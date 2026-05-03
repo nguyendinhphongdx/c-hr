@@ -1,10 +1,10 @@
 ---
-title: 'ADR 0004: OrgChart source of truth — Department.managerId + parentDepartmentId'
+title: 'ADR 0004: OrgChart source of truth — Department.managerId + parentId'
 description: Department tree là single source. Manager chain query qua Postgres recursive CTE. Employee không có directManagerId.
 tags: [project, adr, decision, orgchart, department, hrm]
 ---
 
-# ADR 0004: OrgChart source of truth — `Department.managerId` + `parentDepartmentId`
+# ADR 0004: OrgChart source of truth — `Department.managerId` + `parentId`
 
 - **Status**: Accepted
 - **Date**: 2026-05-03
@@ -20,7 +20,7 @@ Cần biết "ai là quản lý của nhân viên X" để:
 Có 2 cách model:
 
 1. **`Employee.directManagerId?` self-reference**: mỗi nhân viên chỉ vào 1 manager. Dễ query 1-cấp, scale ngang dễ. Nhưng phải maintain riêng khỏi Department tree → 2 cây cùng tồn tại.
-2. **`Department.parentDepartmentId` + `Department.managerId`**: organize qua phòng ban. Mọi nhân viên thuộc 1 phòng, manager phòng cha là manager của nhân viên (đệ quy lên). 1 cây duy nhất.
+2. **`Department.parentId` + `Department.managerId`**: organize qua phòng ban. Mọi nhân viên thuộc 1 phòng, manager phòng cha là manager của nhân viên (đệ quy lên). 1 cây duy nhất.
 
 ## Decision
 
@@ -28,17 +28,17 @@ Có 2 cách model:
 
 ```prisma
 model Department {
-  id                  String       @id @default(uuid())
-  organizationId      String
-  parentDepartmentId  String?      // nested tree, null = top-level
-  managerId           String?      // → Employee
-  name                String
-  code                String?
+  id              String       @id @default(uuid())
+  organizationId  String       @map("organization_id")
+  parentId        String?      @map("parent_id")        // nested tree, null = top-level
+  managerId       String?      @map("manager_id")        // → Employee
+  name            String
+  code            String?
 
-  parent              Department?  @relation("DeptTree", fields: [parentDepartmentId], references: [id])
-  children            Department[] @relation("DeptTree")
-  manager             Employee?    @relation("DeptManager", fields: [managerId], references: [id])
-  members             Employee[]
+  parent          Department?  @relation("DeptTree", fields: [parentId], references: [id])
+  children        Department[] @relation("DeptTree")
+  manager         Employee?    @relation("DeptManager", fields: [managerId], references: [id])
+  members         Employee[]
 
   @@unique([organizationId, code])
   @@map("departments")
@@ -46,8 +46,8 @@ model Department {
 
 model Employee {
   id              String      @id @default(uuid())
-  organizationId  String
-  departmentId    String?           // CHỈ field này (KHÔNG có directManagerId)
+  organizationId  String      @map("organization_id")
+  departmentId    String?     @map("department_id")     // CHỈ field này (KHÔNG có directManagerId)
   // ...
   @@map("employees")
 }
@@ -66,15 +66,15 @@ model Employee {
 
 ```sql
 WITH RECURSIVE manager_chain AS (
-  SELECT d.id, d.parent_department_id, d.manager_id, 0 AS depth
+  SELECT d.id, d.parent_id, d.manager_id, 0 AS depth
   FROM departments d
   WHERE d.id = (SELECT department_id FROM employees WHERE id = $1)
 
   UNION ALL
 
-  SELECT d.id, d.parent_department_id, d.manager_id, mc.depth + 1
+  SELECT d.id, d.parent_id, d.manager_id, mc.depth + 1
   FROM departments d
-  JOIN manager_chain mc ON d.id = mc.parent_department_id
+  JOIN manager_chain mc ON d.id = mc.parent_id
 )
 SELECT e.*
 FROM manager_chain mc
@@ -95,7 +95,7 @@ Service `OrgChartService` expose:
 Redis key `orgchart:chain:${employeeId}`, TTL 1 giờ. Invalidate qua EventEmitter khi:
 - Update `Employee.departmentId`
 - Update `Department.managerId`
-- Update `Department.parentDepartmentId`
+- Update `Department.parentId`
 
 ## Consequences
 
@@ -117,14 +117,14 @@ Redis key `orgchart:chain:${employeeId}`, TTL 1 giờ. Invalidate qua EventEmitt
 | X thuộc dept không có manager | Walk up parent dept. |
 | X chính là manager dept mình | Bỏ qua self, walk up parent. |
 | X ở dept root + chính là manager dept đó (CEO) | `getNearestManager` trả null. `getApproverCandidates` fallback HRM appAdmins; UI cho user chọn (có thể chọn chính mình → vẫn flow approve thường, không auto). |
-| Cycle (A.dept.parent → ... → A.dept) | Validate ở service trước khi `setDepartmentParent`/`setDepartmentManager` — walk + reject nếu gặp cycle. |
+| Cycle (A.dept.parent → ... → A.dept) | Validate ở service trước khi đổi `parentId`/`managerId` — walk + reject nếu gặp cycle. |
 | Manager terminate | Trigger event `employee.terminated` → batch update các `Department.managerId == terminatedId` → set null. Pending requests có `approverId == terminatedId` → re-route lên `getNearestManager` của requester (sau khi đổi). |
 
 ## Alternatives considered
 
 - **Option A (rejected): `Employee.directManagerId`**
   - Đơn giản hơn cho query 1 cấp.
-  - Nhược: 2 nguồn truth (employee.directManager + department.manager) — bulk update khi tái cấu trúc.
+  - Nhược: 2 nguồn truth (`employee.directManager` + `department.manager`) — bulk update khi tái cấu trúc.
 - **Option B (considered, defer): Matrix org (N-N managers)**
   - Bảng `employee_managers` với type PRIMARY/FUNCTIONAL/DOTTED_LINE.
   - Chưa cần MVP. Mở khi có khách yêu cầu.
