@@ -23,33 +23,42 @@ For deeper detail, see [docs/](docs/README.md). All docs are also indexed in [do
 
 ## Layout cheat sheet
 
-```
+```text
 src/
 ├── main.ts             # bootstrap (CORS, Swagger, global pipes/filters)
-├── app.module.ts       # composition root — register feature modules here
+├── app.module.ts       # composition root — import HrmModule, AttendanceModule, …
 ├── config/             # @nestjs/config namespaces (registerAs)
-├── common/             # cross-cutting: filters, interceptors, guards, types, utils
+├── common/             # cross-cutting: filters, interceptors, guards, types, utils, auth helpers (isAppAdmin)
 ├── libs/               # infrastructure (@Global): database, redis, logger, mail, storage
-├── modules/            # feature modules (auth, user, health, …)
+├── apps/               # bounded contexts — đọc ADR 0005
+│   ├── core/           # auth, user, organization (cross-cutting cho mọi app)
+│   ├── platform/       # SYS_OWNER only (org list, billing-future)
+│   ├── hrm/            # employee, department, orgchart, app-admin
+│   ├── attendance/     # work-schedule, timesheet, attendance-log, attendance-device
+│   └── requests/       # leave-request, attendance-correction
 └── cli/                # `pnpm cli <name>` runner + commands
 prisma/                 # schema + seed
-scripts/                # one-off node scripts (init-project, switch-db, build-docs-index)
+scripts/                # one-off node scripts (build-docs-index, switch-db)
 mcp/docs-server/        # local MCP server exposing docs to AI agents
-docs/                   # human + agent docs
+docs/                   # human + agent docs (boilerplate/, project/, project/decisions/)
 ```
 
 ## Hard rules — DO NOT violate
 
 1. **Never check secrets into git.** `.env` is gitignored; use `.env.example` for templates.
 2. **Never modify `prisma/migrations/`** by hand. Always `pnpm prisma:migrate` to generate.
-3. **Never put framework-agnostic helpers in `modules/`.** Cross-cutting code goes in `common/` or `libs/`.
-4. **Never bypass `class-validator` for HTTP input.** Define a DTO; the global `ValidationPipe` enforces it.
-5. **Never throw raw `Error` in HTTP handlers.** Use `@nestjs/common` HttpExceptions or `AccessException`.
-6. **Don't add a new dependency without justifying it.** Prefer the standard library / already-installed deps.
-7. **Don't introduce a new top-level folder** without updating `tsconfig.json` paths and this file.
-8. **Don't write business logic in controllers.** Controllers are thin: validate, delegate to a service, return.
-9. **Don't use `console.log` in committed code.** Use `Logger` from `@nestjs/common` (or `LoggerService` from `libs/logger`).
-10. **Don't write comments that narrate code.** Comments explain *why* (a non-obvious constraint), never *what*.
+3. **DB naming**: tên cột snake_case, tên bảng snake_case plural. Code Prisma + TS dùng camelCase, mapping qua `@map("…")` + `@@map("…")`. Mọi bảng business **bắt buộc** có `created_at` (default `now()`) + `updated_at` (auto). PK = UUID v4. Soft-delete data nhân sự nhạy cảm: thêm `deleted_at DateTime?`. Xem [docs/project/domain.md → DB convention](docs/project/domain.md#db-convention-cứng).
+4. **Folder structure**: feature module sống trong `src/apps/<bounded-context>/<module>/` (vd `src/apps/hrm/employee/`, `src/apps/attendance/timesheet/`). KHÔNG đẩy thẳng vào `src/modules/` cũ. Xem [ADR 0005](docs/project/decisions/0005-folder-structure-bounded-contexts.md).
+5. **Tenant isolation**: mọi query Org-scoped phải qua `*Repository` với method `*ByOrg(organizationId, …)`. Bypass tenant chỉ được dùng method tên `*Raw(…)` rõ ràng. Xem [ADR 0001](docs/project/decisions/0001-tenant-isolation.md).
+6. **Phân quyền**: KHÔNG `@RequirePermission` decorator, KHÔNG bảng `permissions/roles`. Service tự `if/else` dùng helper `isAppAdmin(user, app, orgId)`. Xem [ADR 0003](docs/project/decisions/0003-no-permission-engine.md).
+7. **Never put framework-agnostic helpers in feature modules.** Cross-cutting code goes in `common/` or `libs/`.
+8. **Never bypass `class-validator` for HTTP input.** Define a DTO; the global `ValidationPipe` enforces it.
+9. **Never throw raw `Error` in HTTP handlers.** Use `@nestjs/common` HttpExceptions or `AccessException`.
+10. **Don't add a new dependency without justifying it.** Prefer the standard library / already-installed deps.
+11. **Don't introduce a new top-level folder** without updating `tsconfig.json` paths and this file.
+12. **Don't write business logic in controllers.** Controllers are thin: validate, delegate to a service, return.
+13. **Don't use `console.log` in committed code.** Use `Logger` from `@nestjs/common` (or `LoggerService` from `libs/logger`).
+14. **Don't write comments that narrate code.** Comments explain *why* (a non-obvious constraint), never *what*.
 
 ## When to put code where
 

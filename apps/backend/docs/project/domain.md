@@ -6,96 +6,161 @@ tags: [project, domain, glossary, hrm, c-hr]
 
 # C-HR domain model — backend
 
-> Đây là **outline** cho HRM domain. Sẽ được iterate qua từng feature theo plan trong [REFACTOR_PLAN.md](../../../../REFACTOR_PLAN.md). Khi vào tính năng cụ thể, ADR (`decisions/`) ghi lại quyết định.
+Outline cho HRM domain. Iterate qua từng feature theo [REFACTOR_PLAN.md](../../../../REFACTOR_PLAN.md) → [FEATURES_PLAN.md](../../../../FEATURES_PLAN.md). Mỗi quyết định lớn ghi ADR trong [decisions/](decisions/).
+
+## DB convention (cứng)
+
+- **Tên cột**: snake_case (`first_name`, `direct_manager_id`, `created_at`).
+- **Tên bảng**: snake_case plural (`users`, `employees`, `audit_logs`).
+- **Code (Prisma model + TypeScript)**: camelCase (`firstName`, `directManagerId`, `createdAt`).
+- **Mapping**: dùng `@map("snake_case")` cho field, `@@map("table_name")` cho table.
+- **Mọi bảng business** phải có `created_at` (default `now()`) + `updated_at` (auto on update).
+- **PK**: UUID v4 (`@id @default(uuid())`).
+- **Soft-delete** cho dữ liệu nhân sự nhạy cảm: `deleted_at DateTime?`.
+
+Snippet mẫu:
+
+```prisma
+model SomeEntity {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  someField       String    @map("some_field")
+  createdAt       DateTime  @default(now())     @map("created_at")
+  updatedAt       DateTime  @updatedAt          @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  @@map("some_entities")
+}
+```
 
 ## Glossary
 
 | Term | Meaning |
 | --- | --- |
-| Organization (Org) | Doanh nghiệp khách hàng. Mọi data dưới đây thuộc 1 Org (multi-tenant). |
-| User | Tài khoản đăng nhập. Có thể không phải Employee (vd: admin platform). |
-| Employee | Nhân viên thuộc Org. Liên kết 1-1 (hoặc 1-0..1) với User. |
-| Department | Phòng/ban trong Org. Có thể nested. |
-| Position | Chức danh / vị trí công việc. |
-| Attendance | Bản ghi chấm công (check-in/out, giờ làm). |
-| Leave | Đơn xin nghỉ phép (annual, sick, unpaid, …) cần approval. |
-| Payroll Period | Kỳ tính lương (thường tháng). |
-| Payroll Record | Bảng lương 1 nhân viên trong 1 kỳ. |
+| Organization (Org) | Doanh nghiệp khách hàng. Mọi data HR thuộc 1 Org (multi-tenant). |
+| App | Bounded context nghiệp vụ: HRM, Attendance, Work, … 1 Org có thể bật nhiều app. Mỗi app có code (`HRM`, …) khớp folder `src/apps/<context>/`. |
+| User | Tài khoản đăng nhập. 2 loại: SYS_OWNER (chủ vận hành SaaS), ORG_USER (thuộc Org). |
+| AppAdmin | User được gán vai trò admin cho 1 app cụ thể trong 1 Org (vd HRM appadmin của Org X). |
+| Employee | Hồ sơ nhân viên thuộc Org. Liên kết 1-1 (hoặc 1-0..1) với User qua `User.employeeId`. |
+| Department | Phòng ban. Nested qua `parent_department_id`. Có manager (`manager_id → Employee`). |
+| OrgChart | Cây tổ chức suy ra từ Department tree + manager_id. Single source of truth cho "ai là quản lý của ai" (xem [ADR 0004](decisions/0004-orgchart-source-of-truth.md)). |
+| WorkSchedule | Cấu hình giờ làm chuẩn của Org (T2-T6, 8h-17h, late grace, …). |
+| Timesheet | UI calendar tháng — view của AttendanceLog. Không phải entity. |
+| AttendanceLog | Bản ghi chấm công, đa số đến từ device push (ZKTeco/Hikvision). |
+| AttendanceCorrection | Đơn quên/sai chấm công, gửi duyệt manager để bổ sung log. |
+| LeaveRequest | Đơn xin nghỉ phép (annual/sick/unpaid/…). |
 
 ## Entity outline
 
-> Lưu ý: schema Prisma hiện chỉ có `User` model. Các entity dưới đây sẽ được thêm tuần tự — đừng tạo hết một lượt.
+> Chỉ liệt kê các entity sẽ implement. Chi tiết schema viết trong feature tương ứng (xem FEATURES_PLAN.md).
+
+### `User`
+- Tài khoản đăng nhập.
+- Fields: `id`, `email (unique)`, `password`, `name?`, `avatar?`, `title?` (user tự set, vd "Senior Engineer"), `userType (SYS_OWNER | ORG_USER)`, `organizationId?` (null cho SYS_OWNER), `employeeId? (1-1 unique)`, timestamps.
 
 ### `Organization`
-- Multi-tenant root. Tất cả entity HR khác có `organizationId`.
-- Key fields: `id (uuid)`, `name`, `slug (unique)`, `timezone`, `currency`, `createdAt`, `updatedAt`.
+- Multi-tenant root. Tất cả entity HR khác có `organization_id`.
+- Fields: `id`, `name`, `slug (unique)`, `timezone (default "Asia/Ho_Chi_Minh")`, `currency (default "VND")`, timestamps, `deleted_at?`.
 
-### `User` (đã có)
-- Tài khoản đăng nhập. Hiện có: `id`, `email (unique)`, `password`, `name`, `avatar`, `role (ADMIN|USER)`, `status (ACTIVE|SUSPENDED)`.
-- Cần thêm sau (Phase HR): `organizationId` (nullable cho super-admin platform), `employeeId` (1-1 với Employee, nullable nếu user là admin platform).
-
-### `Employee`
-- Hồ sơ nhân viên thuộc Org. 1 user có thể là 1 employee (1-1).
-- Key fields: `id`, `organizationId`, `userId? (1-1 nullable)`, `code (unique trong Org)`, `firstName`, `lastName`, `dob`, `gender`, `phone`, `email`, `hireDate`, `terminationDate?`, `departmentId?`, `positionId?`, `status (ACTIVE|ON_LEAVE|TERMINATED)`, `deletedAt? (soft-delete)`.
+### `AppAdmin`
+- User được gán làm admin cho 1 app trong 1 Org. Xem [ADR 0003](decisions/0003-no-permission-engine.md).
+- Fields: `id`, `userId`, `organizationId`, `appCode (HRM | …)`, `grantedBy?`, `createdAt`.
+- Constraint: composite unique `(userId, organizationId, appCode)`.
 
 ### `Department`
-- Phòng ban. Hỗ trợ nested: `parentDepartmentId? → Department`.
-- Key fields: `id`, `organizationId`, `name`, `code? (unique trong Org)`, `parentDepartmentId?`, `managerId? → Employee`, `createdAt`, `updatedAt`.
+- Phòng ban. Nested qua `parent_department_id`. Source of truth cho orgchart.
+- Fields: `id`, `organizationId`, `parentDepartmentId?`, `managerId? → Employee`, `name`, `code?`, timestamps, `deleted_at?`.
+- Constraint: composite unique `(organizationId, code)` khi `code` non-null.
 
-### `Position`
-- Chức danh.
-- Key fields: `id`, `organizationId`, `title`, `code? (unique trong Org)`, `level?`, `description?`.
+### `Employee`
+- Hồ sơ nhân viên thuộc Org. **Chỉ giữ `departmentId`** (không có `directManagerId`, không có `positionId`).
+- Fields: `id`, `organizationId`, `userId? (1-1 nullable, link sang User)`, `departmentId? `, `code (unique trong Org)`, `firstName`, `lastName`, `dob?`, `gender?`, `phone?`, `email`, `title?` (HR set, chức danh chính thức trong Org), `hireDate?`, `terminationDate?`, `status (ACTIVE | ON_LEAVE | TERMINATED)`, timestamps, `deleted_at?`.
+- Constraint: composite unique `(organizationId, code)`.
+- Note: `User.title` (cá nhân, user tự set) ≠ `Employee.title` (chính thức, HR set). Hiển thị 2 chỗ khác nhau.
+
+### `WorkSchedule`
+- Cấu hình giờ làm Org (default), có thể override per-Department/Employee sau.
+- Fields: `id`, `organizationId`, `name`, `type (FIXED | SHIFT)`, `startTime "08:00"`, `endTime "17:00"`, `workingDays (Json: ["MON","TUE",…])`, `breakMinutes (default 60)`, `lateGraceMinutes (default 15)`, `isDefault Bool`, timestamps.
+- Org có 1 schedule mặc định (`isDefault = true`); nhiều schedule khác cho shift.
+
+### `AttendanceDevice`
+- Thiết bị chấm công đăng ký vào Org.
+- Fields: `id`, `organizationId`, `brand (ZKTECO | HIKVISION | SUPREMA | OTHER)`, `serialNumber`, `token (cho push auth)`, `name`, `ipAddress?`, `lastSeenAt?`, `isActive`, timestamps.
+- Push endpoint: `POST /api/v1/attendance-devices/push` xác thực qua `token`.
 
 ### `AttendanceLog`
-- Bản ghi chấm công.
-- Key fields: `id`, `organizationId`, `employeeId`, `date`, `checkInAt? (datetime)`, `checkOutAt? (datetime)`, `source (MANUAL|DEVICE|API)`, `note?`.
-- Constraint: 1 employee chỉ có tối đa 1 log / ngày (composite unique `employeeId + date`).
+- Bản ghi chấm công. **User không tự tạo** — chỉ device push hoặc HR tạo qua AttendanceCorrection được duyệt.
+- Fields: `id`, `organizationId`, `employeeId`, `date`, `checkInAt? (datetime)`, `checkOutAt? (datetime)`, `source (DEVICE | CORRECTION | MANUAL_HR)`, `deviceId?`, `deviceLogId?` (idempotency), `note?`, timestamps.
+- Constraint: composite unique `(employeeId, date)` — 1 log/ngày, update thay create nếu push lần 2.
+- Idempotency: `(deviceId, deviceLogId)` unique để device replay không tạo duplicate.
+
+### `AttendanceCorrection`
+- Đơn quên/sai chấm công. Gửi duyệt như LeaveRequest.
+- Fields: `id`, `organizationId`, `requesterId → Employee`, `approverId? → Employee`, `date`, `requestedCheckIn?`, `requestedCheckOut?`, `reason`, `status (PENDING | APPROVED | REJECTED | CANCELLED)`, `approvedAt?`, timestamps.
+- Approve thành công → tạo/update AttendanceLog với `source = CORRECTION`.
 
 ### `LeaveRequest`
 - Đơn xin nghỉ phép.
-- Key fields: `id`, `organizationId`, `employeeId`, `type (ANNUAL|SICK|UNPAID|MATERNITY|OTHER)`, `startDate`, `endDate`, `reason?`, `status (PENDING|APPROVED|REJECTED|CANCELLED)`, `approverId? → Employee`, `approvedAt?`, `createdAt`.
+- Fields: `id`, `organizationId`, `requesterId → Employee`, `approverId? → Employee`, `type (ANNUAL | SICK | UNPAID | MATERNITY | OTHER)`, `startDate`, `endDate`, `reason?`, `status (PENDING | APPROVED | REJECTED | CANCELLED)`, `approvedAt?`, timestamps.
+- State machine: `PENDING → APPROVED | REJECTED | CANCELLED`. Không cho ngược.
 
-### `PayrollPeriod`
-- Kỳ tính lương.
-- Key fields: `id`, `organizationId`, `year`, `month`, `status (DRAFT|LOCKED|PAID)`, `lockedAt?`, `paidAt?`.
-- Constraint: composite unique `organizationId + year + month`.
+### `AuditLog`
+- Xem [ADR 0002](decisions/0002-audit-log.md). Schema chi tiết trong ADR.
 
-### `PayrollRecord`
-- Bảng lương 1 nhân viên / kỳ.
-- Key fields: `id`, `payrollPeriodId`, `employeeId`, `baseSalary`, `allowance`, `deduction`, `tax`, `netAmount`, `breakdown (jsonb)`.
-- Constraint: composite unique `payrollPeriodId + employeeId`.
-
-## Relationships (high-level)
+## Relationships
 
 ```text
 Organization 1 ── n User
+Organization 1 ── n AppAdmin (User × AppCode)
 Organization 1 ── n Employee  ── 0..1 User
 Organization 1 ── n Department (parent? → Department, manager? → Employee)
-Organization 1 ── n Position
-Employee n ── 0..1 Department
-Employee n ── 0..1 Position
+Employee n ── 0..1 Department          (Employee.departmentId)
+Department 0..1 ── 1 Employee (manager) (Department.managerId)
+Organization 1 ── n WorkSchedule
+Organization 1 ── n AttendanceDevice 1 ── n AttendanceLog
 Employee 1 ── n AttendanceLog
-Employee 1 ── n LeaveRequest  ── 0..1 Employee (approver)
-Organization 1 ── n PayrollPeriod 1 ── n PayrollRecord ── 1 Employee
+Employee 1 ── n AttendanceCorrection (── 0..1 Employee approver)
+Employee 1 ── n LeaveRequest         (── 0..1 Employee approver)
 ```
 
 ## Invariants
 
-Mỗi invariant phải map sang một check trong code (DB constraint, validation, transaction).
+Mỗi invariant phải map sang 1 check trong code (DB constraint, validation, service logic).
 
-- **Tenant isolation**: mọi query feature phải filter `organizationId`. Vi phạm = leak dữ liệu giữa các Org. Implement qua middleware/guard, không trust caller.
-- **User ↔ Employee 1-1 trong Org**: `Employee.userId` unique (khi non-null), và `User.organizationId` phải khớp `Employee.organizationId`.
-- **AttendanceLog**: composite unique `(employeeId, date)`.
-- **PayrollPeriod**: composite unique `(organizationId, year, month)`.
-- **LeaveRequest**: `endDate >= startDate`. Trạng thái không thể từ `APPROVED` → `PENDING` (chỉ `PENDING → APPROVED|REJECTED|CANCELLED`).
-- **Soft-delete Employee**: chỉ ẩn (`deletedAt`), không hard-delete. Lý do: payroll/attendance history phải truy vết được.
+- **Tenant isolation**: mọi query feature phải filter `organizationId`. Repository pattern tay enforce ([ADR 0001](decisions/0001-tenant-isolation.md)).
+- **User ↔ Employee 1-1**: `User.employeeId` unique khi non-null. `User.organizationId` phải khớp `Employee.organizationId`. Chỉ ORG_USER có `employeeId`.
+- **Employee bắt buộc thuộc Department**: `Employee.departmentId` NOT NULL ở tất cả Employee active (kể cả CEO thuộc dept "Ban giám đốc"). Để tránh `getNearestManager()` lỗi không tìm thấy chain.
+- **Department không cycle**: validate trước `setDepartmentParent` — walk up tree, reject nếu gặp lại chính mình.
+- **AttendanceLog**: composite unique `(employeeId, date)`. Idempotent qua `(deviceId, deviceLogId)`.
+- **LeaveRequest / AttendanceCorrection**: `endDate >= startDate` (nếu range). State machine không cho ngược.
+- **Soft-delete Employee**: chỉ ẩn (`deletedAt`), không hard-delete. Lý do: attendance/leave/audit history phải truy vết được.
+- **AppAdmin**: composite unique `(userId, organizationId, appCode)`. Gán/xoá phải audit log.
+- **Self-approve**: requester có thể chọn chính mình làm `approverId` (vd CEO khi không có nearest manager). KHÔNG auto-approve khi tạo — vẫn flow approve thường (mở đơn, click approve).
+
+## Approver lookup logic
+
+Khi tạo LeaveRequest/AttendanceCorrection:
+
+1. BE expose `GET /api/v1/orgchart/approver-candidates?employeeId=X` → trả `{ suggested, candidates[] }`.
+2. `suggested` = `getNearestManager(X)` (xem [ADR 0004](decisions/0004-orgchart-source-of-truth.md)). Nếu null → `suggested` = HRM appadmin đầu tiên.
+3. `candidates` = manager chain ∪ HRM appadmins (dedupe, exclude requester nếu muốn — nhưng cho phép self).
+4. FE hiển thị dropdown default `suggested`, user có thể đổi sang bất kỳ ai trong `candidates`.
+5. BE validate khi submit: `dto.approverId ∈ candidates`.
 
 ## Open questions / TODOs
 
-- [ ] Multi-currency cho Org? (ban đầu chỉ VND đủ chưa)
-- [ ] Approval workflow cho LeaveRequest có cần multi-step (manager → HR) hay 1-step?
-- [ ] Attendance device integration (máy chấm công vân tay) — sau hay không scope?
-- [ ] Role-based access: `ADMIN` Org, `MANAGER` (xem team), `EMPLOYEE` (xem mình) — mô hình permission cụ thể TBD.
-- [ ] Audit log (ai sửa lương ai, khi nào) — cần thiết khi vào payroll.
+- [ ] Multi-currency cho Org (ban đầu chỉ VND).
+- [ ] Approval workflow multi-step cho leave > N ngày (vd direct manager → HR appadmin) — defer.
+- [ ] Out-of-office delegate cho approver — defer.
+- [ ] Audit log retention configurable per-Org — defer.
+- [ ] Matrix org (N-N managers) — defer.
+- [ ] Employee history (manager change, dept change, title change) — chỉ qua audit log MVP.
+- [ ] AttendanceDevice pull mode (cron qua TCP socket) cho device cũ không push — defer.
 
-Khi bắt tay vào 1 module, viết ADR ở `decisions/0xxx-<topic>.md` để chốt quyết định trước khi code.
+## ADRs (`decisions/`)
+
+- [0001 — Tenant isolation via manual repository pattern](decisions/0001-tenant-isolation.md)
+- [0002 — Audit log via @Auditable interceptor](decisions/0002-audit-log.md)
+- [0003 — No permission engine, code if/else + AppAdmin model](decisions/0003-no-permission-engine.md)
+- [0004 — OrgChart source of truth: Department.managerId + parentDepartmentId](decisions/0004-orgchart-source-of-truth.md)
+- [0005 — Backend folder structure: src/apps/<context>/<module>/](decisions/0005-folder-structure-bounded-contexts.md)

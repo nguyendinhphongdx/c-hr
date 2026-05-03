@@ -1,0 +1,20 @@
+{
+  "name": "c-hr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "C-HR (C-OpenAI Human Resource) — SaaS HRM monorepo",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev:backend": "pnpm --filter @c-hr/backend start:dev",
+    "dev:frontend": "pnpm --filter @c-hr/frontend dev",
+    "build:backend": "pnpm --filter @c-hr/backend build",
+    "build:frontend": "pnpm --filter @c-hr/frontend build",
+    "check:frontend": "pnpm --filter @c-hr/frontend check",
+    "check:backend": "pnpm --filter @c-hr/backend lint && pnpm --filter @c-hr/backend build"
+  },
+  "pnpm": {
+    "overrides": {
+      "zod": "^4.3.6"
+    }
+  }
+}
