@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/main/schema.json",
+  "mcpServers": {
+    "boilerplate-docs": {
+      "command": "node",
+      "args": ["mcp/docs-server/index.js"],
+      "description": "Local docs MCP server. Exposes docs_list / docs_search / docs_read so AI agents can discover and read this project's CLAUDE.md and docs/ on demand."
+    }
+  }
+}

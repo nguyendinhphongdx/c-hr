@@ -1,0 +1,17 @@
+{
+  "name": "@boilerplate/docs-mcp-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local MCP server exposing project docs to AI agents (Claude Code, etc).",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "docs-mcp-server": "index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  }
+}

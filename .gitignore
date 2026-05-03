@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Env files (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Caches
+.eslintcache
+.cache/
+.turbo/
+.parcel-cache/
+.pytest_cache/
+.ruff_cache/
+
+# Runtime
+*.pid
+*.seed
+*.pid.lock
+
+# Local Claude Code state (settings.local.json is per-user)
+.claude/settings.local.json
+
+# Docker
+docker-compose.override.yml
+
+# Uploads (dev local storage)
+uploads/
+
+# Prisma
+apps/backend/prisma/*.db
+apps/backend/prisma/*.db-journal

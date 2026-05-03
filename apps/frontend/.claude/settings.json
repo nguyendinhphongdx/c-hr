@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm i:*)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm build)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm start)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm check)",
+      "Bash(pnpm docs:index)",
+      "Bash(pnpm mcp:start)",
+      "Bash(pnpm --version)",
+      "Bash(node scripts/*.js)",
+      "Bash(node scripts/**/*.js)",
+      "Bash(node mcp/docs-server/index.js)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(pnpm dlx shadcn@latest:*)",
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff)",
+      "Bash(git diff:*)",
+      "Bash(git log)",
+      "Bash(git log:*)",
+      "Bash(git show)",
+      "Bash(git show:*)",
+      "Bash(git branch)",
+      "Bash(git branch:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-files:*)",
+      "Bash(ls)",
+      "Bash(ls:*)",
+      "Bash(find . -type f *)",
+      "Bash(find src *)",
+      "Bash(find docs *)",
+      "Bash(mkdir -p:*)",
+      "Bash(chmod +x:*)",
+      "Bash(command -v:*)",
+      "mcp__boilerplate-docs__docs_list",
+      "mcp__boilerplate-docs__docs_search",
+      "mcp__boilerplate-docs__docs_read"
+    ],
+    "deny": [
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ~/:*)",
+      "Bash(rm -rf $HOME:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/hooks/post-edit-docs.js\""
+          }
+        ]
+      }
+    ]
+  }
+}

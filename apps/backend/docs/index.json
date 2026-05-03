@@ -1,0 +1,401 @@
+{
+  "generatedAt": "2026-05-03T09:23:32.533Z",
+  "repoRelativeRoot": ".",
+  "count": 18,
+  "entries": [
+    {
+      "id": "AGENTS",
+      "path": "AGENTS.md",
+      "title": "Agent instructions",
+      "description": "Pointer to CLAUDE.md for non-Claude AI coding agents.",
+      "tags": [
+        "overview",
+        "agents"
+      ],
+      "scope": "root",
+      "category": "root",
+      "headings": [],
+      "summary": "This project uses [CLAUDE.md](CLAUDE.md) as the primary instruction file for AI agents. The conventions and rules apply to **any** AI agent (Cursor, Aider, Continue, Copilot Chat, etc.) — read it before making changes."
+    },
+    {
+      "id": "CLAUDE",
+      "path": "CLAUDE.md",
+      "title": "Project conventions for Claude Code",
+      "description": "Read this first. Concise rules of the road for any AI agent working in this codebase.",
+      "tags": [
+        "overview",
+        "conventions",
+        "claude"
+      ],
+      "scope": "root",
+      "category": "root",
+      "headings": [
+        "Project at a glance",
+        "Layout cheat sheet",
+        "Hard rules — DO NOT violate",
+        "When to put code where",
+        "Common commands",
+        "Two tiers of docs",
+        "How to add things — quick pointers (boilerplate-level)",
+        "Required reading by topic",
+        "Subagents available",
+        "Tooling shortcuts",
+        "Workflow expectations for AI agents"
+      ],
+      "summary": "This file is the entry point for any AI agent (Claude Code, Cursor, Aider, etc.) working in this NestJS boilerplate. **Read it before making any change.**"
+    },
+    {
+      "id": "docs:README",
+      "path": "docs/README.md",
+      "title": "Documentation index",
+      "description": "Two-tier docs — boilerplate-level (rarely changes) and project-level (you own).",
+      "tags": [
+        "overview",
+        "index"
+      ],
+      "scope": "overview",
+      "category": "overview",
+      "headings": [
+        "Boilerplate docs (read these to understand HOW the codebase works)",
+        "Project docs (read these to understand WHAT this app does)",
+        "Updating docs"
+      ],
+      "summary": "This project has **two tiers of documentation**:"
+    },
+    {
+      "id": "docs:boilerplate:architecture",
+      "path": "docs/boilerplate/architecture.md",
+      "title": "Architecture",
+      "description": "Layered structure, dependency injection, and HTTP request lifecycle.",
+      "tags": [
+        "architecture",
+        "layers",
+        "di",
+        "request-lifecycle"
+      ],
+      "scope": "boilerplate",
+      "category": "boilerplate",
+      "headings": [
+        "Layers",
+        "Path aliases",
+        "Dependency injection model",
+        "Global infrastructure (`libs/*`)",
+        "Feature modules (`modules/*`)",
+        "Composition root (`AppModule`)",
+        "Request lifecycle",
+        "Per-request context",
+        "Response shape",
+        "Error shape"
+      ],
+      "summary": "The codebase has four layers, each depending only on layers above it:"
+    },
+    {
+      "id": "docs:boilerplate:conventions",
+      "path": "docs/boilerplate/conventions.md",
+      "title": "Conventions",
+      "description": "Naming, file organization, and concrete do/don't rules.",
+      "tags": [
+        "conventions",
+        "style",
+        "naming"
+      ],
+      "scope": "boilerplate",
+      "category": "boilerplate",
+      "headings": [
+        "Naming",
+        "File organization inside a module",
+        "DTO vs interface — when to use what",
+        "Service vs controller",
+        "Configuration",
+        "Logging",
+        "Error handling",
+        "DB access",
+        "Imports",
+        "Comments",
+        "Testing",
+        "What NOT to do"
+      ],
+      "summary": "| Kind | Convention | Example | | --- | --- | --- | | File | kebab-case + role suffix | `user.service.ts`, `login.dto.ts`, `parse-uuid.pipe.ts` | | Class | PascalCase + role suffix | `UserService`, `LoginDto`, `ParseUUIDPipe` | | Interface | PascalCase, prefix `I` only for JWT-style payloads | `RequestUser`, `IJwtPayload` | | Constant | SCREAMING_SNAKE | `MAX_PAGE_SIZE` | | Enum | PascalCase, members SCREAMING_SNAKE | `UserRole.ADMIN` | | Method | camelCase, verb-first | `findById`, `issueTokens` | | Boolean | `is*` / `has*` / `should*` | `isPrivate`, `hasRequiredRole` | | Folder | kebab-case | `request-context/` |"
+    },
+    {
+      "id": "docs:boilerplate:README",
+      "path": "docs/boilerplate/README.md",
+      "title": "Boilerplate documentation",
+      "description": "Architecture, conventions, recipes, reference. Do not edit unless changing the architecture.",
+      "tags": [
+        "overview",
+        "boilerplate"
+      ],
+      "scope": "boilerplate",
+      "category": "boilerplate",
+      "headings": [
+        "Contents"
+      ],
+      "summary": "> **Heads up**: this folder describes the **framework** patterns in this repo (NestJS layout, DI, auth flow, Prisma, …). It ships with the boilerplate and does not need updating per project. > > Project-specific docs (domain, runbook, deployment) live in [../project/](../project/README.md). > > Edit files here only when you actually change the underlying architecture or add a new convention."
+    },
+    {
+      "id": "docs:boilerplate:recipes:add-cli-command",
+      "path": "docs/boilerplate/recipes/add-cli-command.md",
+      "title": "Add a CLI command",
+      "description": "How to register a new `pnpm cli <name>` command.",
+      "tags": [
+        "recipe",
+        "cli"
+      ],
+      "scope": "boilerplate",
+      "category": "recipe",
+      "headings": [
+        "1. Create the command class",
+        "2. Register the command",
+        "3. Run",
+        "Argument parsing",
+        "Why not [`nest-commander`](https://github.com/jmcdo29/nest-commander)?"
+      ],
+      "summary": "The CLI runner reuses the full DI graph via `CliModule`. Each command is an `@Injectable()` class implementing the `CliCommand` interface."
+    },
+    {
+      "id": "docs:boilerplate:recipes:add-module",
+      "path": "docs/boilerplate/recipes/add-module.md",
+      "title": "Add a feature module",
+      "description": "Step-by-step recipe for creating a new NestJS feature module in this codebase.",
+      "tags": [
+        "recipe",
+        "module",
+        "scaffolding"
+      ],
+      "scope": "boilerplate",
+      "category": "recipe",
+      "headings": [
+        "1. Create the folder skeleton",
+        "2. Add the Prisma model",
+        "3. DTOs",
+        "4. Service",
+        "5. Controller",
+        "6. Module",
+        "7. Register in `AppModule`",
+        "8. Verify",
+        "Common variants"
+      ],
+      "summary": "Suppose you're adding a `post` module with CRUD over a `Post` resource."
+    },
+    {
+      "id": "docs:boilerplate:recipes:auth-and-cookies",
+      "path": "docs/boilerplate/recipes/auth-and-cookies.md",
+      "title": "Auth & cookies",
+      "description": "How JWT + httpOnly cookies + Bearer fallback work, and how to extend.",
+      "tags": [
+        "recipe",
+        "auth",
+        "jwt",
+        "cookies"
+      ],
+      "scope": "boilerplate",
+      "category": "recipe",
+      "headings": [
+        "Flow at a glance",
+        "Refresh",
+        "Logout",
+        "Cookie configuration",
+        "Cross-site setup",
+        "Extending",
+        "Add a new context field",
+        "Add roles / RBAC",
+        "Revoke tokens (real logout)",
+        "Common pitfalls"
+      ],
+      "summary": "``` POST /auth/login ↳ AuthService.login() verifies credentials, signs accessToken + refreshToken ↳ Controller calls setAuthCookies(res, tokens, configService) - res.cookie('access_token', ..., { httpOnly, secure, sameSite, domain, maxAge }) - res.cookie('refresh_token', ..., { ... refresh maxAge }) ↳ Response also returns { user, accessToken, refreshToken } in body so non-cookie clients (mobile, server-to-server) can extract them. ```"
+    },
+    {
+      "id": "docs:boilerplate:recipes:storage-providers",
+      "path": "docs/boilerplate/recipes/storage-providers.md",
+      "title": "Storage providers",
+      "description": "Use local filesystem, S3, or GCS — the StorageProvider interface stays the same.",
+      "tags": [
+        "recipe",
+        "storage",
+        "s3",
+        "gcs"
+      ],
+      "scope": "boilerplate",
+      "category": "recipe",
+      "headings": [
+        "Choose a provider",
+        "Using the storage in a service",
+        "File keys vs URLs",
+        "Key naming convention",
+        "Static file serving (local mode)",
+        "Adding a new provider"
+      ],
+      "summary": "`StorageModule` chooses a provider based on `STORAGE_TYPE` env var (`local` | `s3` | `gcs`). Code consumes the abstract `StorageProvider` interface, so switching is a config change."
+    },
+    {
+      "id": "docs:boilerplate:recipes:switch-database",
+      "path": "docs/boilerplate/recipes/switch-database.md",
+      "title": "Switch database engine",
+      "description": "Move between Postgres / MySQL / SQLite / SQL Server / MongoDB.",
+      "tags": [
+        "recipe",
+        "database",
+        "prisma"
+      ],
+      "scope": "boilerplate",
+      "category": "recipe",
+      "headings": [
+        "DATABASE_URL formats",
+        "Schema portability gotchas",
+        "MongoDB-specific notes",
+        "Verifying the switch"
+      ],
+      "summary": "Prisma's `datasource.provider` cannot be templated via `env()` — it must be a literal. The boilerplate works around this with a small script:"
+    },
+    {
+      "id": "docs:boilerplate:reference:env-vars",
+      "path": "docs/boilerplate/reference/env-vars.md",
+      "title": "Environment variables",
+      "description": "Full reference of every env var the app reads, with defaults and notes.",
+      "tags": [
+        "reference",
+        "env",
+        "config"
+      ],
+      "scope": "boilerplate",
+      "category": "reference",
+      "headings": [
+        "App",
+        "CORS & cookies",
+        "Database",
+        "Redis",
+        "JWT",
+        "Mail (SMTP)",
+        "Storage",
+        "Admin / seeding"
+      ],
+      "summary": "All env vars are loaded by `@nestjs/config` from `.env.local` then `.env` (in that order). Inside services, **always** read via `ConfigService`, not `process.env` directly. See [conventions.md](../conventions.md#configuration)."
+    },
+    {
+      "id": "docs:boilerplate:reference:globals",
+      "path": "docs/boilerplate/reference/globals.md",
+      "title": "Global services",
+      "description": "Providers available everywhere via DI without module re-import.",
+      "tags": [
+        "reference",
+        "di",
+        "globals"
+      ],
+      "scope": "boilerplate",
+      "category": "reference",
+      "headings": [
+        "Examples",
+        "Adding a new global service",
+        "Things deliberately NOT global",
+        "Using globals from outside the request scope"
+      ],
+      "summary": "Anything in `libs/` is `@Global()` — once `AppModule` imports it, the providers are injectable from any feature module without re-importing."
+    },
+    {
+      "id": "docs:project:deployment",
+      "path": "docs/project/deployment.md",
+      "title": "Deployment",
+      "description": "Environments, secrets, CI/CD, rollout and rollback procedures.",
+      "tags": [
+        "project",
+        "deployment",
+        "ci",
+        "ops"
+      ],
+      "scope": "project",
+      "category": "project",
+      "headings": [
+        "Environments",
+        "Secrets",
+        "CI/CD",
+        "Rollout",
+        "Rollback"
+      ],
+      "summary": "> **Template** — replace with your project's actual content."
+    },
+    {
+      "id": "docs:project:domain",
+      "path": "docs/project/domain.md",
+      "title": "Domain model",
+      "description": "Business entities, relationships, glossary, and invariants for THIS project.",
+      "tags": [
+        "project",
+        "domain",
+        "glossary"
+      ],
+      "scope": "project",
+      "category": "project",
+      "headings": [
+        "Glossary",
+        "Entities",
+        "`<EntityName>`",
+        "Relationships",
+        "Invariants",
+        "Open questions / TODOs"
+      ],
+      "summary": "> **Template** — replace with your project's actual content."
+    },
+    {
+      "id": "docs:project:README",
+      "path": "docs/project/README.md",
+      "title": "Project documentation",
+      "description": "Project-specific docs — fill these in for your application. Boilerplate-level docs are in ../boilerplate/.",
+      "tags": [
+        "overview",
+        "project"
+      ],
+      "scope": "project",
+      "category": "project",
+      "headings": [
+        "Convention",
+        "What goes where"
+      ],
+      "summary": "This folder is **yours to write**. The boilerplate ships with [docs/boilerplate/](../boilerplate/README.md), which describes the framework patterns and shouldn't change unless you change the architecture."
+    },
+    {
+      "id": "docs:project:runbook",
+      "path": "docs/project/runbook.md",
+      "title": "Runbook",
+      "description": "On-call procedures, common alerts, how to debug production issues.",
+      "tags": [
+        "project",
+        "ops",
+        "runbook",
+        "on-call"
+      ],
+      "scope": "project",
+      "category": "project",
+      "headings": [
+        "Health checks",
+        "Common alerts",
+        "\"DB connection failures\"",
+        "\"Auth 401 spike\"",
+        "Useful commands",
+        "Escalation"
+      ],
+      "summary": "> **Template** — replace with your project's actual content."
+    },
+    {
+      "id": "docs:project:decisions:0001-template",
+      "path": "docs/project/decisions/0001-template.md",
+      "title": "ADR 0001: <decision title>",
+      "description": "Template for project architecture decision records.",
+      "tags": [
+        "project",
+        "adr",
+        "decision"
+      ],
+      "scope": "project",
+      "category": "decision",
+      "headings": [
+        "Context",
+        "Decision",
+        "Consequences",
+        "Alternatives considered",
+        "References"
+      ],
+      "summary": "> **Template** — copy to a new file (e.g. `0002-use-graphql.md`) and replace."
+    }
+  ]
+}

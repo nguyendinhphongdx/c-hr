@@ -1,0 +1,59 @@
+name: c-hr
+
+services:
+  postgres:
+    extends:
+      file: ./services/postgres/docker-compose.yml
+      service: postgres
+
+  redis:
+    extends:
+      file: ./services/redis/docker-compose.yml
+      service: redis
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: c-hr-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 8000
+      API_PREFIX: ${API_PREFIX:-api/v1}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-c_hr}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?missing JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?missing JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-15m}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      AUTH_ACCESS_COOKIE_NAME: ${AUTH_ACCESS_COOKIE_NAME:-access_token}
+      AUTH_REFRESH_COOKIE_NAME: ${AUTH_REFRESH_COOKIE_NAME:-refresh_token}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@c-hr.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@123456}
+    ports:
+      - '${BACKEND_PORT:-8000}:8000'
+    networks:
+      - c-hr
+
+networks:
+  c-hr:
+    name: c-hr
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: c-hr-postgres-data
+  redis_data:
+    name: c-hr-redis-data
