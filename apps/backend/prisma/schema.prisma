@@ -57,7 +57,7 @@ model Organization {
   timezone  String    @default("Asia/Ho_Chi_Minh")
   currency  String    @default("VND")
   createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt      @map("updated_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
   users User[]
@@ -85,7 +85,7 @@ model User {
   // 1-1 link to Employee. Null until HR provisions the employee record.
   employeeId     String?   @unique @map("employee_id")
   createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt      @map("updated_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   organization Organization? @relation(fields: [organizationId], references: [id])
   employee     Employee?     @relation(fields: [employeeId], references: [id])
@@ -146,7 +146,7 @@ model Department {
   /// Optional human-friendly code (e.g. "ENG-01"). Unique within an Org when set.
   code           String?
   createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt      @map("updated_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
 
   parent    Department?  @relation("DepartmentTree", fields: [parentId], references: [id])
@@ -178,14 +178,19 @@ model Employee {
   terminationDate DateTime?      @map("termination_date")
   status          EmployeeStatus @default(ACTIVE)
   createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt      @map("updated_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
   deletedAt       DateTime?      @map("deleted_at")
 
-  department         Department?  @relation("EmployeeDepartment", fields: [departmentId], references: [id])
-  managedDepartments Department[] @relation("DepartmentManager")
+  department         Department?     @relation("EmployeeDepartment", fields: [departmentId], references: [id])
+  managedDepartments Department[]    @relation("DepartmentManager")
   /// 1-1 back-relation. FK is on User.employeeId.
   user               User?
   attendanceLogs     AttendanceLog[]
+
+  leaveRequestsAsRequester         LeaveRequest[]         @relation("LeaveRequester")
+  leaveRequestsAsApprover          LeaveRequest[]         @relation("LeaveApprover")
+  attendanceCorrectionsAsRequester AttendanceCorrection[] @relation("CorrectionRequester")
+  attendanceCorrectionsAsApprover  AttendanceCorrection[] @relation("CorrectionApprover")
 
   @@unique([organizationId, code])
   @@index([organizationId, departmentId])
@@ -201,7 +206,7 @@ model WorkSchedule {
   name           String
   isDefault      Boolean   @default(false) @map("is_default")
   createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt      @map("updated_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
 
   shifts WorkShift[]
@@ -225,7 +230,7 @@ model WorkShift {
   lateGraceMinutes Int      @default(15) @map("late_grace_minutes")
   crossesMidnight  Boolean  @default(false) @map("crosses_midnight")
   createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt      @map("updated_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   workSchedule WorkSchedule @relation(fields: [workScheduleId], references: [id], onDelete: Cascade)
 
@@ -245,7 +250,7 @@ model AttendanceDevice {
   lastSeenAt     DateTime?   @map("last_seen_at")
   isActive       Boolean     @default(true) @map("is_active")
   createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt      @map("updated_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
 
   logs AttendanceLog[]
 
@@ -270,7 +275,7 @@ model AttendanceLog {
   eventLogId     String?          @map("event_log_id")
   note           String?
   createdAt      DateTime         @default(now()) @map("created_at")
-  updatedAt      DateTime         @updatedAt      @map("updated_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
 
   employee Employee          @relation(fields: [employeeId], references: [id])
   device   AttendanceDevice? @relation(fields: [deviceId], references: [id])
@@ -279,4 +284,77 @@ model AttendanceLog {
   @@unique([deviceId, eventLogId])
   @@index([organizationId, date])
   @@map("attendance_logs")
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Requests bounded context (F4) — Leave + Attendance Correction.
+// Workflow: requester picks approver from OrgChart candidates → state
+// machine PENDING → APPROVED|REJECTED|CANCELLED. Approve a correction
+// also writes/updates the matching attendance_log row.
+// ──────────────────────────────────────────────────────────────────────
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  UNPAID
+  MATERNITY
+  OTHER
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// Đơn xin nghỉ phép. requesterId/approverId trỏ Employee (không phải User)
+// để khớp data orgchart — User của approver có thể chưa link Employee mãi.
+model LeaveRequest {
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
+  requesterId    String        @map("requester_id")
+  approverId     String?       @map("approver_id")
+  type           LeaveType
+  startDate      DateTime      @map("start_date") @db.Date
+  endDate        DateTime      @map("end_date") @db.Date
+  reason         String?
+  status         RequestStatus @default(PENDING)
+  /// Required when status = REJECTED. Optional otherwise.
+  decisionNote   String?       @map("decision_note")
+  decidedAt      DateTime?     @map("decided_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  requester Employee  @relation("LeaveRequester", fields: [requesterId], references: [id])
+  approver  Employee? @relation("LeaveApprover", fields: [approverId], references: [id])
+
+  @@index([organizationId, requesterId])
+  @@index([organizationId, approverId, status])
+  @@map("leave_requests")
+}
+
+// Đơn quên/sai chấm công. Approve thành công → upsert AttendanceLog với
+// source = CORRECTION (xem requests/attendance-correction service).
+model AttendanceCorrection {
+  id                  String        @id @default(uuid())
+  organizationId      String        @map("organization_id")
+  requesterId         String        @map("requester_id")
+  approverId          String?       @map("approver_id")
+  date                DateTime      @db.Date
+  requestedCheckInAt  DateTime?     @map("requested_check_in_at")
+  requestedCheckOutAt DateTime?     @map("requested_check_out_at")
+  reason              String
+  status              RequestStatus @default(PENDING)
+  decisionNote        String?       @map("decision_note")
+  decidedAt           DateTime?     @map("decided_at")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  requester Employee  @relation("CorrectionRequester", fields: [requesterId], references: [id])
+  approver  Employee? @relation("CorrectionApprover", fields: [approverId], references: [id])
+
+  @@index([organizationId, requesterId])
+  @@index([organizationId, approverId, status])
+  @@map("attendance_corrections")
 }

@@ -61,8 +61,8 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Requests",
     items: [
-      { href: "/leave", label: "Leave", icon: FileText, disabled: true },
-      { href: "/attendance-corrections", label: "Corrections", icon: PencilLine, disabled: true },
+      { href: "/leave", label: "Leave", icon: FileText },
+      { href: "/attendance-corrections", label: "Corrections", icon: PencilLine },
     ],
   },
 ];

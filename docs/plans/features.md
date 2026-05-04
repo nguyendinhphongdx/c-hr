@@ -28,7 +28,7 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 1 | Auth + Org + AppAdmin | ✅ done | Signup Org / me / admin grant/revoke, audit log, isAdmin/isAppAdmin helpers |
 | 2 | HRM core: Department + Employee + OrgChart | ✅ done | CRUD đủ, OrgChart CTE + approver candidates, EmployeePicker, dept manager auto-link, soft-delete, edit pages |
 | 3 | Attendance | ✅ done | BE 4 modules + 3 FE features. Migration f3_user_personal_info applied. API smoke 7/7 verify items pass (curl). FE typecheck/lint sạch. UI render manual smoke pending khi user demo. |
-| 4 | Requests | ⬜ chưa làm | Tiếp theo |
+| 4 | Requests | ✅ done | BE 2 modules (leave-request + attendance-correction) + FE 2 features + sidebar enable. Migration f4_requests applied. API smoke E2E pass: leave create→approve, correction create→approve→AttendanceLog upsert source=CORRECTION. FE typecheck/lint sạch. Audit entries cho mọi action mutate. **Defer**: sidebar badge pending count, email notification (event emitter sẵn `leave-request.created/approved/...` cho subscriber sau). |
 
 ### F3 verify checklist (đã chạy 2026-05-04 qua curl, BE :8000 + DB Docker)
 

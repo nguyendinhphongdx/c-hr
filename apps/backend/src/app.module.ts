@@ -16,6 +16,7 @@ import { StorageModule } from './libs/storage';
 import { AttendanceModule } from './apps/attendance/attendance.module';
 import { CoreModule } from './apps/core/core.module';
 import { HrmModule } from './apps/hrm/hrm.module';
+import { RequestsModule } from './apps/requests/requests.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { HrmModule } from './apps/hrm/hrm.module';
     CoreModule,
     HrmModule,
     AttendanceModule,
+    RequestsModule,
   ],
 })
 export class AppModule {}
