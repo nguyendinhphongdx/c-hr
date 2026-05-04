@@ -19,7 +19,7 @@ async function main() {
       email: adminEmail,
       password: passwordHash,
       name: 'Administrator',
-      role: 'ADMIN',
+      role: 'sysowner',
     },
   });
   console.log(`✔ Created admin user: ${adminEmail}`);

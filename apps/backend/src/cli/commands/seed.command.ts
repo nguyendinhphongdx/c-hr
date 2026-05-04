@@ -25,7 +25,7 @@ export class SeedCommand implements CliCommand {
 
     const passwordHash = await bcrypt.hash(password, 10);
     await this.prisma.user.create({
-      data: { email, password: passwordHash, name: 'Administrator', role: 'ADMIN' },
+      data: { email, password: passwordHash, name: 'Administrator', role: 'sysowner' },
     });
     this.logger.log(`Created admin user: ${email}`);
   }

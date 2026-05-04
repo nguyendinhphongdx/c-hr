@@ -10,26 +10,95 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  ADMIN
-  USER
+// Role hierarchy: sysowner ⊃ admin (Org) ⊃ appadmin (per-app, see AppAdmin) ⊃ user.
+// See docs/decisions/0003-no-permission-engine.md.
+enum Role {
+  sysowner
+  admin
+  user
 }
 
-enum UserStatus {
-  ACTIVE
-  SUSPENDED
+// Bounded contexts that ship as separate "apps" inside an Organization.
+// Add new codes when scaffolding the matching apps/<context>/ folder.
+enum AppCode {
+  HRM
+}
+
+model Organization {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  timezone  String    @default("Asia/Ho_Chi_Minh")
+  currency  String    @default("VND")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  users User[]
+
+  @@map("organizations")
 }
 
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  password  String
-  name      String?
-  avatar    String?
-  role      UserRole   @default(USER)
-  status    UserStatus @default(ACTIVE)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String
+  name           String?
+  avatar         String?
+  // Personal title set by the user (e.g. "Senior Engineer"). Distinct from
+  // Employee.title (the formal job title set by HR).
+  title          String?
+  role           Role     @default(user)
+  // Null for sysowner (no Org). Required for role=admin/user — enforced in app code.
+  organizationId String?  @map("organization_id")
+  // 1-1 link to Employee. Null until HR provisions the employee record.
+  employeeId     String?  @unique @map("employee_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt      @map("updated_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  appAdmins    AppAdmin[]
 
   @@map("users")
+}
+
+// Per-app admin grant for users with role=user. Users with role=admin or
+// sysowner inherit appadmin permissions (no record needed for them).
+// See docs/decisions/0003-no-permission-engine.md.
+model AppAdmin {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  organizationId String   @map("organization_id")
+  appCode        AppCode  @map("app_code")
+  // The user (admin Org) who granted this. Null if granted via seed/CLI.
+  grantedBy      String?  @map("granted_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, organizationId, appCode])
+  @@index([organizationId, appCode])
+  @@map("app_admins")
+}
+
+// Append-only log of audit-relevant actions (org structure changes, permission
+// grants, approval workflow). Written async by AuditInterceptor.
+// See docs/decisions/0002-audit-log.md.
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String?  @map("organization_id")
+  actorUserId    String?  @map("actor_user_id")
+  actorIpAddress String?  @map("actor_ip_address")
+  actorUserAgent String?  @map("actor_user_agent")
+  action         String
+  entityType     String   @map("entity_type")
+  entityId       String?  @map("entity_id")
+  diff           Json?
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, entityType, entityId])
+  @@index([actorUserId, createdAt])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
