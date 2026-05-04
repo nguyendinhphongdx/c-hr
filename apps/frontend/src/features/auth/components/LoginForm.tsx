@@ -25,6 +25,15 @@ import { SocialAuthButtons } from "./SocialAuthButtons";
 const LAST_EMAIL_KEY = "auth:lastEmail";
 const REMEMBER_ME_KEY = "auth:rememberMe";
 
+function readRemembered() {
+  if (typeof window === "undefined") return { email: "", rememberMe: false };
+  const rememberMe = localStorage.getItem(REMEMBER_ME_KEY) === "1";
+  return {
+    email: rememberMe ? (localStorage.getItem(LAST_EMAIL_KEY) ?? "") : "",
+    rememberMe,
+  };
+}
+
 const schema = z.object({
   email: z.string().email("Invalid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -35,33 +44,15 @@ type FormValues = z.infer<typeof schema>;
 export function LoginForm() {
   const login = useLogin();
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [remembered] = useState(readRemembered);
+  const [rememberMe, setRememberMe] = useState(remembered.rememberMe);
   const [shake, setShake] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: remembered.email, password: "" },
   });
-
-  // Prefill last email if user opted into "Remember me" previously.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const remembered = localStorage.getItem(REMEMBER_ME_KEY) === "1";
-    if (remembered) {
-      const email = localStorage.getItem(LAST_EMAIL_KEY) ?? "";
-      if (email) form.setValue("email", email);
-      setRememberMe(true);
-    }
-  }, [form]);
-
-  // Shake the form on auth failure for clear visual feedback.
-  useEffect(() => {
-    if (!login.error) return;
-    setShake(true);
-    const t = setTimeout(() => setShake(false), 500);
-    return () => clearTimeout(t);
-  }, [login.error]);
 
   // Cmd/Ctrl+Enter submits — handy when the user is reviewing values.
   useEffect(() => {
@@ -88,7 +79,8 @@ export function LoginForm() {
     try {
       await login.mutateAsync(data);
     } catch (err) {
-      // Toast is a backstop — the inline error block is the primary feedback.
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
       toast.error("Sign-in failed", {
         description:
           err instanceof Error

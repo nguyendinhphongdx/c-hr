@@ -35,22 +35,22 @@ export function VerifyOtpView({ destination }: VerifyOtpViewProps) {
   const [cooldown, setCooldown] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Auto-submit the moment we have a full code.
+  // Auto-submit the moment we have a full code; shake + reset on failure.
   useEffect(() => {
     if (code.length !== OTP_LENGTH || verify.isPending) return;
-    verify.mutate({ code });
+    verify.mutate(
+      { code },
+      {
+        onError: () => {
+          setShake(true);
+          setTimeout(() => {
+            setShake(false);
+            setCode("");
+          }, 500);
+        },
+      },
+    );
   }, [code, verify]);
-
-  // Shake on bad code, then clear so the user can re-enter.
-  useEffect(() => {
-    if (!verify.error) return;
-    setShake(true);
-    const t = setTimeout(() => {
-      setShake(false);
-      setCode("");
-    }, 500);
-    return () => clearTimeout(t);
-  }, [verify.error]);
 
   // Countdown timer for the resend button.
   useEffect(() => {

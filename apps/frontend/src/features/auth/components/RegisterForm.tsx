@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -40,17 +40,12 @@ export function RegisterForm() {
     defaultValues: { full_name: "", email: "", password: "" },
   });
 
-  useEffect(() => {
-    if (!register.error) return;
-    setShake(true);
-    const t = setTimeout(() => setShake(false), 500);
-    return () => clearTimeout(t);
-  }, [register.error]);
-
   const onSubmit = async (data: FormValues) => {
     try {
       await register.mutateAsync(data);
     } catch (err) {
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
       toast.error("Couldn't create account", {
         description:
           err instanceof Error

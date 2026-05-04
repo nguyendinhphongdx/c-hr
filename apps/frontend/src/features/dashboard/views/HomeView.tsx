@@ -12,7 +12,6 @@ import Link from "next/link";
 
 import { GithubIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
