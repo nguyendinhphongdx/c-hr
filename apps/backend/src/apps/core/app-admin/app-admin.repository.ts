@@ -28,12 +28,7 @@ export class AppAdminRepository {
     });
   }
 
-  create(data: {
-    userId: string;
-    organizationId: string;
-    appCode: AppCode;
-    grantedBy: string;
-  }) {
+  create(data: { userId: string; organizationId: string; appCode: AppCode; grantedBy: string }) {
     return this.prisma.appAdmin.create({ data });
   }
 

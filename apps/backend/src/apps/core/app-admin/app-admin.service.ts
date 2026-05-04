@@ -47,9 +47,7 @@ export class AppAdminService {
       throw new BadRequestException('Target user belongs to a different organization');
     }
     if (target.role !== 'user') {
-      throw new BadRequestException(
-        'Target user already inherits app admin (role admin/sysowner)',
-      );
+      throw new BadRequestException('Target user already inherits app admin (role admin/sysowner)');
     }
 
     const existing = await this.repo.findUnique(

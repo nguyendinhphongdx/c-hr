@@ -31,10 +31,7 @@ export class OrganizationController {
 
   @HttpCode(HttpStatus.CREATED)
   @Post('signup')
-  async signup(
-    @Body() dto: SignupDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async signup(@Body() dto: SignupDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.orgService.signup(dto);
     setAuthCookies(res, result, this.configService);
     return result;
@@ -50,10 +47,7 @@ export class OrganizationController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch('me')
-  updateMine(
-    @CurrentUser() user: RequestUser,
-    @Body() dto: UpdateOrganizationDto,
-  ) {
+  updateMine(@CurrentUser() user: RequestUser, @Body() dto: UpdateOrganizationDto) {
     return this.orgService.updateMine(user, dto);
   }
 }

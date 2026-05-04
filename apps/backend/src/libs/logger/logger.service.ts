@@ -35,13 +35,7 @@ export class LoggerService implements NestLoggerService {
   }
 
   private shouldLog(level: LogLevel): boolean {
-    const levels = [
-      LogLevel.ERROR,
-      LogLevel.WARN,
-      LogLevel.INFO,
-      LogLevel.DEBUG,
-      LogLevel.VERBOSE,
-    ];
+    const levels = [LogLevel.ERROR, LogLevel.WARN, LogLevel.INFO, LogLevel.DEBUG, LogLevel.VERBOSE];
     return levels.indexOf(level) <= levels.indexOf(this.logLevel);
   }
 

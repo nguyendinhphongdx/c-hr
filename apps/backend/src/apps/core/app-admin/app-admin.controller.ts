@@ -42,10 +42,7 @@ export class AppAdminController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @Auditable({ action: 'APP_ADMIN_REVOKE', entity: 'AppAdmin' })
-  revoke(
-    @CurrentUser() user: RequestUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  revoke(@CurrentUser() user: RequestUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.revoke(user, id);
   }
 }

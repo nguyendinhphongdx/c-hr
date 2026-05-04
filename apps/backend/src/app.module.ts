@@ -14,6 +14,7 @@ import { MailModule } from './libs/mail/mail.module';
 import { StorageModule } from './libs/storage';
 
 import { CoreModule } from './apps/core/core.module';
+import { HrmModule } from './apps/hrm/hrm.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { CoreModule } from './apps/core/core.module';
     AuditModule,
 
     CoreModule,
+    HrmModule,
   ],
 })
 export class AppModule {}

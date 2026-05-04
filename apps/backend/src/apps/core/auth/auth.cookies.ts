@@ -58,12 +58,8 @@ export function setAuthCookies(
   configService: ConfigService,
 ): void {
   const cfg = getAuthCookieConfig(configService);
-  const accessMaxAge = durationToMs(
-    configService.get<string>('auth.jwtAccessExpiration', '15m'),
-  );
-  const refreshMaxAge = durationToMs(
-    configService.get<string>('auth.jwtRefreshExpiration', '7d'),
-  );
+  const accessMaxAge = durationToMs(configService.get<string>('auth.jwtAccessExpiration', '15m'));
+  const refreshMaxAge = durationToMs(configService.get<string>('auth.jwtRefreshExpiration', '7d'));
 
   res.cookie(cfg.accessName, tokens.accessToken, {
     ...baseCookieOptions(cfg),

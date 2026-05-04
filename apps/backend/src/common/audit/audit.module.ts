@@ -14,9 +14,6 @@ import { AuditWriter } from './audit.writer';
  */
 @Global()
 @Module({
-  providers: [
-    AuditWriter,
-    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
-  ],
+  providers: [AuditWriter, { provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],
 })
 export class AuditModule {}

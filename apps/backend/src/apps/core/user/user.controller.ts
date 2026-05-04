@@ -37,10 +37,7 @@ export class UserController {
 
   @HttpCode(HttpStatus.OK)
   @Patch('me/password')
-  changeMyPassword(
-    @CurrentUser() user: RequestUser,
-    @Body() dto: ChangePasswordDto,
-  ) {
+  changeMyPassword(@CurrentUser() user: RequestUser, @Body() dto: ChangePasswordDto) {
     return this.userService.changePassword(user.id, dto);
   }
 

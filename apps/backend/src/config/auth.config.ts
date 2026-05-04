@@ -14,7 +14,9 @@ export default registerAs('auth', () => ({
     refreshName: REFRESH_COOKIE,
     domain: process.env.COOKIE_DOMAIN || undefined,
     // `secure` is auto-on in production (cross-site cookies require secure=true).
-    secure: (process.env.COOKIE_SECURE ?? (process.env.NODE_ENV === 'production' ? 'true' : 'false')) === 'true',
+    secure:
+      (process.env.COOKIE_SECURE ?? (process.env.NODE_ENV === 'production' ? 'true' : 'false')) ===
+      'true',
     // 'lax' works for same-site, 'none' required for cross-site cookies (must pair with secure=true).
     sameSite: (process.env.COOKIE_SAMESITE || 'lax') as 'lax' | 'strict' | 'none',
   },

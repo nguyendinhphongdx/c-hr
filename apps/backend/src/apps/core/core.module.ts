@@ -13,13 +13,7 @@ import { UserModule } from './user/user.module';
  * depends on. See ADR 0005 (docs/decisions/0005-folder-structure-bounded-contexts.md).
  */
 @Module({
-  imports: [
-    AuthModule,
-    UserModule,
-    OrganizationModule,
-    AppAdminModule,
-    HealthModule,
-  ],
+  imports: [AuthModule, UserModule, OrganizationModule, AppAdminModule, HealthModule],
   exports: [AuthModule, UserModule, OrganizationModule, AppAdminModule],
 })
 export class CoreModule {}
