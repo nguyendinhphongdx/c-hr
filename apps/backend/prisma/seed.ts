@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
+import { DEFAULT_REQUEST_GROUPS } from '../src/apps/requests/groups.config';
+
 // This script doesn't go through NestJS bootstrap, so @nestjs/config
 // isn't loading env for us. Mirror the cascade from src/app.module.ts
 // (first found wins; loadEnvFile does not overwrite already-set vars).
@@ -93,6 +95,27 @@ async function main() {
     role: 'user',
     organizationId: org.id,
   });
+
+  // 3. Default RequestGroups (system-wide). Idempotent upsert by code.
+  for (const g of DEFAULT_REQUEST_GROUPS) {
+    await prisma.requestGroup.upsert({
+      where: { code: g.code },
+      create: {
+        code: g.code,
+        name: g.name,
+        description: g.description,
+        // Prisma JSON column accepts unknown — we trust groups.config.ts.
+        fieldsSchema: g.fieldsSchema as unknown as object,
+        isActive: true,
+      },
+      update: {
+        name: g.name,
+        description: g.description,
+        fieldsSchema: g.fieldsSchema as unknown as object,
+      },
+    });
+    console.log(`✚ request_group seeded: ${g.code}`);
+  }
 }
 
 main()

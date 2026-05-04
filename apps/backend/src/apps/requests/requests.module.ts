@@ -1,17 +1,17 @@
 import { Module } from '@nestjs/common';
 
-import { AttendanceCorrectionModule } from './attendance-correction/attendance-correction.module';
-import { LeaveRequestModule } from './leave-request/leave-request.module';
+import { RequestGroupModule } from './request-group/request-group.module';
+import { RequestModule } from './request/request.module';
 
 /**
- * Requests bounded context — leave + attendance corrections + (future)
- * other approval workflows. All requests share the same orgchart-driven
- * approver routing and PENDING → APPROVED|REJECTED|CANCELLED state machine.
+ * Requests bounded context (F5) — universal Request engine.
  *
- * Per ADR 0005, cross-context imports must go through this barrel.
+ * RequestGroup defines the schema (system-wide); Request is the polymorphic
+ * record (per-Org). Side-effects on approve dispatch via group code (xem
+ * src/apps/requests/side-effects/registry.ts). See ADR 0006.
  */
 @Module({
-  imports: [LeaveRequestModule, AttendanceCorrectionModule],
-  exports: [LeaveRequestModule, AttendanceCorrectionModule],
+  imports: [RequestModule, RequestGroupModule],
+  exports: [RequestModule, RequestGroupModule],
 })
 export class RequestsModule {}

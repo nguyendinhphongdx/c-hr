@@ -50,8 +50,8 @@ model SomeEntity {
 | WorkSchedule | Cấu hình giờ làm chuẩn của Org (T2-T6, 8h-17h, late grace, …). |
 | Timesheet | UI calendar tháng — view của AttendanceLog. Không phải entity. |
 | AttendanceLog | Bản ghi chấm công, đa số đến từ device push (ZKTeco/Hikvision). |
-| AttendanceCorrection | Đơn quên/sai chấm công, gửi duyệt manager để bổ sung log. |
-| LeaveRequest | Đơn xin nghỉ phép (annual/sick/unpaid/…). |
+| RequestGroup | Định nghĩa loại đơn (system-wide): `code`, `name`, `fieldsSchema` (mô tả custom fields). MVP seed: `leave`, `checkin`, `checkout`. |
+| Request | Đơn từ universal — mọi loại đơn (xin nghỉ, quên chấm vào, quên chấm ra, …) cùng dùng table này. `data: Json` validated theo `group.fieldsSchema`. Side-effects khi approve dispatch theo `group.code`. Xem [ADR 0006](decisions/0006-universal-request-engine.md). |
 
 ## Entity outline
 
@@ -96,20 +96,22 @@ model SomeEntity {
 - Push endpoint: `POST /api/v1/attendance-devices/push` xác thực qua `token`.
 
 ### `AttendanceLog`
-- Bản ghi chấm công. **User không tự tạo** — chỉ device push hoặc HR tạo qua AttendanceCorrection được duyệt.
+- Bản ghi chấm công. **User không tự tạo** — chỉ device push hoặc qua đơn `checkin`/`checkout` được duyệt.
 - Fields: `id`, `organizationId`, `employeeId`, `date`, `checkInAt? (datetime)`, `checkOutAt? (datetime)`, `source (DEVICE | CORRECTION | MANUAL_HR)`, `deviceId?`, `deviceLogId?` (idempotency), `note?`, timestamps.
 - Constraint: composite unique `(employeeId, date)` — 1 log/ngày, update thay create nếu push lần 2.
 - Idempotency: `(deviceId, deviceLogId)` unique để device replay không tạo duplicate.
 
-### `AttendanceCorrection`
-- Đơn quên/sai chấm công. Gửi duyệt như LeaveRequest.
-- Fields: `id`, `organizationId`, `requesterId → Employee`, `approverId? → Employee`, `date`, `requestedCheckIn?`, `requestedCheckOut?`, `reason`, `status (PENDING | APPROVED | REJECTED | CANCELLED)`, `approvedAt?`, timestamps.
-- Approve thành công → tạo/update AttendanceLog với `source = CORRECTION`.
+### `RequestGroup`
+- Định nghĩa loại đơn — system-wide (1 record / code chung mọi Org). Xem [ADR 0006](decisions/0006-universal-request-engine.md).
+- Fields: `id`, `code (unique: "leave" | "checkin" | "checkout" | …)`, `name`, `description?`, `fieldsSchema (Json)`, `isActive`, timestamps.
+- `fieldsSchema` shape: `{ fields: [{ key, label, type: "text|textarea|number|date|time|enum", required?, options?, maxLength?, min?, max? }] }`.
+- MVP seed cứng (xem `apps/backend/src/apps/requests/groups.config.ts`). Form-builder UI cho admin Org sửa schema = F5.2 (defer).
 
-### `LeaveRequest`
-- Đơn xin nghỉ phép.
-- Fields: `id`, `organizationId`, `requesterId → Employee`, `approverId? → Employee`, `type (ANNUAL | SICK | UNPAID | MATERNITY | OTHER)`, `startDate`, `endDate`, `reason?`, `status (PENDING | APPROVED | REJECTED | CANCELLED)`, `approvedAt?`, timestamps.
+### `Request`
+- Đơn từ — gộp leave + correction + future (out-of-office, OT, …) vào 1 table polymorphic.
+- Fields: `id`, `organizationId`, `groupId → RequestGroup`, `requesterId → Employee`, `approverId? → Employee`, `status (PENDING | APPROVED | REJECTED | CANCELLED)`, `data (Json — theo group.fieldsSchema)`, `decisionNote?`, `decidedAt?`, timestamps.
 - State machine: `PENDING → APPROVED | REJECTED | CANCELLED`. Không cho ngược.
+- Side-effect khi approve: dispatch theo `group.code` qua registry trong `apps/requests/side-effects/registry.ts`. Hiện tại: `checkin` upsert `check_in_at`, `checkout` upsert `check_out_at`, `leave` no-op (deduct balance defer).
 
 ### `AuditLog`
 - Xem [ADR 0002](decisions/0002-audit-log.md). Schema chi tiết trong ADR.
@@ -126,8 +128,8 @@ Department 0..1 ── 1 Employee (manager) (Department.managerId)
 Organization 1 ── n WorkSchedule 1 ── n WorkShift
 Organization 1 ── n AttendanceDevice 1 ── n AttendanceLog
 Employee 1 ── n AttendanceLog
-Employee 1 ── n AttendanceCorrection (── 0..1 Employee approver)
-Employee 1 ── n LeaveRequest         (── 0..1 Employee approver)
+RequestGroup 1 ── n Request           (system-wide group → per-Org request)
+Employee 1 ── n Request (as requester) (── 0..1 Employee approver)
 ```
 
 ## Invariants
@@ -139,14 +141,16 @@ Mỗi invariant phải map sang 1 check trong code (DB constraint, validation, s
 - **Employee bắt buộc thuộc Department**: `Employee.departmentId` NOT NULL ở tất cả Employee active (kể cả CEO thuộc dept "Ban giám đốc"). Để tránh `getNearestManager()` lỗi không tìm thấy chain.
 - **Department không cycle**: validate trước khi đổi `parentId` — walk up tree, reject nếu gặp lại chính mình.
 - **AttendanceLog**: composite unique `(employeeId, date)`. Idempotent qua `(deviceId, deviceLogId)`.
-- **LeaveRequest / AttendanceCorrection**: `endDate >= startDate` (nếu range). State machine không cho ngược.
+- **Request.data validation**: BE validate `data` keys khớp `group.fieldsSchema` (required, type, enum options, maxLength) trước khi insert. Sai → 400 với message theo field label. Validator self-built ở `apps/requests/request.validator.ts`.
+- **Request state machine**: `PENDING → APPROVED | REJECTED | CANCELLED`. Approver duy nhất quyết — admin/sysowner KHÔNG auto-approve. Reject yêu cầu `decisionNote`. Cancel chỉ requester khi PENDING.
+- **Request side-effects** chạy trong cùng transaction với status update — handler throw → toàn bộ rollback (kể cả APPROVED).
 - **Soft-delete Employee**: chỉ ẩn (`deletedAt`), không hard-delete. Lý do: attendance/leave/audit history phải truy vết được.
 - **AppAdmin**: composite unique `(userId, organizationId, appCode)`. Gán/xoá phải audit log.
 - **Self-approve**: requester có thể chọn chính mình làm `approverId` (vd CEO khi không có nearest manager). KHÔNG auto-approve khi tạo — vẫn flow approve thường (mở đơn, click approve).
 
 ## Approver lookup logic
 
-Khi tạo LeaveRequest/AttendanceCorrection:
+Khi tạo Request (mọi group):
 
 1. BE expose `GET /api/v1/orgchart/approver-candidates?employeeId=X` → trả `{ suggested, candidates[] }`.
 2. `suggested` = `getNearestManager(X)` (xem [ADR 0004](decisions/0004-orgchart-source-of-truth.md)). Nếu null → `suggested` = HRM appadmin đầu tiên.

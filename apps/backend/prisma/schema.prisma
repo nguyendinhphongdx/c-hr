@@ -187,10 +187,8 @@ model Employee {
   user               User?
   attendanceLogs     AttendanceLog[]
 
-  leaveRequestsAsRequester         LeaveRequest[]         @relation("LeaveRequester")
-  leaveRequestsAsApprover          LeaveRequest[]         @relation("LeaveApprover")
-  attendanceCorrectionsAsRequester AttendanceCorrection[] @relation("CorrectionRequester")
-  attendanceCorrectionsAsApprover  AttendanceCorrection[] @relation("CorrectionApprover")
+  requestsAsRequester Request[] @relation("RequestRequester")
+  requestsAsApprover  Request[] @relation("RequestApprover")
 
   @@unique([organizationId, code])
   @@index([organizationId, departmentId])
@@ -287,19 +285,12 @@ model AttendanceLog {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Requests bounded context (F4) — Leave + Attendance Correction.
-// Workflow: requester picks approver from OrgChart candidates → state
-// machine PENDING → APPROVED|REJECTED|CANCELLED. Approve a correction
-// also writes/updates the matching attendance_log row.
+// Universal Request engine (F5) — replaces F4's per-type tables.
+// Một bảng `requests` với polymorphic `data: Json` validated theo
+// `RequestGroup.fieldsSchema`. Side-effects khi approve dispatch theo
+// group code (registry trong src/apps/requests/side-effects/).
+// Xem ADR 0006.
 // ──────────────────────────────────────────────────────────────────────
-
-enum LeaveType {
-  ANNUAL
-  SICK
-  UNPAID
-  MATERNITY
-  OTHER
-}
 
 enum RequestStatus {
   PENDING
@@ -308,53 +299,48 @@ enum RequestStatus {
   CANCELLED
 }
 
-// Đơn xin nghỉ phép. requesterId/approverId trỏ Employee (không phải User)
-// để khớp data orgchart — User của approver có thể chưa link Employee mãi.
-model LeaveRequest {
+// Định nghĩa loại đơn — system-wide (1 record / code chung mọi Org).
+// MVP seed cứng (leave, checkin, checkout). Form-builder UI cho admin
+// Org tự thêm/sửa schema sẽ làm sau (xem F5.2 trong plans/features.md).
+model RequestGroup {
+  id           String   @id @default(uuid())
+  /// "leave", "checkin", "checkout", ... — unique system-wide.
+  code         String   @unique
+  name         String
+  description  String?
+  /// JSON theo dạng { fields: [{ key, label, type, required, options?, ... }] }.
+  /// BE validate request.data trước save; FE dùng render dynamic form.
+  fieldsSchema Json     @map("fields_schema")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt      @map("updated_at")
+
+  requests Request[]
+
+  @@map("request_groups")
+}
+
+// Mọi đơn từ. data là object theo group.fieldsSchema (vd leave có
+// type/startDate/endDate; checkin có date/requestedCheckInAt/reason; ...).
+model Request {
   id             String        @id @default(uuid())
   organizationId String        @map("organization_id")
+  groupId        String        @map("group_id")
   requesterId    String        @map("requester_id")
   approverId     String?       @map("approver_id")
-  type           LeaveType
-  startDate      DateTime      @map("start_date") @db.Date
-  endDate        DateTime      @map("end_date") @db.Date
-  reason         String?
   status         RequestStatus @default(PENDING)
-  /// Required when status = REJECTED. Optional otherwise.
+  data           Json
   decisionNote   String?       @map("decision_note")
   decidedAt      DateTime?     @map("decided_at")
   createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  updatedAt      DateTime      @updatedAt      @map("updated_at")
 
-  requester Employee  @relation("LeaveRequester", fields: [requesterId], references: [id])
-  approver  Employee? @relation("LeaveApprover", fields: [approverId], references: [id])
-
-  @@index([organizationId, requesterId])
-  @@index([organizationId, approverId, status])
-  @@map("leave_requests")
-}
-
-// Đơn quên/sai chấm công. Approve thành công → upsert AttendanceLog với
-// source = CORRECTION (xem requests/attendance-correction service).
-model AttendanceCorrection {
-  id                  String        @id @default(uuid())
-  organizationId      String        @map("organization_id")
-  requesterId         String        @map("requester_id")
-  approverId          String?       @map("approver_id")
-  date                DateTime      @db.Date
-  requestedCheckInAt  DateTime?     @map("requested_check_in_at")
-  requestedCheckOutAt DateTime?     @map("requested_check_out_at")
-  reason              String
-  status              RequestStatus @default(PENDING)
-  decisionNote        String?       @map("decision_note")
-  decidedAt           DateTime?     @map("decided_at")
-  createdAt           DateTime      @default(now()) @map("created_at")
-  updatedAt           DateTime      @updatedAt @map("updated_at")
-
-  requester Employee  @relation("CorrectionRequester", fields: [requesterId], references: [id])
-  approver  Employee? @relation("CorrectionApprover", fields: [approverId], references: [id])
+  group     RequestGroup @relation(fields: [groupId], references: [id])
+  requester Employee     @relation("RequestRequester", fields: [requesterId], references: [id])
+  approver  Employee?    @relation("RequestApprover", fields: [approverId], references: [id])
 
   @@index([organizationId, requesterId])
   @@index([organizationId, approverId, status])
-  @@map("attendance_corrections")
+  @@index([organizationId, groupId, status])
+  @@map("requests")
 }

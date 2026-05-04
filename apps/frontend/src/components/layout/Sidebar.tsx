@@ -3,10 +3,9 @@
 import {
   Building2,
   Calendar,
-  FileText,
+  Inbox,
   Home,
   Network,
-  PencilLine,
   Settings,
   Sparkles,
   Users,
@@ -61,8 +60,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Requests",
     items: [
-      { href: "/leave", label: "Leave", icon: FileText },
-      { href: "/attendance-corrections", label: "Corrections", icon: PencilLine },
+      { href: "/requests", label: "Requests", icon: Inbox },
     ],
   },
 ];

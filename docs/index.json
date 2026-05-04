@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-04T15:56:21.204Z",
+  "generatedAt": "2026-05-04T16:41:00.446Z",
   "repoRelativeRoot": ".",
-  "count": 43,
+  "count": 44,
   "entries": [
     {
       "id": "AGENTS",
@@ -216,8 +216,8 @@
         "`WorkSchedule` + `WorkShift`",
         "`AttendanceDevice`",
         "`AttendanceLog`",
-        "`AttendanceCorrection`",
-        "`LeaveRequest`",
+        "`RequestGroup`",
+        "`Request`",
         "`AuditLog`",
         "Relationships",
         "Invariants",
@@ -343,7 +343,12 @@
         "BE",
         "FE",
         "Done-when",
-        "Feature 4 — Requests: LeaveRequest + AttendanceCorrection",
+        "Feature 5 — Universal Request engine",
+        "BE",
+        "FE",
+        "Smoke E2E (curl, 2026-05-04)",
+        "Defers (F5.2 / future)",
+        "Feature 4 — Requests: LeaveRequest + AttendanceCorrection (superseded)",
         "BE",
         "FE",
         "Done-when",
@@ -545,6 +550,38 @@
         "References"
       ],
       "summary": "- **Status**: Accepted - **Date**: 2026-05-03 - **Deciders**: @nguyendinhphongdx"
+    },
+    {
+      "id": "docs:decisions:0006-universal-request-engine",
+      "path": "docs/decisions/0006-universal-request-engine.md",
+      "title": "ADR 0006: Universal Request engine — RequestGroup + Request + side-effects",
+      "description": "One polymorphic table for every kind of request (leave, attendance correction, OT, OOO, …) instead of per-type tables. Validated by JSON fieldsSchema, dispatched on approve via a code-keyed registry.",
+      "tags": [
+        "project",
+        "adr",
+        "decision",
+        "requests",
+        "polymorphic",
+        "schema",
+        "side-effects"
+      ],
+      "scope": "decision",
+      "category": "decisions",
+      "headings": [
+        "Context",
+        "Decision",
+        "Schema",
+        "`fieldsSchema` shape",
+        "Validation",
+        "Side-effect dispatch",
+        "Authorisation & workflow",
+        "Group governance (MVP)",
+        "Consequences",
+        "Alternatives considered",
+        "Migration plan",
+        "References"
+      ],
+      "summary": "- **Status**: Accepted (supersedes the per-type tables introduced in F4) - **Date**: 2026-05-04 - **Deciders**: @nguyendinhphongdx"
     },
     {
       "id": "docs:backend:recipes:add-cli-command",

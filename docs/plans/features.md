@@ -28,7 +28,8 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 1 | Auth + Org + AppAdmin | ✅ done | Signup Org / me / admin grant/revoke, audit log, isAdmin/isAppAdmin helpers |
 | 2 | HRM core: Department + Employee + OrgChart | ✅ done | CRUD đủ, OrgChart CTE + approver candidates, EmployeePicker, dept manager auto-link, soft-delete, edit pages |
 | 3 | Attendance | ✅ done | BE 4 modules + 3 FE features. Migration f3_user_personal_info applied. API smoke 7/7 verify items pass (curl). FE typecheck/lint sạch. UI render manual smoke pending khi user demo. |
-| 4 | Requests | ✅ done | BE 2 modules (leave-request + attendance-correction) + FE 2 features + sidebar enable. Migration f4_requests applied. API smoke E2E pass: leave create→approve, correction create→approve→AttendanceLog upsert source=CORRECTION. FE typecheck/lint sạch. Audit entries cho mọi action mutate. **Defer**: sidebar badge pending count, email notification (event emitter sẵn `leave-request.created/approved/...` cho subscriber sau). |
+| 4 | Requests (per-type) | ⛔ superseded | F4 đã build LeaveRequest + AttendanceCorrection riêng — refactor sang F5 universal engine vì cần mở rộng (out-of-office, OT, …). Tables drop trong migration `f5_universal_requests`. |
+| 5 | Requests (universal engine) | ✅ done | RequestGroup + Request polymorphic, `data: Json` validated theo `group.fieldsSchema`. 3 group seed: `leave`, `checkin`, `checkout`. Side-effect registry dispatch theo group code (checkin/checkout upsert AttendanceLog, leave no-op MVP). FE: master-detail UI + DynamicForm render theo schema. ADR 0006. |
 
 ### F3 verify checklist (đã chạy 2026-05-04 qua curl, BE :8000 + DB Docker)
 
@@ -63,7 +64,8 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 1 | **Auth + Org + User + AppAdmin** | core, platform, hrm | `Organization`, mở rộng `User` (`role`, `title`, `organizationId`, `employeeId`), `AppAdmin` model + module gán/xoá (admin Org gán cho user role=user), signup flow Org | Trang đăng ký Org (tạo Org + admin user), trang `/settings/organization`, trang `/settings/app-admins` (admin Org grant/revoke), profile edit (set `User.title`) | 0 |
 | 2 | **HRM core: Department + Employee + OrgChart** | hrm | `Department` (nested + manager), `Employee` (departmentId, title, soft-delete, link User↔Employee), `OrgChartService` (CTE chain query, `getApproverCandidates`), `/orgchart` endpoints | `features/employees/` (list, search, profile), `features/departments/` (CRUD + tree picker), `features/orgchart/` 2 view React Flow (reporting line + department structure) | 1 |
 | 3 | **Attendance: WorkSchedule + Device + Log + Timesheet UI** | attendance | `WorkSchedule` config, `AttendanceDevice` registry + push endpoint, `AttendanceLog` (composite unique `employee_id, date`, idempotent qua `event_log_id`), `Timesheet` query API trả về log theo tháng. **MVP simplified:** generic JSON push contract, no brand adapter. | `/settings/work-schedule`, `/settings/attendance-devices`, `/timesheet` (calendar tháng — grid 7 cột, mỗi ô check-in/out + status badge). `/timesheet/team` deferred. | 2 |
-| 4 | **Requests: LeaveRequest + AttendanceCorrection** | requests | Module `requests/leave-request/` + `requests/attendance-correction/`, state machine `PENDING → APPROVED/REJECTED/CANCELLED`, approve workflow dùng `OrgChartService.getApproverCandidates`, approve `AttendanceCorrection` → tạo/update `AttendanceLog` source `CORRECTION`, mail notification async, `@Auditable` cho approve/reject | `features/leave/` (list filtered by role, create form với approver dropdown, detail + approve/reject UI), `features/attendance-correction/` tương tự, badge số đơn pending trên sidebar | 2, 3 |
+| 4 | ⛔ **Requests per-type** (superseded by F5) | requests | Đã build `LeaveRequest` + `AttendanceCorrection` rời. Refactor sang universal engine F5 vì cần mở rộng linh hoạt cho các loại đơn khác (OT, OOO, …). Drop trong migration `f5_universal_requests`. | — | — |
+| 5 | **Requests: Universal engine + form-builder defer** | requests | `RequestGroup` (system-wide, `fieldsSchema` JSON) + `Request` polymorphic. Validation engine self-built. Side-effect registry keyed by group code (checkin/checkout upsert AttendanceLog). 3 group seed: `leave`, `checkin`, `checkout`. ADR 0006. | `/requests` master-detail (list + preview pane). `DynamicForm` render từ `fieldsSchema`. `/requests/new` chọn group → form. Sidebar gộp 1 link "Requests". | 2, 3 |
 
 Mỗi feature **kết thúc xanh khi**:
 
@@ -469,7 +471,45 @@ User KHÔNG tự tạo log. Chỉ device push hoặc HR tạo qua AttendanceCorr
 - Composite unique enforced (push 2 lần cùng day → update, không create).
 - User role=user chỉ xem mình; HRM appadmin xem team.
 
-## Feature 4 — Requests: LeaveRequest + AttendanceCorrection
+## Feature 5 — Universal Request engine
+
+Replaces the original F4 (LeaveRequest + AttendanceCorrection per-type tables) with a polymorphic `Request` table + `RequestGroup` schema. See [ADR 0006](../decisions/0006-universal-request-engine.md).
+
+### BE
+
+- [x] Schema: drop `LeaveRequest` + `AttendanceCorrection`; add `RequestGroup` (system-wide) + `Request` (per-Org). Migration `f5_universal_requests`.
+- [x] `groups.config.ts` — hard-coded definitions for `leave`, `checkin`, `checkout` with their `fieldsSchema`. Seed upserts on each `prisma:seed` run.
+- [x] `request.validator.ts` — self-built validator: required, text/textarea maxLength, number min/max, date YYYY-MM-DD, time HH:MM, enum options.
+- [x] `side-effects/registry.ts` — handlers keyed by group code. `checkin` upserts `attendance_logs.check_in_at`, `checkout` upserts `check_out_at`. Both run inside the approve transaction so a thrown handler rolls back the status update.
+- [x] Module `requests/request` — CRUD + approve/reject/cancel + `@Auditable`. List supports `scope=mine|incoming` + `groupId` + `status` filters; HRM appadmin sees all in Org.
+- [x] Module `requests/request-group` — read-only list/get for the schema dropdown.
+- [x] `RequestsModule` barrel + wired into `AppModule`.
+
+### FE
+
+- [x] `features/requests/` — types/services/hooks, `DynamicForm` (renders `Input/Select/Textarea` per field type), `DynamicDataView` (read-only render), `StatusBadge`, `RequestPreview` (right panel with approve/reject/cancel actions).
+- [x] `RequestListView` — master-detail layout (left: filtered list with group + scope filters, right: preview pane with decision actions). 2-column grid (resizable handle deferred — type mismatch with installed `react-resizable-panels`).
+- [x] `RequestCreateView` — group select → DynamicForm → approver select. Pre-fills `?group=&date=` from query so timesheet "Tạo đơn quên chấm" can deep-link.
+- [x] App routes `/requests`, `/requests/new`. Sidebar gộp 1 link "Requests" (was 2 — Leave + Corrections).
+
+### Smoke E2E (curl, 2026-05-04)
+
+- [x] List request-groups → 3 seeded groups returned with full schema
+- [x] Create leave with full data → 201
+- [x] Create leave missing required field → 400 "Trường 'Đến ngày' là bắt buộc"
+- [x] Create leave with bad enum → 400 "'Loại nghỉ' phải là một trong: ANNUAL, SICK, ..."
+- [x] Create checkin → approve → AttendanceLog row upserted with `source=CORRECTION` + `check_in_at` from `data.requestedCheckInAt` + `note` from `data.reason`
+- [x] audit_logs entries: `REQUEST_CREATE`, `REQUEST_APPROVE`
+
+### Defers (F5.2 / future)
+
+- **Form-builder UI** for admin Org to add/edit RequestGroup `fieldsSchema` through a drag-drop interface. MVP: seed cứng + change-via-release.
+- **Resizable panel** (drag-to-resize) — current 2-column grid is static at md breakpoint.
+- **Sidebar pending-count badge** — endpoint `request.repository.countPendingByApprover` exists; FE polling to drive badge is the remaining bit.
+- **Email notifications** — events emitted (`request.<group>.created/approved/rejected/cancelled`) but no MailService listener yet.
+- **`leave` side-effect** — deduct leave-balance when leave-balance entity is added (later feature).
+
+## Feature 4 — Requests: LeaveRequest + AttendanceCorrection (superseded)
 
 Đơn từ — workflow approval qua orgchart.
 
