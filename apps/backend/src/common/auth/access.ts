@@ -1,4 +1,4 @@
-import { AppCode, User } from '@prisma/client';
+import { AppCode, Role } from '@prisma/client';
 
 import { PrismaService } from '@libs/database/prisma.service';
 
@@ -14,13 +14,24 @@ import { PrismaService } from '@libs/database/prisma.service';
  */
 
 /**
+ * Subset of User fields the helpers actually read. Both the full Prisma
+ * `User` row and the leaner `RequestUser` (carried on req.user) satisfy
+ * this — no cast needed at call sites.
+ */
+export interface AccessUser {
+  id: string;
+  role: Role;
+  organizationId: string | null;
+}
+
+/**
  * Org-level admin check.
  *
  * Pass when:
  *   - user.role === 'sysowner' (cross-Org), OR
  *   - user.role === 'admin' AND user.organizationId === organizationId.
  */
-export function isAdmin(user: User, organizationId: string): boolean {
+export function isAdmin(user: AccessUser, organizationId: string): boolean {
   if (user.role === 'sysowner') return true;
   return user.role === 'admin' && user.organizationId === organizationId;
 }
@@ -33,7 +44,7 @@ export function isAdmin(user: User, organizationId: string): boolean {
  *   - user belongs to the Org AND has an AppAdmin record for (app, Org).
  */
 export async function isAppAdmin(
-  user: User,
+  user: AccessUser,
   app: AppCode,
   organizationId: string,
   prisma: PrismaService,
