@@ -38,7 +38,7 @@ C-HR (**C-OpenAI Human Resource**) là SaaS quản lý nhân sự cho doanh nghi
 
 ## Cross-cutting hard rules (root)
 
-1. **`.env` không commit.** Mỗi tầng có file riêng: `.env` ở root (cho docker-compose), `apps/backend/.env`, `apps/frontend/.env.local`. Template tương ứng `.env.example` ở từng nơi.
+1. **`.env` không commit.** Root không có `.env` — `docker-compose.yml` dùng `env_file: ./apps/backend/.env` cho BE container và `include:` infra service từ `services/*` (postgres/redis dùng default). Mỗi app có template `.env.example` riêng: `apps/backend/.env.example` + `apps/frontend/.env.example`.
 2. **Dockerfile / docker-compose** chỉ sửa khi orchestration thay đổi. Khi thêm service mới, theo pattern: `services/<name>/docker-compose.yml` + extends trong root compose.
 3. **`scripts/dev.sh`** là entry point thống nhất cho dev. Đừng viết script riêng tản mác — bổ sung command vào file này.
 4. **MCP server** — root [.mcp.json](.mcp.json) đăng ký 1 server `c-hr-docs` ([mcp/docs-server](mcp/docs-server/)). Dùng `docs_list / docs_search / docs_read` thay vì grep markdown.
@@ -87,11 +87,10 @@ pnpm docs:index                      # rebuild docs/index.json
 ├── .claude/
 │   ├── settings.json         # permissions + hooks
 │   └── agents/               # code-reviewer, module-scaffolder (BE), page-scaffolder (FE)
-├── docker-compose.yml        # root: postgres + redis + backend
+├── docker-compose.yml        # root: include services/{postgres,redis} + backend (env_file BE)
 ├── docker-compose.dev.yml    # override: BE hot-reload, source mount
 ├── .mcp.json                 # c-hr-docs server
-├── pnpm-workspace.yaml       # apps/*, packages/*
-└── .env.example              # template root env (cho docker-compose)
+└── pnpm-workspace.yaml       # apps/*, mcp/*
 ```
 
 ## Workflow expectations

@@ -26,7 +26,6 @@
 ├── docker-compose.yml        root orchestration
 ├── docker-compose.dev.yml    override hot-reload BE
 ├── pnpm-workspace.yaml
-├── .env.example
 ├── .mcp.json                 c-hr-docs server
 ├── .claude/                  permissions + subagents (code-reviewer, scaffolders)
 └── CLAUDE.md / AGENTS.md     instructions cho AI coding agents
@@ -41,11 +40,11 @@
 ## Quick start
 
 ```bash
-# 1. Copy env (root .env chỉ phục vụ docker-compose, BE/FE đọc env riêng)
-cp .env.example .env
+# 1. Copy env per app — root không còn .env, compose đọc env_file của
+#    từng service (apps/backend/.env cho BE, services/* dùng default).
 cp apps/backend/.env.example apps/backend/.env
 cp apps/frontend/.env.example apps/frontend/.env.local
-# Sửa các JWT_*_SECRET trong .env và apps/backend/.env
+# Sửa các JWT_*_SECRET trong apps/backend/.env trước khi start.
 
 # 2. Install deps
 pnpm install
