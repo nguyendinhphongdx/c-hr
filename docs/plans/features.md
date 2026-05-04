@@ -38,26 +38,25 @@ Mỗi feature **kết thúc xanh khi**:
 
 ## Feature 0 — Foundation
 
-Dọn nền + thêm building block dùng chung.
+Dọn nền **không đụng schema**. Mọi việc cần model mới (BaseRepository tenant-scoped, isAdmin/isAppAdmin helpers, audit_logs) đẩy vào Feature 1 — vì chúng require Schema migration của Feature 1 (Organization, AppAdmin, Role enum mới) chạy trước.
 
 ### BE
 
-- [ ] **Migrate folder structure** (theo [ADR 0005](../decisions/0005-folder-structure-bounded-contexts.md)):
-  - `git mv src/modules/auth → src/apps/core/auth`
-  - `git mv src/modules/user → src/apps/core/user`
-  - `git mv src/modules/health → src/apps/core/health`
-  - Tạo `src/apps/core/core.module.ts` (re-export Auth/User/Health module)
-  - Update `src/app.module.ts`: `imports: [CoreModule, …]`
-  - Update `tsconfig.json` paths: drop `@modules/*`, add `@apps/*`
-  - Update `package.json` jest `moduleNameMapper`
-  - `pnpm build` xanh
-- [ ] **`BaseRepository<T>` generic** trong `src/common/repository/base.repository.ts` với method chuẩn (`findManyByOrg`, `findByIdByOrg`, `createForOrg`, `updateByOrg`, `softDeleteByOrg`, `*Raw` variants). Dùng generic `<TModel, TWhereInput, TCreateInput, TUpdateInput>`.
-- [ ] **`audit_logs` table** + `@Auditable()` decorator + `AuditInterceptor` (xem [ADR 0002](../decisions/0002-audit-log.md)). Write async qua `@nestjs/event-emitter`. Redact danh sách field nhạy cảm cấu hình trong `AuditableOptions`.
-- [ ] **`isAdmin` + `isAppAdmin` helpers** trong `src/common/auth/access.ts` (xem [ADR 0003](../decisions/0003-no-permission-engine.md)) — `isAdmin(user, orgId)` cho admin Org, `isAppAdmin(user, app, orgId)` cho appadmin (admin tự pass). Chưa enforce ở Feature 0, chuẩn bị cho Feature 1.
-- [ ] **Prisma schema convention check**: thêm rule lint custom hoặc check thủ công — mọi model phải có `@@map`, mọi field non-id phải có `@map` nếu camelCase. (Optional script: `scripts/check-prisma-naming.js`.)
+- [x] **Migrate folder structure** (theo [ADR 0005](../decisions/0005-folder-structure-bounded-contexts.md)) — commit `0ce93d1`:
+  - `git mv src/modules/{auth,user,health} → src/apps/core/{auth,user,health}`
+  - `src/apps/core/core.module.ts` re-export Auth/User/Health.
+  - `src/app.module.ts` import `CoreModule` thay 3 module.
+  - `tsconfig.json` + jest `moduleNameMapper`: drop `@modules/*`, add `@apps/*`.
+- [x] **BE eslint flat config** — commit `b85516c`:
+  - `.eslintrc.cjs` → `eslint.config.mjs` (eslint 9 yêu cầu).
+  - Dùng deps có sẵn (`@typescript-eslint/*`, `eslint-plugin-prettier`, `eslint-config-prettier`) — không thêm package mới.
+  - Per-file override cho `src/libs/storage/providers/*.provider.ts` (allow `require()` cho optional deps lazy load).
+  - Lint script `eslint . --fix`.
 
 ### FE
 
+- [ ] Fix [`apps/frontend/src/features/auth/components/LoginForm.tsx`](apps/frontend/src/features/auth/components/LoginForm.tsx) — 2 errors `react-hooks/set-state-in-effect`.
+- [ ] Fix [`apps/frontend/src/features/auth/components/RegisterForm.tsx`](apps/frontend/src/features/auth/components/RegisterForm.tsx) — error tương tự.
 - [ ] Fix [`apps/frontend/src/features/auth/views/VerifyOtpView.tsx:47`](apps/frontend/src/features/auth/views/VerifyOtpView.tsx#L47) — bỏ `setShake/setCode` ra khỏi useEffect body.
 - [ ] Fix [`apps/frontend/src/features/dashboard/views/HomeView.tsx:15`](apps/frontend/src/features/dashboard/views/HomeView.tsx#L15) — bỏ import `Button` không dùng.
 - [ ] `pnpm --filter @c-hr/frontend check` xanh.
@@ -65,14 +64,22 @@ Dọn nền + thêm building block dùng chung.
 
 ### Done-when
 
-- Migrations applied (`audit_logs` exist).
-- Folder migrate xong, BE build + smoke test xanh.
+- Folder migrate xong, BE build + lint xanh.
 - FE check xanh.
-- Helper `isAppAdmin` có unit test.
+- Sidebar có slot disabled cho mọi context sắp implement.
+
+### Defer sang Feature 1 (cần schema)
+
+- `BaseRepository<T>` generic — chờ entity tenant-scoped đầu tiên (Organization). Pattern thật chỉ rõ khi >=2 repo concrete tồn tại. Có thể bắt đầu concrete `OrganizationRepository` trong F1, extract base ở F2 khi `EmployeeRepository` cùng pattern.
+- `isAdmin` + `isAppAdmin` helpers — depend `Role` enum mới (`sysowner|admin|user`), `User.organizationId`, table `app_admins`.
+- `audit_logs` + `@Auditable` decorator + `AuditInterceptor` — depend `AuditLog` model + FK đến User mở rộng. Spec ở [ADR 0002](../decisions/0002-audit-log.md).
+- Prisma naming-convention check script — nice-to-have, defer.
 
 ## Feature 1 — Auth + Organization + User + AppAdmin
 
 Chuyển app từ "1 hệ thống User" → "Org multi-tenant với 3 role (`sysowner`, `admin`, `user`) + AppAdmin per-app cho user `role=user`".
+
+> Bao gồm cả 3 task infrastructure defer từ Feature 0 (BaseRepository, access helpers, audit log) — tất cả depend vào schema mới của F1.
 
 ### BE
 
@@ -127,6 +134,9 @@ Chuyển app từ "1 hệ thống User" → "Org multi-tenant với 3 role (`sys
   }
   ```
 - [ ] Migration: drop `enum UserRole` cũ (ADMIN/USER) → seed mới: `ADMIN` boilerplate → `admin` (organization_id sẽ gán sau khi tạo Org seed); thêm 1 sysowner cho dev. Trường `organization_id` nullable trong migration step 1, NOT NULL cho user role=admin/user enforced ở app code.
+- [ ] **`isAdmin` + `isAppAdmin` helpers** (defer từ F0) trong `src/common/auth/access.ts`. Spec ở [ADR 0003](../decisions/0003-no-permission-engine.md). Unit test riêng cho `isAppAdmin` (admin/sysowner pass tự động, user role=user query DB).
+- [ ] **`audit_logs` infra** (defer từ F0): `AuditLog` model + migration, `@Auditable()` decorator + `AuditInterceptor`, write async qua `@nestjs/event-emitter`. Spec ở [ADR 0002](../decisions/0002-audit-log.md). Apply lên các endpoint AppAdmin grant/revoke ngay trong F1.
+- [ ] **`OrganizationRepository` concrete** (kèm Org module). Khi viết `EmployeeRepository` ở F2, nếu pattern lặp → extract `BaseRepository<T>` generic. **Không** scaffold base trước.
 - [ ] **Module `core/organization`**:
   - `POST /api/v1/organizations/signup` — public, tạo Org + user đầu tiên (role=admin) trong 1 transaction. Admin tự bao quyền appadmin → không cần tạo AppAdmin record.
   - `GET /api/v1/organizations/me` — Org của user đang login.
