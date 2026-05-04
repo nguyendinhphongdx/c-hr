@@ -47,9 +47,10 @@ export class OrgChartService {
   async getReportingLine(currentUser: RequestUser, employeeId: string) {
     const orgId = this.requireOrg(currentUser);
     const employee = await this.requireEmployeeInOrg(orgId, employeeId);
-    if (!employee.departmentId) return [];
+    const startDeptId = await this.resolveStartDept(orgId, employee);
+    if (!startDeptId) return [];
 
-    const managerIds = await this.collectManagerChain(employee.departmentId, employeeId);
+    const managerIds = await this.collectManagerChain(startDeptId, employeeId);
     if (managerIds.length === 0) return [];
 
     const managers = await this.prisma.employee.findMany({
@@ -81,11 +82,10 @@ export class OrgChartService {
   async getApproverCandidates(currentUser: RequestUser, employeeId: string) {
     const orgId = this.requireOrg(currentUser);
     const employee = await this.requireEmployeeInOrg(orgId, employeeId);
+    const startDeptId = await this.resolveStartDept(orgId, employee);
 
     // Manager chain (nearest first).
-    const managerIds = employee.departmentId
-      ? await this.collectManagerChain(employee.departmentId, employeeId)
-      : [];
+    const managerIds = startDeptId ? await this.collectManagerChain(startDeptId, employeeId) : [];
 
     // HRM appadmins + Org admins. Both groups have permission to approve
     // org-structure-related workflows; surfacing them as candidates lets the
@@ -166,6 +166,24 @@ export class OrgChartService {
     });
     if (!employee) throw new NotFoundException('Employee not found in organization');
     return employee;
+  }
+
+  /**
+   * Pick the department to start the chain walk from. Prefer the
+   * employee's own departmentId; if it's null, fall back to a department
+   * they manage. This keeps reporting-line useful even when the manager's
+   * dept assignment hasn't been set yet (legacy data, post-signup state).
+   */
+  private async resolveStartDept(
+    orgId: string,
+    employee: { id: string; departmentId: string | null },
+  ): Promise<string | null> {
+    if (employee.departmentId) return employee.departmentId;
+    const managed = await this.prisma.department.findFirst({
+      where: { managerId: employee.id, organizationId: orgId, deletedAt: null },
+      select: { id: true },
+    });
+    return managed?.id ?? null;
   }
 
   /**

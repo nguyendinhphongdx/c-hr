@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useIsAppAdmin } from "@/features/auth";
+import { useDepartments } from "@/features/departments";
 import type { ID } from "@/lib/types";
 
 import { useEmployee } from "../hooks/useEmployees";
@@ -29,6 +30,7 @@ function formatDate(value: string | null): string {
 export function EmployeeDetailView({ id }: EmployeeDetailViewProps) {
   const canManage = useIsAppAdmin("HRM");
   const employee = useEmployee(id);
+  const departments = useDepartments();
 
   if (employee.isLoading) {
     return (
@@ -53,6 +55,10 @@ export function EmployeeDetailView({ id }: EmployeeDetailViewProps) {
 
   const e = employee.data;
   const fullName = `${e.firstName} ${e.lastName}`.trim();
+  const dept = e.departmentId
+    ? departments.data?.find((d) => d.id === e.departmentId)
+    : null;
+  const deptLabel = dept ? `${dept.name}${dept.code ? ` · ${dept.code}` : ""}` : "—";
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-8">
@@ -70,7 +76,16 @@ export function EmployeeDetailView({ id }: EmployeeDetailViewProps) {
               {e.title ?? "No title set"} · <span className="font-mono">{e.code}</span>
             </CardDescription>
           </div>
-          <Badge>{e.status.replace("_", " ").toLowerCase()}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge>{e.status.replace("_", " ").toLowerCase()}</Badge>
+            {canManage && (
+              <Button asChild size="sm" variant="outline" className="gap-2">
+                <Link href={`/employees/${e.id}/edit`}>
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </Link>
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <Field label="Email" value={e.email} mono />
@@ -84,16 +99,9 @@ export function EmployeeDetailView({ id }: EmployeeDetailViewProps) {
               value={formatDate(e.terminationDate)}
             />
           )}
-          <Field label="Department" value={e.departmentId ?? "—"} mono small />
+          <Field label="Department" value={deptLabel} />
         </CardContent>
       </Card>
-
-      {canManage && (
-        <p className="text-xs text-muted-foreground">
-          Edit / soft-delete UI coming next iteration. For now, edits land via
-          the API directly.
-        </p>
-      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 import { isAppAdmin } from '@/common/auth/access';
 import { RequestUser } from '@/common/types';
@@ -38,12 +39,23 @@ export class DepartmentService {
     if (dto.parentId) await this.assertParentInOrg(orgId, dto.parentId);
     if (dto.managerId) await this.assertManagerInOrg(orgId, dto.managerId);
 
-    return this.repo.create({
-      organizationId: orgId,
-      name: dto.name,
-      code: dto.code,
-      parentId: dto.parentId,
-      managerId: dto.managerId,
+    return this.prisma.$transaction(async (tx) => {
+      const dept = await tx.department.create({
+        data: {
+          organizationId: orgId,
+          name: dto.name,
+          code: dto.code,
+          parentId: dto.parentId,
+          managerId: dto.managerId,
+        },
+        include: {
+          manager: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+      if (dto.managerId) {
+        await this.linkManagerToDept(tx, dto.managerId, dept.id);
+      }
+      return dept;
     });
   }
 
@@ -62,11 +74,23 @@ export class DepartmentService {
       await this.assertManagerInOrg(orgId, dto.managerId);
     }
 
-    return this.repo.update(id, {
-      name: dto.name ?? undefined,
-      code: dto.code ?? undefined,
-      parentId: dto.parentId,
-      managerId: dto.managerId,
+    return this.prisma.$transaction(async (tx) => {
+      const dept = await tx.department.update({
+        where: { id },
+        data: {
+          name: dto.name ?? undefined,
+          code: dto.code ?? undefined,
+          parentId: dto.parentId,
+          managerId: dto.managerId,
+        },
+        include: {
+          manager: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+      if (dto.managerId) {
+        await this.linkManagerToDept(tx, dto.managerId, id);
+      }
+      return dept;
     });
   }
 
@@ -109,6 +133,29 @@ export class DepartmentService {
     });
     if (!employee) {
       throw new BadRequestException('Manager employee not found in organization');
+    }
+  }
+
+  /**
+   * If the manager has no department yet, attach them to this one — so
+   * the reporting-line walker (orgchart) can reach them. We don't reassign
+   * managers who already work in another department; their assignment is
+   * managed via Employee admin separately.
+   */
+  private async linkManagerToDept(
+    tx: Prisma.TransactionClient,
+    employeeId: string,
+    deptId: string,
+  ) {
+    const emp = await tx.employee.findUnique({
+      where: { id: employeeId },
+      select: { departmentId: true },
+    });
+    if (emp && emp.departmentId === null) {
+      await tx.employee.update({
+        where: { id: employeeId },
+        data: { departmentId: deptId },
+      });
     }
   }
 

@@ -1,10 +1,17 @@
 import type { ID, ISODate, Nullable } from "@/lib/types";
 
+export interface DepartmentManager {
+  id: ID;
+  firstName: string;
+  lastName: string;
+}
+
 export interface Department {
   id: ID;
   organizationId: ID;
   parentId: Nullable<ID>;
   managerId: Nullable<ID>;
+  manager: Nullable<DepartmentManager>;
   name: string;
   code: Nullable<string>;
   createdAt: ISODate;

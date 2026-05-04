@@ -11,12 +11,18 @@ export class DepartmentRepository {
     return this.prisma.department.findMany({
       where: { organizationId, deletedAt: null },
       orderBy: { name: 'asc' },
+      include: {
+        manager: { select: { id: true, firstName: true, lastName: true } },
+      },
     });
   }
 
   findByIdByOrg(organizationId: string, id: string) {
     return this.prisma.department.findFirst({
       where: { id, organizationId, deletedAt: null },
+      include: {
+        manager: { select: { id: true, firstName: true, lastName: true } },
+      },
     });
   }
 

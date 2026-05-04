@@ -1,12 +1,10 @@
-import {
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  MaxLength,
-  MinLength,
-  ValidateIf,
-} from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
+
+// Global ValidationPipe has `enableImplicitConversion: true`, which would
+// otherwise coerce null → "null" for `string` fields and break the IsUUID
+// check. Keep null as null so IsOptional skips validation.
+const passThrough = ({ value }: { value: unknown }) => value;
 
 export class UpdateDepartmentDto {
   @IsOptional()
@@ -16,13 +14,13 @@ export class UpdateDepartmentDto {
   name?: string;
 
   /** Pass null explicitly to detach from parent (move to root). */
-  @ValidateIf((_, v) => v !== null)
+  @Transform(passThrough)
   @IsOptional()
   @IsUUID()
   parentId?: string | null;
 
   /** Pass null explicitly to clear manager. */
-  @ValidateIf((_, v) => v !== null)
+  @Transform(passThrough)
   @IsOptional()
   @IsUUID()
   managerId?: string | null;

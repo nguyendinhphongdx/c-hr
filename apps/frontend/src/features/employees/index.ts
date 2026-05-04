@@ -1,6 +1,7 @@
 export { EmployeePicker } from "./components/EmployeePicker";
 export { EmployeeCreateView } from "./views/EmployeeCreateView";
 export { EmployeeDetailView } from "./views/EmployeeDetailView";
+export { EmployeeEditView } from "./views/EmployeeEditView";
 export { EmployeeListView } from "./views/EmployeeListView";
 export {
   employeesKeys,

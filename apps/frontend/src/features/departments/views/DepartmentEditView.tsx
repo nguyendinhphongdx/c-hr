@@ -49,8 +49,10 @@ const NO_PARENT = "__none__";
 
 const schema = z.object({
   name: z.string().min(1, "Required").max(100),
-  parentId: z.string(),
-  managerId: z.string().nullable(),
+  parentId: z.union([z.literal(NO_PARENT), z.string().uuid("Pick a valid parent")], {
+    message: "Pick a valid parent",
+  }),
+  managerId: z.string().uuid("Pick a valid manager").nullable(),
   code: z
     .string()
     .max(50)

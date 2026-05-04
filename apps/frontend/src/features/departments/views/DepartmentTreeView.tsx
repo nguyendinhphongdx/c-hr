@@ -131,6 +131,11 @@ function TreeNode({
             ({node.code})
           </span>
         )}
+        {node.manager && (
+          <span className="text-xs text-muted-foreground">
+            · {node.manager.firstName} {node.manager.lastName}
+          </span>
+        )}
         {canEdit && (
           <Link
             href={`/departments/${node.id}/edit`}
