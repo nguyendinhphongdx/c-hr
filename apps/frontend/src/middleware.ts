@@ -8,10 +8,11 @@ import { NextResponse, type NextRequest } from "next/server";
  * validity is still enforced by the backend on every API call. Don't use the
  * cookie value here for authorization.
  *
- * Configure the cookie name via `NEXT_PUBLIC_SESSION_COOKIE` if your backend
- * uses something other than `session`.
+ * Cookie name comes from BE's AUTH_ACCESS_COOKIE_NAME (apps/backend/.env,
+ * default `access_token`). Override with NEXT_PUBLIC_SESSION_COOKIE if the
+ * BE side is renamed.
  */
-const SESSION_COOKIE = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? "session";
+const SESSION_COOKIE = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? "access_token";
 
 export function middleware(req: NextRequest) {
   const hasSession = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
@@ -28,5 +29,16 @@ export function middleware(req: NextRequest) {
  * api routes, static assets, _next, favicon) are intentionally excluded.
  */
 export const config = {
-  matcher: ["/home/:path*", "/settings/:path*"],
+  matcher: [
+    "/home",
+    "/home/:path*",
+    "/settings",
+    "/settings/:path*",
+    "/employees",
+    "/employees/:path*",
+    "/departments",
+    "/departments/:path*",
+    "/orgchart",
+    "/orgchart/:path*",
+  ],
 };
