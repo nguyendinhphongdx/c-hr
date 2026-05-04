@@ -20,7 +20,10 @@ import { CoreModule } from './apps/core/core.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: configs,
-      envFilePath: ['.env.local', '.env'],
+      // Load order (first wins): app-local overrides → app shared → repo
+      // root (shared with docker-compose). Lets contributors put common
+      // values once in /.env instead of duplicating across BE + compose.
+      envFilePath: ['.env.local', '.env', '../../.env'],
     }),
 
     EventEmitterModule.forRoot(),
