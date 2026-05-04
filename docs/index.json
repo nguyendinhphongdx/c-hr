@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-04T04:21:53.006Z",
+  "generatedAt": "2026-05-04T04:41:49.780Z",
   "repoRelativeRoot": ".",
   "count": 42,
   "entries": [
@@ -58,6 +58,7 @@
         "Yêu cầu",
         "Quick start",
         "CLI",
+        "Gotchas / known issues",
         "Tài liệu",
         "Status"
       ],
