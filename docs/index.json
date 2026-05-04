@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-04T02:17:07.277Z",
+  "generatedAt": "2026-05-04T04:21:53.006Z",
   "repoRelativeRoot": ".",
   "count": 42,
   "entries": [
@@ -325,6 +325,7 @@
         "BE",
         "FE",
         "Done-when",
+        "Defer sang Feature 1 (cần schema)",
         "Feature 1 — Auth + Organization + User + AppAdmin",
         "BE",
         "FE",
