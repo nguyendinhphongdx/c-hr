@@ -7,8 +7,11 @@ export { VerifyEmailPendingView } from "./views/VerifyEmailPendingView";
 export { VerifyOtpView } from "./views/VerifyOtpView";
 export {
   useAuth,
+  useIsAdmin,
+  useIsAppAdmin,
   useLogin,
   useRegister,
+  useSignupOrg,
   useLogout,
   useForgotPassword,
   useResetPassword,
@@ -22,15 +25,22 @@ export {
 } from "./hooks/useAuth";
 export { authService, oauthStartUrl } from "./services/authService";
 export type {
-  User,
+  AppAdminGrant,
+  AppCode,
   AuthResponse,
-  LoginInput,
-  RegisterInput,
+  ChangePasswordInput,
   ForgotPasswordInput,
+  LoginInput,
+  MeResponse,
+  OAuthProvider,
+  OrganizationSummary,
+  OrgSignupInput,
+  OrgSignupResponse,
+  RegisterInput,
   ResetPasswordInput,
+  Role,
+  UpdateProfileInput,
+  User,
   VerifyEmailConfirmInput,
   VerifyOtpInput,
-  ChangePasswordInput,
-  UpdateProfileInput,
-  OAuthProvider,
 } from "./types";
