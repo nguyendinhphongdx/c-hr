@@ -1,43 +1,48 @@
 ---
 title: C-HR — Project conventions for AI agents (root)
-description: Navigation hub. Trỏ xuống CLAUDE.md của apps/backend và apps/frontend. Đọc trước khi sửa code.
-tags: [overview, conventions, claude, monorepo, c-hr]
+description: Navigation hub. Trỏ xuống CLAUDE.md của apps/backend và apps/frontend, và docs/ là single source of truth.
+tags: [overview, conventions, claude, c-hr]
 ---
 
 # C-HR — Conventions for AI agents (root)
 
-C-HR (**C-OpenAI Human Resource**) là SaaS quản lý nhân sự cho doanh nghiệp. Đây là **root navigation hub** cho monorepo. Khi làm việc trong một app cụ thể, đọc CLAUDE.md của app đó — file này chỉ chứa quy tắc cross-cutting.
+C-HR (**C-OpenAI Human Resource**) là SaaS quản lý nhân sự cho doanh nghiệp. Đây là **root navigation hub** cho monorepo. Mọi tài liệu kiến trúc/quy ước/ADR/plan đều sống ở [docs/](docs/) (single source of truth, không nhân bản theo app).
 
 ## Project at a glance
 
-- **Domain**: HRM (employees, departments, attendance, leave, payroll)
+- **Domain**: HRM (employees, departments, attendance, leave, payroll). Entity + invariants ở [docs/domain.md](docs/domain.md).
 - **Stack**: Next.js 16 (frontend) + NestJS 10 (backend) + Postgres 16 + Redis 7
 - **Layout**:
-  - [apps/backend](apps/backend/) — NestJS + Prisma + Postgres + Redis. Boilerplate gốc + identity C-HR.
-  - [apps/frontend](apps/frontend/) — Next.js 16 + Tailwind 4 + shadcn/ui (Radix Nova) + TanStack Query.
-  - [services/postgres](services/postgres/) — Postgres 16 dev container (standalone hoặc qua root compose).
+  - [apps/backend](apps/backend/) — NestJS + Prisma + Postgres + Redis. Conventions: [docs/backend/](docs/backend/).
+  - [apps/frontend](apps/frontend/) — Next.js 16 + Tailwind 4 + shadcn/ui (Radix Nova) + TanStack Query. Conventions: [docs/frontend/](docs/frontend/).
+  - [services/postgres](services/postgres/) — Postgres 16 dev container.
   - [services/redis](services/redis/) — Redis 7 dev container.
   - [scripts/dev.sh](scripts/dev.sh) — CLI quản lý docker compose + dev workflows.
+  - [mcp/docs-server](mcp/docs-server/) — MCP server expose docs cho AI agent.
 - **Port mặc định**: BE `:8000`, FE `:3000`, Postgres `:5432`, Redis `:6379`.
 
-## Khi user yêu cầu, đọc đúng CLAUDE.md
+## Khi user yêu cầu, đọc đúng tài liệu
 
 | Phạm vi yêu cầu | File phải đọc trước |
 |---|---|
-| Bất cứ thay đổi nào trong [apps/backend/](apps/backend/) | [apps/backend/CLAUDE.md](apps/backend/CLAUDE.md) |
-| Bất cứ thay đổi nào trong [apps/frontend/](apps/frontend/) | [apps/frontend/CLAUDE.md](apps/frontend/CLAUDE.md) |
-| Docker / orchestration / services | File này + [REFACTOR_PLAN.md](REFACTOR_PLAN.md) |
-| Schema Prisma / migration | [apps/backend/CLAUDE.md](apps/backend/CLAUDE.md) (mục Hard rules #2) |
-| HRM domain (employees, payroll, …) | [apps/backend/docs/project/domain.md](apps/backend/docs/project/domain.md) + [apps/frontend/docs/project/domain.md](apps/frontend/docs/project/domain.md) |
+| HRM domain (entity, invariant, constraint) | [docs/domain.md](docs/domain.md) (BE) + [docs/frontend/domain.md](docs/frontend/domain.md) (UX, route map) |
+| Backend module / Prisma / NestJS | [apps/backend/CLAUDE.md](apps/backend/CLAUDE.md) → [docs/backend/](docs/backend/README.md) |
+| Frontend page / feature / component | [apps/frontend/CLAUDE.md](apps/frontend/CLAUDE.md) → [docs/frontend/](docs/frontend/README.md) |
+| Quyết định kiến trúc đã chốt | [docs/decisions/](docs/decisions/) |
+| Việc đang/sắp làm | [docs/plans/refactor.md](docs/plans/refactor.md) + [docs/plans/features.md](docs/plans/features.md) |
+| Docker / orchestration / services | File này |
+| Vận hành dev local + on-call | [docs/runbook.md](docs/runbook.md) |
+| Deploy production | [docs/deployment.md](docs/deployment.md) |
 
-**Tuyệt đối không** override quy ước của app con từ root. Nếu cần thay quy ước → sửa CLAUDE.md của app đó, không thêm exception ở đây.
+**Tuyệt đối không** copy tài liệu xuống các app — `apps/<name>/` chỉ chứa code, README, và CLAUDE.md (entry point trỏ về `docs/`).
 
 ## Cross-cutting hard rules (root)
 
 1. **`.env` không commit.** Mỗi tầng có file riêng: `.env` ở root (cho docker-compose), `apps/backend/.env`, `apps/frontend/.env.local`. Template tương ứng `.env.example` ở từng nơi.
 2. **Dockerfile / docker-compose** chỉ sửa khi orchestration thay đổi. Khi thêm service mới, theo pattern: `services/<name>/docker-compose.yml` + extends trong root compose.
 3. **`scripts/dev.sh`** là entry point thống nhất cho dev. Đừng viết script riêng tản mác — bổ sung command vào file này.
-4. **MCP servers** — root [.mcp.json](.mcp.json) đăng ký 2 MCP server (`backend-docs`, `frontend-docs`) trỏ xuống mỗi app. Đừng nhân bản, dùng các tool `docs_list / docs_search / docs_read` của từng server theo phạm vi.
+4. **MCP server** — root [.mcp.json](.mcp.json) đăng ký 1 server `c-hr-docs` ([mcp/docs-server](mcp/docs-server/)). Dùng `docs_list / docs_search / docs_read` thay vì grep markdown.
+5. **Docs index** — `docs/index.json` được rebuild tự động bởi PostToolUse hook trong [.claude/settings.json](.claude/settings.json) khi bạn edit MD file. Manual: `pnpm docs:index`.
 
 ## Common commands (root)
 
@@ -52,7 +57,8 @@ C-HR (**C-OpenAI Human Resource**) là SaaS quản lý nhân sự cho doanh nghi
 ./scripts/dev.sh stop                # stop tất cả container
 pnpm install                         # workspace install (root)
 pnpm --filter @c-hr/backend build
-pnpm --filter @c-hr/frontend typecheck
+pnpm --filter @c-hr/frontend check
+pnpm docs:index                      # rebuild docs/index.json
 ```
 
 ## Đường nét thư mục
@@ -60,26 +66,39 @@ pnpm --filter @c-hr/frontend typecheck
 ```
 .
 ├── apps/
-│   ├── backend/              # NestJS — đọc apps/backend/CLAUDE.md
-│   └── frontend/             # Next.js — đọc apps/frontend/CLAUDE.md
+│   ├── backend/              # NestJS — entry: apps/backend/CLAUDE.md
+│   └── frontend/             # Next.js — entry: apps/frontend/CLAUDE.md
 ├── services/
 │   ├── postgres/             # standalone postgres compose
 │   └── redis/                # standalone redis compose
+├── docs/                     # single source of truth — kiến trúc, quy ước, ADR, plan
+│   ├── domain.md             # HRM business domain (entity, invariant)
+│   ├── runbook.md            # on-call + dev local
+│   ├── deployment.md         # production
+│   ├── backend/              # NestJS-specific (architecture, conventions, recipes, reference)
+│   ├── frontend/             # Next.js-specific + UX domain (domain.md route map)
+│   ├── decisions/            # ADRs (0001..)
+│   └── plans/                # refactor.md + features.md
+├── mcp/docs-server/          # 1 MCP server cho cả monorepo
 ├── scripts/
-│   └── dev.sh                # dev CLI
+│   ├── dev.sh                # dev CLI
+│   ├── build-docs-index.js   # docs indexer
+│   └── hooks/post-edit-docs.js  # PostToolUse hook
+├── .claude/
+│   ├── settings.json         # permissions + hooks
+│   └── agents/               # code-reviewer, module-scaffolder (BE), page-scaffolder (FE)
 ├── docker-compose.yml        # root: postgres + redis + backend
 ├── docker-compose.dev.yml    # override: BE hot-reload, source mount
-├── .mcp.json                 # backend-docs + frontend-docs MCP servers
+├── .mcp.json                 # c-hr-docs server
 ├── pnpm-workspace.yaml       # apps/*, packages/*
-├── .env.example              # template root env (cho docker-compose)
-├── REFACTOR_PLAN.md          # plan setup hiện tại
-└── CLAUDE.md                 # file này
+└── .env.example              # template root env (cho docker-compose)
 ```
 
 ## Workflow expectations
 
-1. **Trước khi sửa code app**: đọc CLAUDE.md của app đó (BE hoặc FE).
+1. **Trước khi sửa code app**: đọc CLAUDE.md của app đó (BE hoặc FE), nó sẽ trỏ về `docs/<stack>/`.
 2. **Sau khi sửa schema Prisma**: `pnpm --filter @c-hr/backend prisma:generate` + tạo migration.
 3. **Trước khi báo done**: chạy `pnpm --filter @c-hr/backend build` (BE) hoặc `pnpm --filter @c-hr/frontend check` (FE).
-4. **Khi thêm service mới** (queue worker, worker mail, vv): tạo `services/<name>/` riêng + extend trong root compose.
-5. **Không** đẩy logic domain vào root — domain HR sống trong `apps/backend/src/modules/` và `apps/frontend/src/features/`.
+4. **Khi thêm service mới** (queue worker, mail worker, vv): tạo `services/<name>/` riêng + extend trong root compose.
+5. **Không** đẩy logic domain vào root — domain HR sống trong `apps/backend/src/apps/<context>/` và `apps/frontend/src/features/`.
+6. **Khi thêm/sửa doc**: hook tự rebuild index. Nếu chạy CI hay agent khác, `pnpm docs:index` thủ công.

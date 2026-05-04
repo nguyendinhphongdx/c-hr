@@ -1,0 +1,1018 @@
+{
+  "generatedAt": "2026-05-04T02:17:07.277Z",
+  "repoRelativeRoot": ".",
+  "count": 42,
+  "entries": [
+    {
+      "id": "AGENTS",
+      "path": "AGENTS.md",
+      "title": "Agent instructions (root)",
+      "description": "Pointer cho non-Claude AI coding agents. Đọc CLAUDE.md ở root rồi xuống docs/ + CLAUDE.md của app phù hợp.",
+      "tags": [
+        "overview",
+        "agents",
+        "c-hr"
+      ],
+      "scope": "root",
+      "category": "root",
+      "headings": [
+        "Đọc theo phạm vi",
+        "MCP docs server",
+        "Heads-up: Next.js 16 + React 19"
+      ],
+      "summary": "Project này dùng [CLAUDE.md](CLAUDE.md) làm file chỉ dẫn chính. Quy ước áp dụng cho **mọi** AI agent (Cursor, Aider, Continue, Copilot Chat, …)."
+    },
+    {
+      "id": "CLAUDE",
+      "path": "CLAUDE.md",
+      "title": "C-HR — Project conventions for AI agents (root)",
+      "description": "Navigation hub. Trỏ xuống CLAUDE.md của apps/backend và apps/frontend, và docs/ là single source of truth.",
+      "tags": [
+        "overview",
+        "conventions",
+        "claude",
+        "c-hr"
+      ],
+      "scope": "root",
+      "category": "root",
+      "headings": [
+        "Project at a glance",
+        "Khi user yêu cầu, đọc đúng tài liệu",
+        "Cross-cutting hard rules (root)",
+        "Common commands (root)",
+        "Đường nét thư mục",
+        "Workflow expectations"
+      ],
+      "summary": "C-HR (**C-OpenAI Human Resource**) là SaaS quản lý nhân sự cho doanh nghiệp. Đây là **root navigation hub** cho monorepo. Mọi tài liệu kiến trúc/quy ước/ADR/plan đều sống ở [docs/](docs/) (single source of truth, không nhân bản theo app)."
+    },
+    {
+      "id": "README",
+      "path": "README.md",
+      "title": "C-HR",
+      "description": "**C-OpenAI Human Resource** — SaaS quản lý nhân sự cho doanh nghiệp.",
+      "tags": [],
+      "scope": "root",
+      "category": "root",
+      "headings": [
+        "Cấu trúc",
+        "Yêu cầu",
+        "Quick start",
+        "CLI",
+        "Tài liệu",
+        "Status"
+      ],
+      "summary": "**C-OpenAI Human Resource** — SaaS quản lý nhân sự cho doanh nghiệp."
+    },
+    {
+      "id": "apps:backend:AGENTS",
+      "path": "apps/backend/AGENTS.md",
+      "title": "C-HR backend — agent instructions",
+      "description": "Pointer to CLAUDE.md + root docs/. Apply to any non-Claude AI coding agent (Cursor, Aider, Continue, Copilot Chat).",
+      "tags": [
+        "overview",
+        "agents",
+        "backend",
+        "c-hr"
+      ],
+      "scope": "app",
+      "category": "backend",
+      "headings": [],
+      "summary": "This app is part of the C-HR monorepo. **Read in this order:**"
+    },
+    {
+      "id": "apps:backend:CLAUDE",
+      "path": "apps/backend/CLAUDE.md",
+      "title": "C-HR backend — entry point cho AI agents",
+      "description": "Trỏ về docs/ ở root. Đọc trước khi sửa code trong apps/backend/.",
+      "tags": [
+        "overview",
+        "conventions",
+        "claude",
+        "c-hr",
+        "backend"
+      ],
+      "scope": "app",
+      "category": "backend",
+      "headings": [
+        "Project at a glance",
+        "Layout (sau khi Foundation feature 0 chạy xong)",
+        "Hard rules — DO NOT violate",
+        "When to put code where",
+        "Common commands",
+        "Required reading by topic",
+        "Subagents available",
+        "Tooling shortcuts",
+        "Workflow expectations for AI agents"
+      ],
+      "summary": "Đây là entry point cho AI agent khi làm việc trong [apps/backend/](.). Tài liệu kiến trúc + quy ước **không** sống ở đây — chúng ở [docs/](../../docs/) (single source of truth cho cả monorepo)."
+    },
+    {
+      "id": "apps:backend:README",
+      "path": "apps/backend/README.md",
+      "title": "C-HR Backend",
+      "description": "NestJS 10 API cho **C-HR** (C-OpenAI Human Resource) — SaaS HRM. Thuộc monorepo C-HR ([root README](../../README.md)).",
+      "tags": [],
+      "scope": "app",
+      "category": "backend",
+      "headings": [
+        "Stack",
+        "Layout",
+        "Local dev",
+        "Endpoints sẵn có",
+        "Cookie-based auth",
+        "Common tasks",
+        "Docker"
+      ],
+      "summary": "NestJS 10 API cho **C-HR** (C-OpenAI Human Resource) — SaaS HRM. Thuộc monorepo C-HR ([root README](../../README.md))."
+    },
+    {
+      "id": "apps:frontend:AGENTS",
+      "path": "apps/frontend/AGENTS.md",
+      "title": "C-HR frontend — agent instructions",
+      "description": "Pointer to CLAUDE.md + root docs/. Apply to any non-Claude AI coding agent (Cursor, Aider, Continue, Copilot Chat).",
+      "tags": [
+        "overview",
+        "agents",
+        "frontend",
+        "c-hr"
+      ],
+      "scope": "app",
+      "category": "frontend",
+      "headings": [
+        "Heads-up: not the Next.js you may know",
+        "MCP"
+      ],
+      "summary": "This app is part of the C-HR monorepo. **Read in this order:**"
+    },
+    {
+      "id": "apps:frontend:CLAUDE",
+      "path": "apps/frontend/CLAUDE.md",
+      "title": "C-HR frontend — entry point cho AI agents",
+      "description": "Trỏ về docs/ ở root. Đọc trước khi sửa code trong apps/frontend/.",
+      "tags": [
+        "overview",
+        "conventions",
+        "claude",
+        "c-hr",
+        "frontend"
+      ],
+      "scope": "app",
+      "category": "frontend",
+      "headings": [
+        "Project at a glance",
+        "Layout cheat sheet",
+        "Hard rules — DO NOT violate",
+        "When to put code where",
+        "Common commands",
+        "Required reading by topic",
+        "Subagents available",
+        "Tooling shortcuts",
+        "Workflow expectations for AI agents"
+      ],
+      "summary": "Đây là entry point cho AI agent khi làm việc trong [apps/frontend/](.). Tài liệu kiến trúc + quy ước **không** sống ở đây — chúng ở [docs/](../../docs/) (single source of truth cho cả monorepo)."
+    },
+    {
+      "id": "apps:frontend:README",
+      "path": "apps/frontend/README.md",
+      "title": "C-HR Frontend",
+      "description": "Next.js 16 web app cho **C-HR** (C-OpenAI Human Resource) — SaaS HRM. Thuộc monorepo C-HR ([root README](../../README.md)).",
+      "tags": [],
+      "scope": "app",
+      "category": "frontend",
+      "headings": [
+        "What's included",
+        "Getting Started",
+        "Setup checklist (trước khi vào tính năng HR)",
+        "Scripts",
+        "Project structure",
+        "Notes"
+      ],
+      "summary": "Next.js 16 web app cho **C-HR** (C-OpenAI Human Resource) — SaaS HRM. Thuộc monorepo C-HR ([root README](../../README.md))."
+    },
+    {
+      "id": "docs:domain",
+      "path": "docs/domain.md",
+      "title": "C-HR domain model (backend)",
+      "description": "HRM business entities, relationships, invariants. Source of truth cho Prisma schema và service logic.",
+      "tags": [
+        "project",
+        "domain",
+        "glossary",
+        "hrm",
+        "c-hr"
+      ],
+      "scope": "overview",
+      "category": "domain",
+      "headings": [
+        "DB convention (cứng)",
+        "Glossary",
+        "Entity outline",
+        "`User`",
+        "`Organization`",
+        "`AppAdmin`",
+        "`Department`",
+        "`Employee`",
+        "`WorkSchedule` + `WorkShift`",
+        "`AttendanceDevice`",
+        "`AttendanceLog`",
+        "`AttendanceCorrection`",
+        "`LeaveRequest`",
+        "`AuditLog`",
+        "Relationships",
+        "Invariants",
+        "Approver lookup logic",
+        "Open questions / TODOs",
+        "ADRs (`decisions/`)"
+      ],
+      "summary": "Outline cho HRM domain (entity, invariant, business rule). Iterate qua từng feature theo [plans/refactor.md](plans/refactor.md) → [plans/features.md](plans/features.md). Mỗi quyết định lớn ghi ADR trong [decisions/](decisions/)."
+    },
+    {
+      "id": "docs:runbook",
+      "path": "docs/runbook.md",
+      "title": "C-HR runbook",
+      "description": "On-call procedures, common alerts, debug commands cho cả backend và frontend C-HR.",
+      "tags": [
+        "project",
+        "ops",
+        "runbook",
+        "on-call",
+        "c-hr"
+      ],
+      "scope": "overview",
+      "category": "runbook",
+      "headings": [
+        "Health checks",
+        "Local debug",
+        "Common (root)",
+        "Backend",
+        "Frontend",
+        "Common alerts (template — fill khi có prod)",
+        "\"DB connection failures\" (BE)",
+        "\"Auth 401 spike\" (BE + FE)",
+        "\"BE 5xx spike\" (FE side observation)",
+        "\"Hydration mismatch\" (FE)",
+        "\"Payroll job failed\" (BE)",
+        "Useful commands (prod — TBD)",
+        "Escalation"
+      ],
+      "summary": "> Project đang ở giai đoạn setup. Phần ops thật sẽ fill khi có môi trường staging/prod đầu tiên. Hiện chỉ ghi structure + các check local cho cả 2 app."
+    },
+    {
+      "id": "docs:deployment",
+      "path": "docs/deployment.md",
+      "title": "C-HR deployment",
+      "description": "Environments, secrets, CI/CD, rollout/rollback cho cả backend và frontend.",
+      "tags": [
+        "project",
+        "deployment",
+        "ci",
+        "ops",
+        "c-hr"
+      ],
+      "scope": "overview",
+      "category": "deployment",
+      "headings": [
+        "Environments",
+        "Secrets",
+        "Backend",
+        "Frontend",
+        "CI/CD",
+        "Rollout",
+        "Backend rollout",
+        "Frontend rollout",
+        "Rollback"
+      ],
+      "summary": "> **TBD**. Project mới khởi động — chưa có pipeline. Section dưới là skeleton, fill khi setup môi trường thật."
+    },
+    {
+      "id": "docs:README",
+      "path": "docs/README.md",
+      "title": "C-HR documentation index",
+      "description": "Single source of truth cho monorepo. Domain, ADR, plan, conventions cho cả BE và FE đều ở đây.",
+      "tags": [
+        "overview",
+        "index",
+        "c-hr"
+      ],
+      "scope": "overview",
+      "category": "README",
+      "headings": [
+        "Cross-cutting",
+        "Backend (NestJS — apps/backend)",
+        "Frontend (Next.js — apps/frontend)",
+        "Updating docs"
+      ],
+      "summary": "Single source of truth cho cả monorepo. Không nhân bản theo app — `apps/<name>/CLAUDE.md` chỉ là entry point trỏ về đây."
+    },
+    {
+      "id": "docs:plans:features",
+      "path": "docs/plans/features.md",
+      "title": "C-HR features plan",
+      "description": "Queue tính năng HRM theo bounded context. Bắt đầu sau khi refactor.md done.",
+      "tags": [
+        "project",
+        "plan",
+        "features",
+        "hrm",
+        "c-hr"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Nguyên tắc (cứng — không đổi)",
+        "Thứ tự implement",
+        "Feature 0 — Foundation",
+        "BE",
+        "FE",
+        "Done-when",
+        "Feature 1 — Auth + Organization + User + AppAdmin",
+        "BE",
+        "FE",
+        "Done-when",
+        "Feature 2 — HRM core: Department + Employee + OrgChart",
+        "BE",
+        "FE",
+        "Done-when",
+        "Feature 3 — Attendance: WorkSchedule + Device + Log + Timesheet UI",
+        "BE",
+        "FE",
+        "Done-when",
+        "Feature 4 — Requests: LeaveRequest + AttendanceCorrection",
+        "BE",
+        "FE",
+        "Done-when",
+        "Sau Feature 4 (roadmap dài hơi)",
+        "Workflow mỗi feature (template)"
+      ],
+      "summary": "Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 + Phase 4 docs/MCP unification — root scaffolding, identity, docs gộp ra root, infra Docker chạy, Prisma migrate `_init` áp dụng)."
+    },
+    {
+      "id": "docs:plans:refactor",
+      "path": "docs/plans/refactor.md",
+      "title": "C-HR refactor plan",
+      "description": "3-phase refactor để gộp 2 boilerplate ban đầu thành 1 monorepo C-HR có doc/MCP thống nhất.",
+      "tags": [
+        "project",
+        "plan",
+        "refactor",
+        "c-hr"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Phase 1 — Root scaffolding (combine 2 boilerplate ra ngoài)",
+        "Phase 2 — Identity refactor (boilerplate → C-HR)",
+        "Phase 3 — Hygiene + smoke test",
+        "Phase 4 — Docs + MCP unification",
+        "Sau Phase 4"
+      ],
+      "summary": "**Project**: C-HR (C-OpenAI Human Resource) — SaaS quản lý nhân sự cho doanh nghiệp. **Stack**: Next.js 16 (frontend) + NestJS 10 (backend) + Postgres 16 + Redis 7, monorepo."
+    },
+    {
+      "id": "docs:decisions:_template",
+      "path": "docs/decisions/_template.md",
+      "title": "ADR 0001: <decision title>",
+      "description": "Template for project architecture decision records.",
+      "tags": [
+        "project",
+        "adr",
+        "decision"
+      ],
+      "scope": "decision",
+      "category": "decisions",
+      "headings": [
+        "Context",
+        "Decision",
+        "Consequences",
+        "Alternatives considered",
+        "References"
+      ],
+      "summary": "> **Template** — copy to a new file (e.g. `0002-use-graphql.md`) and replace."
+    },
+    {
+      "id": "docs:decisions:0001-tenant-isolation",
+      "path": "docs/decisions/0001-tenant-isolation.md",
+      "title": "ADR 0001: Tenant isolation via manual repository pattern",
+      "description": "Mỗi truy vấn data của Org tự thêm filter organizationId trong repository per-service, không dùng Prisma extension auto-filter.",
+      "tags": [
+        "project",
+        "adr",
+        "decision",
+        "tenant",
+        "prisma",
+        "repository"
+      ],
+      "scope": "decision",
+      "category": "decisions",
+      "headings": [
+        "Context",
+        "Decision",
+        "Consequences",
+        "Alternatives considered",
+        "Conventions kèm theo",
+        "References"
+      ],
+      "summary": "- **Status**: Accepted - **Date**: 2026-05-03 - **Deciders**: @nguyendinhphongdx"
+    },
+    {
+      "id": "docs:decisions:0002-audit-log",
+      "path": "docs/decisions/0002-audit-log.md",
+      "title": "ADR 0002: Audit log via @Auditable interceptor",
+      "description": "Cấu trúc audit_logs, scope các action cần ghi, retention.",
+      "tags": [
+        "project",
+        "adr",
+        "decision",
+        "audit",
+        "security"
+      ],
+      "scope": "decision",
+      "category": "decisions",
+      "headings": [
+        "Context",
+        "Decision",
+        "Scope — actions phải audit",
+        "Retention",
+        "Consequences",
+        "Alternatives considered",
+        "References"
+      ],
+      "summary": "- **Status**: Accepted - **Date**: 2026-05-03 - **Deciders**: @nguyendinhphongdx"
+    },
+    {
+      "id": "docs:decisions:0003-no-permission-engine",
+      "path": "docs/decisions/0003-no-permission-engine.md",
+      "title": "ADR 0003: No permission engine — code if/else + AppAdmin model",
+      "description": "Không dùng RBAC decorator/permission table. Phân quyền viết if/else trong service, dựa UserType + AppAdmin record.",
+      "tags": [
+        "project",
+        "adr",
+        "decision",
+        "auth",
+        "rbac"
+      ],
+      "scope": "decision",
+      "category": "decisions",
+      "headings": [
+        "Context",
+        "Decision",
+        "Schema",
+        "Hierarchy mapping",
+        "Consequences",
+        "Alternatives considered",
+        "Khi nào revisit",
+        "References"
+      ],
+      "summary": "- **Status**: Accepted - **Date**: 2026-05-03 - **Deciders**: @nguyendinhphongdx"
+    },
+    {
+      "id": "docs:decisions:0004-orgchart-source-of-truth",
+      "path": "docs/decisions/0004-orgchart-source-of-truth.md",
+      "title": "ADR 0004: OrgChart source of truth — Department.managerId + parentId",
+      "description": "Department tree là single source. Manager chain query qua Postgres recursive CTE. Employee không có directManagerId.",
+      "tags": [
+        "project",
+        "adr",
+        "decision",
+        "orgchart",
+        "department",
+        "hrm"
+      ],
+      "scope": "decision",
+      "category": "decisions",
+      "headings": [
+        "Context",
+        "Decision",
+        "Logic suy ra \"quản lý của X\"",
+        "Truy vấn — Postgres recursive CTE (1 query, không N+1)",
+        "Cache",
+        "Consequences",
+        "Edge cases & policy",
+        "Alternatives considered",
+        "References"
+      ],
+      "summary": "- **Status**: Accepted - **Date**: 2026-05-03 - **Deciders**: @nguyendinhphongdx"
+    },
+    {
+      "id": "docs:decisions:0005-folder-structure-bounded-contexts",
+      "path": "docs/decisions/0005-folder-structure-bounded-contexts.md",
+      "title": "ADR 0005: Backend folder structure — src/apps/<context>/<module>/",
+      "description": "Tách bounded contexts theo nghiệp vụ HR (core, hrm, attendance, requests, …) thay vì 1 thư mục modules/ phẳng.",
+      "tags": [
+        "project",
+        "adr",
+        "decision",
+        "structure",
+        "nestjs",
+        "monorepo"
+      ],
+      "scope": "decision",
+      "category": "decisions",
+      "headings": [
+        "Context",
+        "Decision",
+        "Conventions kèm theo",
+        "Path alias",
+        "Consequences",
+        "Migration plan",
+        "Alternatives considered",
+        "References"
+      ],
+      "summary": "- **Status**: Accepted - **Date**: 2026-05-03 - **Deciders**: @nguyendinhphongdx"
+    },
+    {
+      "id": "docs:backend:recipes:add-cli-command",
+      "path": "docs/backend/recipes/add-cli-command.md",
+      "title": "Add a CLI command",
+      "description": "How to register a new `pnpm cli <name>` command.",
+      "tags": [
+        "recipe",
+        "cli"
+      ],
+      "scope": "backend",
+      "category": "recipe",
+      "headings": [
+        "1. Create the command class",
+        "2. Register the command",
+        "3. Run",
+        "Argument parsing",
+        "Why not [`nest-commander`](https://github.com/jmcdo29/nest-commander)?"
+      ],
+      "summary": "The CLI runner reuses the full DI graph via `CliModule`. Each command is an `@Injectable()` class implementing the `CliCommand` interface."
+    },
+    {
+      "id": "docs:backend:recipes:add-module",
+      "path": "docs/backend/recipes/add-module.md",
+      "title": "Add a feature module",
+      "description": "Step-by-step recipe for creating a new NestJS feature module in this codebase.",
+      "tags": [
+        "recipe",
+        "module",
+        "scaffolding"
+      ],
+      "scope": "backend",
+      "category": "recipe",
+      "headings": [
+        "1. Create the folder skeleton",
+        "2. Add the Prisma model",
+        "3. DTOs",
+        "4. Service",
+        "5. Controller",
+        "6. Module",
+        "7. Register in `AppModule`",
+        "8. Verify",
+        "Common variants"
+      ],
+      "summary": "Suppose you're adding a `post` module with CRUD over a `Post` resource."
+    },
+    {
+      "id": "docs:backend:recipes:auth-and-cookies",
+      "path": "docs/backend/recipes/auth-and-cookies.md",
+      "title": "Auth & cookies",
+      "description": "How JWT + httpOnly cookies + Bearer fallback work, and how to extend.",
+      "tags": [
+        "recipe",
+        "auth",
+        "jwt",
+        "cookies"
+      ],
+      "scope": "backend",
+      "category": "recipe",
+      "headings": [
+        "Flow at a glance",
+        "Refresh",
+        "Logout",
+        "Cookie configuration",
+        "Cross-site setup",
+        "Extending",
+        "Add a new context field",
+        "Add roles / RBAC",
+        "Revoke tokens (real logout)",
+        "Common pitfalls"
+      ],
+      "summary": "``` POST /auth/login ↳ AuthService.login() verifies credentials, signs accessToken + refreshToken ↳ Controller calls setAuthCookies(res, tokens, configService) - res.cookie('access_token', ..., { httpOnly, secure, sameSite, domain, maxAge }) - res.cookie('refresh_token', ..., { ... refresh maxAge }) ↳ Response also returns { user, accessToken, refreshToken } in body so non-cookie clients (mobile, server-to-server) can extract them. ```"
+    },
+    {
+      "id": "docs:backend:recipes:storage-providers",
+      "path": "docs/backend/recipes/storage-providers.md",
+      "title": "Storage providers",
+      "description": "Use local filesystem, S3, or GCS — the StorageProvider interface stays the same.",
+      "tags": [
+        "recipe",
+        "storage",
+        "s3",
+        "gcs"
+      ],
+      "scope": "backend",
+      "category": "recipe",
+      "headings": [
+        "Choose a provider",
+        "Using the storage in a service",
+        "File keys vs URLs",
+        "Key naming convention",
+        "Static file serving (local mode)",
+        "Adding a new provider"
+      ],
+      "summary": "`StorageModule` chooses a provider based on `STORAGE_TYPE` env var (`local` | `s3` | `gcs`). Code consumes the abstract `StorageProvider` interface, so switching is a config change."
+    },
+    {
+      "id": "docs:backend:recipes:switch-database",
+      "path": "docs/backend/recipes/switch-database.md",
+      "title": "Switch database engine",
+      "description": "Move between Postgres / MySQL / SQLite / SQL Server / MongoDB.",
+      "tags": [
+        "recipe",
+        "database",
+        "prisma"
+      ],
+      "scope": "backend",
+      "category": "recipe",
+      "headings": [
+        "DATABASE_URL formats",
+        "Schema portability gotchas",
+        "MongoDB-specific notes",
+        "Verifying the switch"
+      ],
+      "summary": "Prisma's `datasource.provider` cannot be templated via `env()` — it must be a literal. The boilerplate works around this with a small script:"
+    },
+    {
+      "id": "docs:backend:reference:env-vars",
+      "path": "docs/backend/reference/env-vars.md",
+      "title": "Environment variables",
+      "description": "Full reference of every env var the app reads, with defaults and notes.",
+      "tags": [
+        "reference",
+        "env",
+        "config"
+      ],
+      "scope": "backend",
+      "category": "reference",
+      "headings": [
+        "App",
+        "CORS & cookies",
+        "Database",
+        "Redis",
+        "JWT",
+        "Mail (SMTP)",
+        "Storage",
+        "Admin / seeding"
+      ],
+      "summary": "All env vars are loaded by `@nestjs/config` from `.env.local` then `.env` (in that order). Inside services, **always** read via `ConfigService`, not `process.env` directly. See [conventions.md](../conventions.md#configuration)."
+    },
+    {
+      "id": "docs:backend:reference:globals",
+      "path": "docs/backend/reference/globals.md",
+      "title": "Global services",
+      "description": "Providers available everywhere via DI without module re-import.",
+      "tags": [
+        "reference",
+        "di",
+        "globals"
+      ],
+      "scope": "backend",
+      "category": "reference",
+      "headings": [
+        "Examples",
+        "Adding a new global service",
+        "Things deliberately NOT global",
+        "Using globals from outside the request scope"
+      ],
+      "summary": "Anything in `libs/` is `@Global()` — once `AppModule` imports it, the providers are injectable from any feature module without re-importing."
+    },
+    {
+      "id": "docs:backend:architecture",
+      "path": "docs/backend/architecture.md",
+      "title": "Architecture",
+      "description": "Layered structure, dependency injection, and HTTP request lifecycle.",
+      "tags": [
+        "architecture",
+        "layers",
+        "di",
+        "request-lifecycle"
+      ],
+      "scope": "backend",
+      "category": "backend",
+      "headings": [
+        "Layers",
+        "Path aliases",
+        "Dependency injection model",
+        "Global infrastructure (`libs/*`)",
+        "Feature modules (`modules/*`)",
+        "Composition root (`AppModule`)",
+        "Request lifecycle",
+        "Per-request context",
+        "Response shape",
+        "Error shape"
+      ],
+      "summary": "The codebase has four layers, each depending only on layers above it:"
+    },
+    {
+      "id": "docs:backend:conventions",
+      "path": "docs/backend/conventions.md",
+      "title": "Conventions",
+      "description": "Naming, file organization, and concrete do/don't rules.",
+      "tags": [
+        "conventions",
+        "style",
+        "naming"
+      ],
+      "scope": "backend",
+      "category": "backend",
+      "headings": [
+        "Naming",
+        "File organization inside a module",
+        "DTO vs interface — when to use what",
+        "Service vs controller",
+        "Configuration",
+        "Logging",
+        "Error handling",
+        "DB access",
+        "Imports",
+        "Comments",
+        "Testing",
+        "What NOT to do"
+      ],
+      "summary": "| Kind | Convention | Example | | --- | --- | --- | | File | kebab-case + role suffix | `user.service.ts`, `login.dto.ts`, `parse-uuid.pipe.ts` | | Class | PascalCase + role suffix | `UserService`, `LoginDto`, `ParseUUIDPipe` | | Interface | PascalCase, prefix `I` only for JWT-style payloads | `RequestUser`, `IJwtPayload` | | Constant | SCREAMING_SNAKE | `MAX_PAGE_SIZE` | | Enum | PascalCase, members SCREAMING_SNAKE | `UserRole.ADMIN` | | Method | camelCase, verb-first | `findById`, `issueTokens` | | Boolean | `is*` / `has*` / `should*` | `isPrivate`, `hasRequiredRole` | | Folder | kebab-case | `request-context/` |"
+    },
+    {
+      "id": "docs:backend:README",
+      "path": "docs/backend/README.md",
+      "title": "C-HR backend documentation",
+      "description": "NestJS-specific architecture, conventions, recipes, reference for the C-HR backend.",
+      "tags": [
+        "overview",
+        "backend",
+        "nestjs",
+        "c-hr"
+      ],
+      "scope": "backend",
+      "category": "backend",
+      "headings": [
+        "Contents",
+        "Related"
+      ],
+      "summary": "NestJS-specific patterns cho [apps/backend](../../apps/backend/) (layered architecture, DI, Prisma, auth flow, recipes). HRM business domain (entity, invariant) sống ở [../domain.md](../domain.md), không ở đây."
+    },
+    {
+      "id": "docs:frontend:recipes:add-feature",
+      "path": "docs/frontend/recipes/add-feature.md",
+      "title": "Add a feature module",
+      "description": "Step-by-step recipe for adding a new feature under src/features/.",
+      "tags": [
+        "recipe",
+        "feature",
+        "scaffolding"
+      ],
+      "scope": "frontend",
+      "category": "recipe",
+      "headings": [
+        "1. Folder skeleton",
+        "2. Types",
+        "3. Service (axios)",
+        "4. Hooks (TanStack Query)",
+        "5. Views",
+        "6. Public surface (`index.ts`)",
+        "7. Wire it to a route",
+        "8. Verify",
+        "Variants"
+      ],
+      "summary": "Suppose you're adding a `posts` feature with list/detail/create."
+    },
+    {
+      "id": "docs:frontend:recipes:add-page",
+      "path": "docs/frontend/recipes/add-page.md",
+      "title": "Add a page (route)",
+      "description": "Step-by-step recipe for adding a new App Router page that delegates UI to a feature view.",
+      "tags": [
+        "recipe",
+        "page",
+        "route",
+        "app-router"
+      ],
+      "scope": "frontend",
+      "category": "recipe",
+      "headings": [
+        "Public page (e.g. `/about`)",
+        "Protected page (under `(dashboard)/` group)",
+        "Dynamic route (e.g. `/posts/:id`)",
+        "Page that needs query params",
+        "Add to sitemap (public pages only)",
+        "Verify"
+      ],
+      "summary": "Pages live under `src/app/`. The convention is **page = thin wrapper, view = the actual UI** — keeps routes hot-swappable."
+    },
+    {
+      "id": "docs:frontend:recipes:auth-flow",
+      "path": "docs/frontend/recipes/auth-flow.md",
+      "title": "Auth flow",
+      "description": "How cookies + middleware + axios refresh interceptor + TanStack Query work together.",
+      "tags": [
+        "recipe",
+        "auth",
+        "cookies",
+        "middleware",
+        "jwt"
+      ],
+      "scope": "frontend",
+      "category": "recipe",
+      "headings": [
+        "Overview",
+        "Files involved",
+        "Endpoints (assumed BE contract)",
+        "OTP — email or SMS, channel-agnostic",
+        "Adding role-based access (RBAC)",
+        "Adding a new auth endpoint",
+        "Cross-site cookies (FE on different domain than BE)",
+        "Common pitfalls"
+      ],
+      "summary": "```text cookie present? browser ───────────► middleware.ts (edge) │ NO → redirect /login?next=… │ YES → continue ▼ RSC route renders │ ▼ client hydrates │ TanStack Query ▼ GET /auth/me ──► apiClient (axios, withCredentials) │ 401? │ └─► /auth/refresh (deduped) │ ok? retry original │ fail? redirect /login ▼ user data → useAuth() hook ```"
+    },
+    {
+      "id": "docs:frontend:recipes:icons",
+      "path": "docs/frontend/recipes/icons.md",
+      "title": "Icons",
+      "description": "When to use lucide-react vs custom inline SVG vs an icon library, and how to add a new icon.",
+      "tags": [
+        "recipe",
+        "icons",
+        "ui",
+        "svg"
+      ],
+      "scope": "frontend",
+      "category": "recipe",
+      "headings": [
+        "TL;DR",
+        "Why a dedicated icons folder",
+        "Layout",
+        "Add a new brand icon",
+        "Conventions",
+        "Don'ts",
+        "Scaling up — adding `simple-icons`",
+        "Other libraries (for reference)"
+      ],
+      "summary": "| Need | Use | | --- | --- | | UI icon (arrow, check, eye, settings, …) | `lucide-react` (already installed) | | Brand mark (GitHub, Google, X, Discord, Apple, …) | Add a file in [`src/components/icons/`](../../../apps/frontend/src/components/icons/) | | 15+ brand marks at once | Install `simple-icons` (see \"Scaling up\") |"
+    },
+    {
+      "id": "docs:frontend:recipes:theming",
+      "path": "docs/frontend/recipes/theming.md",
+      "title": "Theming & design tokens",
+      "description": "How CSS variables, dark mode, animations, and the shadcn registry hang together.",
+      "tags": [
+        "recipe",
+        "theme",
+        "tailwind",
+        "css-variables",
+        "animations"
+      ],
+      "scope": "frontend",
+      "category": "recipe",
+      "headings": [
+        "Single source of truth",
+        "Dark mode",
+        "Tailwind v4 specifics",
+        "Animations",
+        "Scrollbars",
+        "Adding a new shadcn component",
+        "Brand colors"
+      ],
+      "summary": "All design tokens live in [src/app/globals.css](../../../apps/frontend/src/app/globals.css):"
+    },
+    {
+      "id": "docs:frontend:reference:env-vars",
+      "path": "docs/frontend/reference/env-vars.md",
+      "title": "Environment variables",
+      "description": "Every env var the app reads, what it does, and where it's consumed.",
+      "tags": [
+        "reference",
+        "env",
+        "config"
+      ],
+      "scope": "frontend",
+      "category": "reference",
+      "headings": [
+        "Public (browser-exposed)",
+        "Where they're consumed",
+        "Adding a new env var",
+        "Production checklist"
+      ],
+      "summary": "All `NEXT_PUBLIC_*` vars are inlined at build time. Server-only vars (no prefix) are only available during SSR / server actions / route handlers."
+    },
+    {
+      "id": "docs:frontend:reference:ui-tokens",
+      "path": "docs/frontend/reference/ui-tokens.md",
+      "title": "UI tokens & utilities",
+      "description": "Animation classes, scrollbar utility, design tokens reference.",
+      "tags": [
+        "reference",
+        "ui",
+        "animations",
+        "design-tokens"
+      ],
+      "scope": "frontend",
+      "category": "reference",
+      "headings": [
+        "Color tokens (CSS variables)",
+        "Animations",
+        "Stagger helpers",
+        "Scroll-triggered (`<Reveal>`)",
+        "Reduced motion",
+        "Scrollbar utility",
+        "Color usage pitfalls"
+      ],
+      "summary": "Defined in [src/app/globals.css](../../../apps/frontend/src/app/globals.css)."
+    },
+    {
+      "id": "docs:frontend:architecture",
+      "path": "docs/frontend/architecture.md",
+      "title": "Architecture",
+      "description": "App Router layers, RSC vs Client boundaries, auth flow, request lifecycle.",
+      "tags": [
+        "architecture",
+        "app-router",
+        "rsc",
+        "layers"
+      ],
+      "scope": "frontend",
+      "category": "frontend",
+      "headings": [
+        "Layers",
+        "Path alias",
+        "RSC vs Client — the cardinal rule",
+        "Request lifecycle (protected route)",
+        "Auth flow",
+        "Response shape",
+        "Per-page metadata",
+        "Error / loading / not-found"
+      ],
+      "summary": "```text ┌──────────────────────────────────────────────────────────┐ │ src/app/ Next.js routes (RSC + Client) │ ← composition root ├──────────────────────────────────────────────────────────┤ │ src/features/<name>/ feature modules │ ← can depend on lib + components ├──────────────────────────────────────────────────────────┤ │ src/components/ shared UI + layout + icons │ ← can depend on lib ├──────────────────────────────────────────────────────────┤ │ src/lib/ api, seo, utils, types │ ← leaf └──────────────────────────────────────────────────────────┘ ```"
+    },
+    {
+      "id": "docs:frontend:conventions",
+      "path": "docs/frontend/conventions.md",
+      "title": "Conventions",
+      "description": "Naming, file organization, and concrete do/don't rules.",
+      "tags": [
+        "conventions",
+        "style",
+        "naming"
+      ],
+      "scope": "frontend",
+      "category": "frontend",
+      "headings": [
+        "Naming",
+        "Feature folder structure",
+        "RSC vs Client — practical defaults",
+        "DTO vs interface — when to use what",
+        "Imports",
+        "Forms",
+        "Brand icons",
+        "Logging",
+        "State management",
+        "What NOT to do"
+      ],
+      "summary": "| Kind | Convention | Example | | --- | --- | --- | | File (component) | PascalCase | `LoginForm.tsx`, `BrandPanel.tsx` | | File (hook) | kebab-case + `use-` or camelCase `useFoo.ts` | `use-mobile.ts`, `useAuth.ts` | | File (route) | lowercase, kebab-case folder | `app/forgot-password/page.tsx` | | File (helper) | kebab-case + `.util.ts` / `.types.ts` | `pagination.util.ts`, `user.types.ts` | | Class | PascalCase | `Pagination`, `User` | | Component | PascalCase | `function LoginForm()` | | Hook | camelCase, prefix `use` | `function useAuth()` | | Constant | SCREAMING_SNAKE | `MAX_PAGE_SIZE`, `LAST_EMAIL_KEY` | | Boolean | `is*` / `has*` / `should*` | `isLoading`, `hasSession` | | Folder | kebab-case for routes, lowercase for features | `(auth)/`, `landing/`, `auth/` |"
+    },
+    {
+      "id": "docs:frontend:domain",
+      "path": "docs/frontend/domain.md",
+      "title": "C-HR domain model (frontend)",
+      "description": "HRM user flows, route map, feature breakdown. Đối chiếu với backend domain.",
+      "tags": [
+        "project",
+        "domain",
+        "hrm",
+        "c-hr"
+      ],
+      "scope": "frontend",
+      "category": "frontend",
+      "headings": [
+        "User personas",
+        "Route map (dự kiến)",
+        "Feature → folder map",
+        "Cross-feature concerns",
+        "Invariants UI",
+        "Open questions"
+      ],
+      "summary": "> Outline cho UI/UX của C-HR. Source of truth domain (entities, invariants) ở [docs/domain.md](../domain.md). File này tập trung vào **user flow** và **route map** của FE."
+    },
+    {
+      "id": "docs:frontend:README",
+      "path": "docs/frontend/README.md",
+      "title": "C-HR frontend documentation",
+      "description": "Next.js-specific architecture, conventions, recipes, reference + UX domain for the C-HR frontend.",
+      "tags": [
+        "overview",
+        "frontend",
+        "nextjs",
+        "c-hr"
+      ],
+      "scope": "frontend",
+      "category": "frontend",
+      "headings": [
+        "Contents",
+        "Related"
+      ],
+      "summary": "Next.js-specific patterns cho [apps/frontend](../../apps/frontend/) (App Router, RSC vs Client, design tokens, auth flow, recipes) **plus** UX domain (route map, persona)."
+    }
+  ]
+}

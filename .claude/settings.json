@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm i:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm --version)",
+      "Bash(pnpm --filter @c-hr/backend:*)",
+      "Bash(pnpm --filter @c-hr/frontend:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm check:*)",
+      "Bash(pnpm docs:index)",
+      "Bash(pnpm mcp:start)",
+      "Bash(node scripts/*.js)",
+      "Bash(node scripts/**/*.js)",
+      "Bash(node mcp/docs-server/index.js)",
+      "Bash(./scripts/dev.sh:*)",
+      "Bash(bash scripts/dev.sh:*)",
+      "Bash(npx prisma generate)",
+      "Bash(npx prisma migrate:*)",
+      "Bash(pnpm dlx shadcn@latest:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff)",
+      "Bash(git diff:*)",
+      "Bash(git log)",
+      "Bash(git log:*)",
+      "Bash(git show)",
+      "Bash(git show:*)",
+      "Bash(git branch)",
+      "Bash(git branch:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-files:*)",
+      "Bash(ls)",
+      "Bash(ls:*)",
+      "Bash(find . -type f *)",
+      "Bash(find apps *)",
+      "Bash(find docs *)",
+      "Bash(find prisma *)",
+      "Bash(find src *)",
+      "Bash(mkdir -p:*)",
+      "Bash(chmod +x:*)",
+      "Bash(command -v:*)",
+      "mcp__c-hr-docs__docs_list",
+      "mcp__c-hr-docs__docs_search",
+      "mcp__c-hr-docs__docs_read"
+    ],
+    "deny": [
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ~/:*)",
+      "Bash(rm -rf $HOME:*)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/hooks/post-edit-docs.js\""
+          }
+        ]
+      }
+    ]
+  }
+}

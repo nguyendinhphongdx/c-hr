@@ -10,7 +10,9 @@
     "build:backend": "pnpm --filter @c-hr/backend build",
     "build:frontend": "pnpm --filter @c-hr/frontend build",
     "check:frontend": "pnpm --filter @c-hr/frontend check",
-    "check:backend": "pnpm --filter @c-hr/backend lint && pnpm --filter @c-hr/backend build"
+    "check:backend": "pnpm --filter @c-hr/backend lint && pnpm --filter @c-hr/backend build",
+    "docs:index": "node scripts/build-docs-index.js",
+    "mcp:start": "node mcp/docs-server/index.js"
   },
   "pnpm": {
     "overrides": {

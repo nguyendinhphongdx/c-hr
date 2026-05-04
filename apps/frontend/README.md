@@ -2,7 +2,7 @@
 
 Next.js 16 web app cho **C-HR** (C-OpenAI Human Resource) — SaaS HRM. Thuộc monorepo C-HR ([root README](../../README.md)).
 
-> **Cho AI agents** (Claude Code, Cursor, Aider, …): đọc [CLAUDE.md](CLAUDE.md) trước. Có MCP server tại [mcp/docs-server](mcp/docs-server) phơi bày `docs_list` / `docs_search` / `docs_read` qua stdio. Đăng ký trong [.mcp.json](.mcp.json).
+> **Cho AI agents** (Claude Code, Cursor, Aider, …): đọc [CLAUDE.md](CLAUDE.md) trước. Toàn bộ doc kiến trúc + quy ước + recipes + UX domain ở root [`docs/frontend/`](../../docs/frontend/README.md). MCP server `c-hr-docs` ([../../mcp/docs-server](../../mcp/docs-server/)) phơi `docs_list` / `docs_search` / `docs_read` qua stdio.
 
 ## What's included
 
@@ -37,13 +37,13 @@ Mở [http://localhost:3000](http://localhost:3000). FE expect BE chạy ở `ht
 
 ## Setup checklist (trước khi vào tính năng HR)
 
-1. Sửa `src/lib/seo/site.ts` — đổi tên app, URL, mô tả thành C-HR
-2. Sao chép `.env.example` → `.env.local`, đảm bảo `NEXT_PUBLIC_API_URL` trỏ vào BE C-HR (`:8000/api/v1`)
-3. Thay assets ở `public/` + `src/app/favicon.ico` thành brand C-HR
-4. API contract cho `auth` ở `src/features/auth/types/` + `src/features/auth/services/authService.ts` — xác nhận khớp BE
-5. `pnpm check` xanh trước khi commit
+1. Sửa `src/lib/seo/site.ts` — đổi tên app, URL, mô tả thành C-HR.
+2. Sao chép `.env.example` → `.env.local`, đảm bảo `NEXT_PUBLIC_API_URL` trỏ vào BE C-HR (`:8000/api/v1`).
+3. Thay assets ở `public/` + `src/app/favicon.ico` thành brand C-HR.
+4. API contract cho `auth` ở `src/features/auth/types/` + `src/features/auth/services/authService.ts` — xác nhận khớp BE.
+5. `pnpm check` xanh trước khi commit.
 
-Phần còn lại (employees, departments, attendance, leave, payroll) sẽ tạo theo recipe `add-feature.md` trong giai đoạn plan tính năng.
+Phần còn lại (employees, departments, attendance, leave, payroll) sẽ tạo theo recipe `add-feature.md` trong giai đoạn plan tính năng — xem [docs/plans/features.md](../../docs/plans/features.md).
 
 ## Scripts
 
@@ -75,5 +75,5 @@ src/middleware.ts        Edge auth gate
 ## Notes
 
 - App dùng Next.js 16 docs ở `node_modules/next/dist/docs` làm source of truth — không tin trí nhớ training data, đọc tại chỗ khi không chắc.
-- Conventions chi tiết: [CLAUDE.md](CLAUDE.md) + [docs/boilerplate/conventions.md](docs/boilerplate/conventions.md).
-- HRM domain doc: [docs/project/domain.md](docs/project/domain.md).
+- Conventions chi tiết: [CLAUDE.md](CLAUDE.md) + [docs/frontend/conventions.md](../../docs/frontend/conventions.md).
+- HRM business domain: [docs/domain.md](../../docs/domain.md). UX route map + persona: [docs/frontend/domain.md](../../docs/frontend/domain.md).

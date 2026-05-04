@@ -1,15 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/main/schema.json",
   "mcpServers": {
-    "backend-docs": {
+    "c-hr-docs": {
       "command": "node",
-      "args": ["apps/backend/mcp/docs-server/index.js"],
-      "description": "Backend (NestJS) docs MCP server. Tools: docs_list / docs_search / docs_read scoped to apps/backend/docs."
-    },
-    "frontend-docs": {
-      "command": "node",
-      "args": ["apps/frontend/mcp/docs-server/index.js"],
-      "description": "Frontend (Next.js) docs MCP server. Tools: docs_list / docs_search / docs_read scoped to apps/frontend/docs."
+      "args": ["mcp/docs-server/index.js"],
+      "description": "C-HR docs MCP server. Tools docs_list / docs_search / docs_read scoped to root CLAUDE.md / AGENTS.md / README.md, docs/**, and apps/<name>/CLAUDE.md."
     }
   }
 }

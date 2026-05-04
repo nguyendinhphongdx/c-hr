@@ -1,0 +1,17 @@
+{
+  "name": "@c-hr/docs-mcp-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "C-HR docs MCP server. Exposes the monorepo docs (root, docs/**, apps/<name>/CLAUDE.md) to AI agents (Claude Code, Cursor, ...).",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "docs-mcp-server": "index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  }
+}

@@ -19,9 +19,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm lint && pnpm typecheck",
-    "docs:index": "node scripts/build-docs-index.js",
-    "mcp:start": "node mcp/docs-server/index.js"
+    "check": "pnpm lint && pnpm typecheck"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -54,7 +52,6 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

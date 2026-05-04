@@ -2,7 +2,7 @@
 
 NestJS 10 API cho **C-HR** (C-OpenAI Human Resource) — SaaS HRM. Thuộc monorepo C-HR ([root README](../../README.md)).
 
-> **Cho AI agents** (Claude Code, Cursor, Aider, …): đọc [CLAUDE.md](CLAUDE.md) trước. App ship kèm MCP server tại [mcp/docs-server](mcp/docs-server) phơi bày `docs_list` / `docs_search` / `docs_read` qua stdio để discover docs theo nhu cầu thay vì load cả tree. Đăng ký trong [.mcp.json](.mcp.json).
+> **Cho AI agents** (Claude Code, Cursor, Aider, …): đọc [CLAUDE.md](CLAUDE.md) trước. Toàn bộ doc kiến trúc + quy ước + recipes ở root [`docs/backend/`](../../docs/backend/README.md). MCP server `c-hr-docs` ([../../mcp/docs-server](../../mcp/docs-server/)) phơi `docs_list` / `docs_search` / `docs_read` qua stdio để discover docs theo nhu cầu.
 
 ## Stack
 
@@ -20,7 +20,7 @@ NestJS 10 API cho **C-HR** (C-OpenAI Human Resource) — SaaS HRM. Thuộc monor
 
 ## Layout
 
-```
+```text
 src/
 ├── main.ts                   # bootstrap (cors, swagger, global pipes/filters)
 ├── app.module.ts             # composition root
@@ -42,7 +42,7 @@ src/
 │   ├── redis/                # RedisService
 │   ├── mail/                 # MailService
 │   └── storage/              # local / s3 / gcs providers
-├── modules/                  # feature modules (HRM domain ở đây)
+├── modules/                  # legacy boilerplate modules (đang migrate sang src/apps/<context>/ — ADR 0005)
 │   ├── auth/
 │   ├── user/
 │   └── health/
@@ -54,7 +54,7 @@ prisma/
 └── seed.ts                   # admin seeder
 ```
 
-HRM modules sẽ thêm sau (xem [REFACTOR_PLAN.md](../../REFACTOR_PLAN.md) → "Sau phase 3"): `employee`, `department`, `position`, `attendance`, `leave`, `payroll`.
+HRM modules sẽ thêm theo [docs/plans/features.md](../../docs/plans/features.md) trong layout `src/apps/<bounded-context>/<module>/` (xem [ADR 0005](../../docs/decisions/0005-folder-structure-bounded-contexts.md)).
 
 ## Local dev
 
@@ -70,8 +70,8 @@ Khởi động ở **root** (đã có `scripts/dev.sh` orchestrate):
 Hoặc thủ công trong thư mục này:
 
 ```bash
-cp .env.example .env                 # rồi đổi JWT secrets
-pnpm install                         # nên dùng `pnpm install` ở root để cài cả workspace
+cp .env.example .env                                # rồi đổi JWT secrets
+pnpm install                                        # nên dùng `pnpm install` ở root để cài cả workspace
 pnpm prisma:migrate
 pnpm prisma:seed
 pnpm start:dev
@@ -79,7 +79,6 @@ pnpm start:dev
 
 API: `http://localhost:8000/api/v1`
 Swagger: `http://localhost:8000/api/v1/docs`
-MailHog UI (nếu start): `http://localhost:8025`
 
 ## Endpoints sẵn có
 
@@ -101,9 +100,9 @@ MailHog UI (nếu start): `http://localhost:8025`
 
 `JwtStrategy` đọc access token từ cookie trước, fallback sang `Authorization: Bearer <token>` cho non-browser clients (mobile, server-to-server).
 
-Config qua env:
+Config qua env (xem [docs/backend/reference/env-vars.md](../../docs/backend/reference/env-vars.md) cho danh sách đầy đủ):
 
-```
+```text
 AUTH_ACCESS_COOKIE_NAME=access_token
 AUTH_REFRESH_COOKIE_NAME=refresh_token
 COOKIE_DOMAIN=.example.com   # share giữa subdomain
@@ -126,79 +125,13 @@ pnpm db:switch mysql        # đổi Prisma datasource
 pnpm cli seed               # CLI command đã đăng ký
 ```
 
-### Adding a new module
+Recipe đầy đủ:
 
-```
-src/modules/<feature>/
-├── <feature>.controller.ts
-├── <feature>.service.ts
-├── <feature>.module.ts
-└── dto/
-```
-
-Đăng ký module trong [src/app.module.ts](src/app.module.ts). Recipe đầy đủ: [docs/boilerplate/recipes/add-module.md](docs/boilerplate/recipes/add-module.md).
-
-### Adding a CLI command
-
-1. Tạo `src/cli/commands/<name>.command.ts` implement `CliCommand`.
-2. Register class trong [src/cli/cli.module.ts](src/cli/cli.module.ts) `providers` + thêm vào map [src/cli/commands/index.ts](src/cli/commands/index.ts).
-3. `pnpm cli <name>`.
-
-### Storage S3 / GCS
-
-```bash
-# S3
-pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
-# .env: STORAGE_TYPE=s3 + AWS_* vars
-
-# GCS
-pnpm add @google-cloud/storage
-# .env: STORAGE_TYPE=gcs + GCS_* vars
-```
-
-`StorageModule` factory pick provider theo `STORAGE_TYPE`.
-
-## Docs & AI agents
-
-```text
-CLAUDE.md                          # entry point cho AI agents
-AGENTS.md                          # pointer ngắn → CLAUDE.md
-docs/
-├── README.md                      # human index
-├── boilerplate/                   # framework patterns (đừng sửa trừ khi đổi kiến trúc)
-│   ├── architecture.md
-│   ├── conventions.md
-│   ├── recipes/
-│   └── reference/
-├── project/                       # docs C-HR thật (domain HRM)
-│   ├── domain.md
-│   ├── runbook.md
-│   ├── deployment.md
-│   └── decisions/
-└── index.json                     # auto-generated — fuel cho MCP server
-mcp/docs-server/                   # local MCP server (stdio)
-.mcp.json
-```
-
-```bash
-pnpm docs:index    # regenerate docs/index.json sau khi sửa markdown (PostToolUse hook đã tự chạy)
-pnpm mcp:start     # smoke-test MCP server (Claude Code tự start qua .mcp.json)
-```
-
-### Claude Code integration
-
-```text
-.claude/
-├── settings.json         # permissions allowlist + PostToolUse hooks
-├── settings.local.json   # per-user overrides (gitignored)
-└── agents/
-    ├── code-reviewer.md
-    └── module-scaffolder.md
-```
-
-- **Permissions** auto-approve các lệnh an toàn (`pnpm build`, `pnpm test`, `git diff`, `node scripts/*`), cấm các lệnh phá hoại (`git push`, `git reset --hard`, `rm -rf $HOME`).
-- **PostToolUse hook** ([scripts/hooks/post-edit-docs.js](scripts/hooks/post-edit-docs.js)) auto-rebuild `docs/index.json` khi sửa `CLAUDE.md`, `AGENTS.md`, hoặc `docs/**/*.md`.
-- **Subagents**: `code-reviewer` cho review, `module-scaffolder` cho thêm feature module.
+- Add module → [docs/backend/recipes/add-module.md](../../docs/backend/recipes/add-module.md)
+- Add CLI → [docs/backend/recipes/add-cli-command.md](../../docs/backend/recipes/add-cli-command.md)
+- Auth + cookies → [docs/backend/recipes/auth-and-cookies.md](../../docs/backend/recipes/auth-and-cookies.md)
+- Storage S3/GCS → [docs/backend/recipes/storage-providers.md](../../docs/backend/recipes/storage-providers.md)
+- Switch DB → [docs/backend/recipes/switch-database.md](../../docs/backend/recipes/switch-database.md)
 
 ## Docker
 

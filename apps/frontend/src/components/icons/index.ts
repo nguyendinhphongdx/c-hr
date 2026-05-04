@@ -15,8 +15,8 @@
  * For brand marks not in lucide, paste the SVG path here from
  * https://simpleicons.org/ (MIT-licensed) or your design source.
  *
- * See docs/boilerplate/recipes/icons.md for the full pattern + when to use
- * which library.
+ * See docs/frontend/recipes/icons.md (at the repo root) for the full pattern
+ * + when to use which library.
  */
 export { GithubIcon } from "./github-icon";
 export { GoogleIcon } from "./google-icon";

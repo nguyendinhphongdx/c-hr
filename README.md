@@ -15,18 +15,21 @@
 ```
 .
 ├── apps/
-│   ├── backend/              NestJS API (:8000)
-│   └── frontend/             Next.js app (:3000)
+│   ├── backend/              NestJS API (:8000) — entry: apps/backend/CLAUDE.md
+│   └── frontend/             Next.js app (:3000) — entry: apps/frontend/CLAUDE.md
 ├── services/
 │   ├── postgres/             standalone postgres compose
 │   └── redis/                standalone redis compose
+├── docs/                     Single source of truth (kiến trúc, quy ước, ADR, plan)
+├── mcp/docs-server/          1 MCP server expose docs cho AI agent
 ├── scripts/dev.sh            dev CLI
 ├── docker-compose.yml        root orchestration
 ├── docker-compose.dev.yml    override hot-reload BE
 ├── pnpm-workspace.yaml
 ├── .env.example
-├── CLAUDE.md / AGENTS.md     instructions cho AI coding agents
-└── REFACTOR_PLAN.md          phase plan hiện tại
+├── .mcp.json                 c-hr-docs server
+├── .claude/                  permissions + subagents (code-reviewer, scaffolders)
+└── CLAUDE.md / AGENTS.md     instructions cho AI coding agents
 ```
 
 ## Yêu cầu
@@ -38,7 +41,7 @@
 ## Quick start
 
 ```bash
-# 1. Copy env
+# 1. Copy env (root .env chỉ phục vụ docker-compose, BE/FE đọc env riêng)
 cp .env.example .env
 cp apps/backend/.env.example apps/backend/.env
 cp apps/frontend/.env.example apps/frontend/.env.local
@@ -86,11 +89,17 @@ Hoặc chạy full stack qua Docker (BE hot-reload, FE phải native):
 
 ## Tài liệu
 
-- Quy ước AI agent: [CLAUDE.md](CLAUDE.md)
-- Backend conventions: [apps/backend/CLAUDE.md](apps/backend/CLAUDE.md), [apps/backend/docs](apps/backend/docs/)
-- Frontend conventions: [apps/frontend/CLAUDE.md](apps/frontend/CLAUDE.md), [apps/frontend/docs](apps/frontend/docs/)
-- Plan refactor đang chạy: [REFACTOR_PLAN.md](REFACTOR_PLAN.md)
+Toàn bộ doc của monorepo sống ở [docs/](docs/) (single source of truth):
+
+- Quy ước AI agent: [CLAUDE.md](CLAUDE.md) (root) + [apps/backend/CLAUDE.md](apps/backend/CLAUDE.md) + [apps/frontend/CLAUDE.md](apps/frontend/CLAUDE.md)
+- HRM domain: [docs/domain.md](docs/domain.md) (BE) + [docs/frontend/domain.md](docs/frontend/domain.md) (UX)
+- Kiến trúc + recipes: [docs/backend/](docs/backend/) (NestJS) + [docs/frontend/](docs/frontend/) (Next.js)
+- ADR: [docs/decisions/](docs/decisions/)
+- Plan đang chạy: [docs/plans/refactor.md](docs/plans/refactor.md) + [docs/plans/features.md](docs/plans/features.md)
+- Vận hành: [docs/runbook.md](docs/runbook.md), deploy: [docs/deployment.md](docs/deployment.md)
+
+AI agent dùng MCP server `c-hr-docs` ([mcp/docs-server](mcp/docs-server/)) qua tools `docs_list / docs_search / docs_read`.
 
 ## Status
 
-Đang ở giai đoạn refactor setup (xem [REFACTOR_PLAN.md](REFACTOR_PLAN.md)). Tính năng HR (employees, departments, attendance, leave, payroll) sẽ được plan sau khi xong cả 3 phase refactor.
+Đang ở giai đoạn refactor setup (xem [docs/plans/refactor.md](docs/plans/refactor.md)). Tính năng HR (employees, departments, attendance, leave, payroll) sẽ được plan sau khi xong cả 3 phase refactor.
