@@ -8,6 +8,7 @@ import type {
   ChangePasswordInput,
   ForgotPasswordInput,
   LoginInput,
+  OrgSignupInput,
   RegisterInput,
   ResetPasswordInput,
   UpdateProfileInput,
@@ -57,6 +58,24 @@ export function useRegister() {
     onSuccess: (res) => {
       queryClient.setQueryData(authKeys.me, res.user);
       router.push("/verify-email/pending");
+    },
+  });
+}
+
+/**
+ * Org signup — creates Organization + the founding admin user in one
+ * transaction (BE: POST /organizations/signup). On success the user is
+ * already authenticated (BE set httpOnly cookies) and gets dropped at /home.
+ */
+export function useSignupOrg() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (data: OrgSignupInput) => authService.signupOrg(data),
+    onSuccess: (res) => {
+      queryClient.setQueryData(authKeys.me, res.user);
+      router.push("/home");
     },
   });
 }

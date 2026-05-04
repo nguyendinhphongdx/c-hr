@@ -30,6 +30,35 @@ export interface RegisterInput {
   full_name: string;
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// Organization signup (Feature 1) — proper multi-tenant entry point.
+// /register form now collects these fields and POSTs /organizations/signup
+// (creates Org + first admin User in one transaction).
+// ──────────────────────────────────────────────────────────────────────
+
+export interface OrgSignupInput {
+  organizationName: string;
+  slug: string;
+  adminEmail: string;
+  adminPassword: string;
+  adminName: string;
+}
+
+export interface OrganizationSummary {
+  id: ID;
+  name: string;
+  slug: string;
+  timezone: string;
+  currency: string;
+}
+
+/** /organizations/signup returns the new Org + the founder + tokens.
+ *  BE also sets httpOnly cookies; FE doesn't need to read the tokens. */
+export interface OrgSignupResponse {
+  user: User;
+  organization: OrganizationSummary;
+}
+
 export interface ForgotPasswordInput {
   email: string;
 }

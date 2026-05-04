@@ -5,6 +5,8 @@ import type {
   ForgotPasswordInput,
   LoginInput,
   OAuthProvider,
+  OrgSignupInput,
+  OrgSignupResponse,
   RegisterInput,
   ResetPasswordInput,
   UpdateProfileInput,
@@ -21,6 +23,14 @@ export const authService = {
 
   register: async (data: RegisterInput): Promise<AuthResponse> => {
     const res = await apiClient.post<AuthResponse>("/auth/register", data);
+    return res.data;
+  },
+
+  signupOrg: async (data: OrgSignupInput): Promise<OrgSignupResponse> => {
+    const res = await apiClient.post<OrgSignupResponse>(
+      "/organizations/signup",
+      data,
+    );
     return res.data;
   },
 
