@@ -6,6 +6,24 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
+/**
+ * BE wraps every response in `{ success: true, data: ... }` via
+ * common/interceptors/transform.interceptor.ts. Unwrap once here so every
+ * service caller reads `res.data` as the actual payload.
+ */
+apiClient.interceptors.response.use((response) => {
+  const body = response.data;
+  if (
+    body &&
+    typeof body === "object" &&
+    body.success === true &&
+    "data" in body
+  ) {
+    response.data = body.data;
+  }
+  return response;
+});
+
 let refreshInFlight: Promise<void> | null = null;
 let refreshFailed = false;
 
