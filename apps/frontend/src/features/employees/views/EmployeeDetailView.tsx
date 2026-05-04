@@ -1,0 +1,128 @@
+"use client";
+
+import { ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useIsAppAdmin } from "@/features/auth";
+import type { ID } from "@/lib/types";
+
+import { useEmployee } from "../hooks/useEmployees";
+
+interface EmployeeDetailViewProps {
+  id: ID;
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString();
+}
+
+export function EmployeeDetailView({ id }: EmployeeDetailViewProps) {
+  const canManage = useIsAppAdmin("HRM");
+  const employee = useEmployee(id);
+
+  if (employee.isLoading) {
+    return (
+      <div className="mx-auto flex max-w-3xl items-center justify-center gap-2 px-6 py-16 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+      </div>
+    );
+  }
+
+  if (employee.error || !employee.data) {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-16">
+        <p className="text-sm text-destructive">Employee not found.</p>
+        <Button variant="ghost" asChild className="mt-4 gap-2">
+          <Link href="/employees">
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to list
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const e = employee.data;
+  const fullName = `${e.firstName} ${e.lastName}`.trim();
+
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-8">
+      <Button variant="ghost" asChild size="sm" className="gap-2">
+        <Link href="/employees">
+          <ArrowLeft className="h-3.5 w-3.5" /> All employees
+        </Link>
+      </Button>
+
+      <Card>
+        <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+          <div>
+            <CardTitle className="text-2xl">{fullName}</CardTitle>
+            <CardDescription>
+              {e.title ?? "No title set"} · <span className="font-mono">{e.code}</span>
+            </CardDescription>
+          </div>
+          <Badge>{e.status.replace("_", " ").toLowerCase()}</Badge>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Field label="Email" value={e.email} mono />
+          <Field label="Phone" value={e.phone ?? "—"} />
+          <Field label="Date of birth" value={formatDate(e.dob)} />
+          <Field label="Gender" value={e.gender ?? "—"} />
+          <Field label="Hire date" value={formatDate(e.hireDate)} />
+          {e.terminationDate && (
+            <Field
+              label="Termination date"
+              value={formatDate(e.terminationDate)}
+            />
+          )}
+          <Field label="Department" value={e.departmentId ?? "—"} mono small />
+        </CardContent>
+      </Card>
+
+      {canManage && (
+        <p className="text-xs text-muted-foreground">
+          Edit / soft-delete UI coming next iteration. For now, edits land via
+          the API directly.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  mono,
+  small,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  small?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-[140px_1fr] items-start gap-4">
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div
+        className={[
+          "text-sm",
+          mono ? "font-mono" : "",
+          small ? "text-xs" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
