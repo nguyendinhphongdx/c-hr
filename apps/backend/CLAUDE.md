@@ -38,7 +38,7 @@ prisma/                 # schema + seed
 scripts/                # one-off node scripts (init-project, switch-db)
 ```
 
-> **Hiện tại** code mới có `src/modules/{auth,user,health}` (legacy boilerplate). Migrate sang `src/apps/core/...` được track trong [docs/plans/features.md](../../docs/plans/features.md) Feature 0.
+> **Hiện tại** chỉ có `src/apps/core/{auth,user,health}`. Bounded context mới (`platform`, `hrm`, `attendance`, `requests`) sẽ thêm theo [docs/plans/features.md](../../docs/plans/features.md) Feature 1+.
 
 ## Hard rules — DO NOT violate
 

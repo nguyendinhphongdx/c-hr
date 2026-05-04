@@ -12,9 +12,7 @@ import { RedisModule } from './libs/redis/redis.module';
 import { MailModule } from './libs/mail/mail.module';
 import { StorageModule } from './libs/storage';
 
-import { AuthModule } from './modules/auth/auth.module';
-import { UserModule } from './modules/user/user.module';
-import { HealthModule } from './modules/health/health.module';
+import { CoreModule } from './apps/core/core.module';
 
 @Module({
   imports: [
@@ -40,9 +38,7 @@ import { HealthModule } from './modules/health/health.module';
     MailModule,
     StorageModule,
 
-    AuthModule,
-    UserModule,
-    HealthModule,
+    CoreModule,
   ],
 })
 export class AppModule {}

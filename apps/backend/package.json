@@ -103,7 +103,7 @@
       "^@common/(.*)$": "<rootDir>/common/$1",
       "^@config/(.*)$": "<rootDir>/config/$1",
       "^@libs/(.*)$": "<rootDir>/libs/$1",
-      "^@modules/(.*)$": "<rootDir>/modules/$1"
+      "^@apps/(.*)$": "<rootDir>/apps/$1"
     }
   }
 }

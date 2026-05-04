@@ -42,10 +42,11 @@ src/
 │   ├── redis/                # RedisService
 │   ├── mail/                 # MailService
 │   └── storage/              # local / s3 / gcs providers
-├── modules/                  # legacy boilerplate modules (đang migrate sang src/apps/<context>/ — ADR 0005)
-│   ├── auth/
-│   ├── user/
-│   └── health/
+├── apps/                     # bounded contexts (ADR 0005)
+│   └── core/                 # auth, user, health — cross-cutting cho mọi app
+│       ├── auth/
+│       ├── user/
+│       └── health/
 └── cli/
     ├── cli.ts                # `pnpm cli <command>`
     └── commands/
