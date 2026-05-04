@@ -50,7 +50,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "HRM",
     items: [
       { href: "/employees", label: "Employees", icon: Users },
-      { href: "/departments", label: "Departments", icon: Building2, disabled: true },
+      { href: "/departments", label: "Departments", icon: Building2 },
       { href: "/orgchart", label: "OrgChart", icon: Network, disabled: true },
     ],
   },
