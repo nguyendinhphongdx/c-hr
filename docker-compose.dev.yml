@@ -1,24 +1,8 @@
 name: c-hr
 
-services:
-  backend:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
-      target: builder
-    command: ['pnpm', 'start:dev']
-    environment:
-      NODE_ENV: development
-      LOG_LEVEL: debug
-    volumes:
-      - ./apps/backend/src:/app/src:cached
-      - ./apps/backend/prisma:/app/prisma:cached
-      - ./apps/backend/test:/app/test:cached
-      - ./apps/backend/tsconfig.json:/app/tsconfig.json:cached
-      - ./apps/backend/tsconfig.build.json:/app/tsconfig.build.json:cached
-      - ./apps/backend/nest-cli.json:/app/nest-cli.json:cached
-      - backend_node_modules:/app/node_modules
-
-volumes:
-  backend_node_modules:
-    name: c-hr-backend-node-modules
+# Dev mode — only infra (postgres + redis) in containers. BE and FE run
+# natively via `pnpm dev` so file watching, debugger, and source maps
+# stay snappy. Used by `./scripts/dev.sh start:dev`.
+include:
+  - ./services/postgres/docker-compose.yml
+  - ./services/redis/docker-compose.yml

@@ -7,8 +7,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# `start` → full stack (infra + backend container, FE container TBD).
+# `start:dev` → infra-only; BE + FE run natively via `pnpm dev` for fast
+#               file watching + easy debugging.
 COMPOSE_BASE=(docker compose -f docker-compose.yml)
-COMPOSE_DEV=(docker compose -f docker-compose.yml -f docker-compose.dev.yml)
+COMPOSE_DEV=(docker compose -f docker-compose.dev.yml)
 
 usage() {
   cat <<EOF
@@ -16,16 +19,18 @@ C-HR dev CLI
 
 Usage: ./scripts/dev.sh <command> [target]
 
-Targets: all | infra | backend | frontend | postgres | redis
+Targets (start / start:dev / etc.): all | infra | backend | postgres | redis
 
 Commands:
-  start [target]      Start containers (default: infra)
-  start:dev [target]  Start with dev override (hot-reload)
+  start [target]      Start full-stack containers (default: all). Builds
+                      apps/* images if missing.
+  start:dev           Start infra (postgres + redis) only — for native
+                      BE/FE dev. No target needed.
   stop  [target]      Stop containers (default: all)
   restart [target]    Restart containers
   logs  [target]      Tail logs (default: backend)
   status              docker compose ps
-  build [target]      Rebuild image
+  build [target]      Rebuild image (default: backend)
   clean [target]      Stop + remove volumes (DESTRUCTIVE — drops DB)
   dev   <target>      Run native dev server: dev backend | dev frontend
   install             pnpm install at root (workspace)
@@ -35,10 +40,10 @@ Commands:
   shell <target>      Exec a bash shell in container
 
 Examples:
-  ./scripts/dev.sh start infra        # postgres + redis only
-  ./scripts/dev.sh dev backend        # native nest start --watch on :8000
-  ./scripts/dev.sh dev frontend       # native next dev on :3000
-  ./scripts/dev.sh start:dev all      # full stack with hot-reload BE
+  ./scripts/dev.sh start:dev          # postgres + redis only
+  ./scripts/dev.sh dev backend        # native nest start --watch :8000
+  ./scripts/dev.sh dev frontend       # native next dev :3000
+  ./scripts/dev.sh start              # full stack in containers (prod-like)
   ./scripts/dev.sh migrate
 EOF
 }
@@ -47,14 +52,13 @@ cmd="${1:-help}"
 target="${2:-}"
 
 infra_services=(postgres redis)
-all_compose_services=(postgres redis backend)
+all_compose_services=(postgres redis backend frontend)
 
 resolve_services() {
   case "$1" in
     ""|all)      printf '%s\n' "${all_compose_services[@]}" ;;
     infra)       printf '%s\n' "${infra_services[@]}" ;;
-    postgres|redis|backend) printf '%s\n' "$1" ;;
-    frontend)    echo "frontend chạy native (pnpm dev), không có trong root compose. Dùng: ./scripts/dev.sh dev frontend" >&2; exit 2 ;;
+    postgres|redis|backend|frontend) printf '%s\n' "$1" ;;
     *)           echo "Unknown target: $1" >&2; exit 2 ;;
   esac
 }
@@ -65,14 +69,13 @@ case "$cmd" in
     ;;
 
   start)
-    mapfile -t svcs < <(resolve_services "${target:-infra}")
+    mapfile -t svcs < <(resolve_services "${target:-all}")
     "${COMPOSE_BASE[@]}" up -d "${svcs[@]}"
     "${COMPOSE_BASE[@]}" ps
     ;;
 
   start:dev)
-    mapfile -t svcs < <(resolve_services "${target:-all}")
-    "${COMPOSE_DEV[@]}" up -d "${svcs[@]}"
+    "${COMPOSE_DEV[@]}" up -d
     "${COMPOSE_DEV[@]}" ps
     ;;
 

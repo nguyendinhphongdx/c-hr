@@ -4,7 +4,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json pnpm-lock.yaml* .npmrc* ./
-RUN npm install -g pnpm@10 && pnpm install --frozen-lockfile
+RUN npm install -g pnpm@10 && pnpm install
 
 COPY . .
 RUN npx prisma generate

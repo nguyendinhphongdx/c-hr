@@ -1,16 +1,58 @@
 name: c-hr
 
-# Infra services pulled in whole via `include:` — postgres + redis have no
-# dev overrides and run identically across environments.
+# Full stack — infra (services/*) + apps (apps/*). Used for prod-like
+# verification: `./scripts/dev.sh start`. For day-to-day dev, use
+# docker-compose.dev.yml (infra only) and run BE/FE natively via
+# `pnpm dev` for fast file watching + easy debugging.
 include:
   - ./services/postgres/docker-compose.yml
   - ./services/redis/docker-compose.yml
 
-# Backend uses `extends:` (not `include:`) so docker-compose.dev.yml can
-# layer hot-reload + dev command on top via `-f`. Compose's `include`
-# does not propagate `-f` overrides into included service definitions.
 services:
   backend:
-    extends:
-      file: ./services/backend/docker-compose.yml
-      service: backend
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: c-hr-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Single source of truth for BE config — same file BE reads natively.
+    # `environment:` below only overrides container-network values.
+    env_file:
+      - ./apps/backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/c_hr
+      REDIS_HOST: redis
+    ports:
+      - '8000:8000'
+    networks:
+      - c-hr
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: c-hr-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    # NEXT_PUBLIC_* are baked into the build; the container only serves
+    # the prebuilt output. URLs in apps/frontend/.env.local should point
+    # at the host-mapped ports (localhost:8000 for BE) so the browser
+    # can reach them.
+    env_file:
+      - ./apps/frontend/.env.local
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - '3000:3000'
+    networks:
+      - c-hr
