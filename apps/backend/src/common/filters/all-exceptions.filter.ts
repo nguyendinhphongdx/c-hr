@@ -1,4 +1,4 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus, Logger } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 @Catch()
@@ -22,10 +22,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       path: request.url,
     };
 
-    this.logger.error(
-      `Unhandled Exception | ${request.method} ${request.url} | Status: ${status} | Error: ${exception.message}`,
-      exception.stack,
-    );
+    // 4xx are expected client mistakes (bad input, missing auth, not found)
+    // — log at warn without the stack so the console stays readable.
+    // 5xx are real bugs we want full visibility on.
+    const line = `${request.method} ${request.url} | ${status} | ${exception.message}`;
+    if (status >= 500) {
+      this.logger.error(line, exception.stack);
+    } else {
+      this.logger.warn(line);
+    }
 
     response.status(status).json(errorResponse);
   }
