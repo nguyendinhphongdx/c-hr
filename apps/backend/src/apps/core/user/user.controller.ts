@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -12,12 +11,10 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
-import { isAppAdmin } from '@/common/auth/access';
 import { CurrentUser } from '@/common/decorators';
 import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
 import { RequestUser } from '@/common/types';
-import { PrismaService } from '@libs/database/prisma.service';
 
 import { ChangePasswordDto, ListUsersDto, UpdateUserDto } from './dto';
 import { UserService } from './user.service';
@@ -27,23 +24,15 @@ import { UserService } from './user.service';
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UserController {
-  constructor(
-    private readonly userService: UserService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
   /**
    * Tenant-scoped user list for the Employee form's user picker.
    * HRM appadmin only — exposes Org members' emails.
    */
   @Get()
-  async list(@CurrentUser() user: RequestUser, @Query() query: ListUsersDto) {
-    if (!user.organizationId) {
-      throw new ForbiddenException('Current user is not attached to an organization');
-    }
-    const ok = await isAppAdmin(user, 'HRM', user.organizationId, this.prisma);
-    if (!ok) throw new ForbiddenException('Need HRM appadmin or admin role');
-    return this.userService.listForOrg(user.organizationId, query);
+  list(@Query() query: ListUsersDto) {
+    return this.userService.listForOrg(query);
   }
 
   @Get('me')

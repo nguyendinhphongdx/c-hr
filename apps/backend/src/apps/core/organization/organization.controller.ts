@@ -13,9 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 
-import { CurrentUser } from '@/common/decorators';
 import { JwtAuthGuard } from '@/common/guards';
-import { RequestUser } from '@/common/types';
 
 import { setAuthCookies } from '../auth/auth.cookies';
 import { SignupDto, UpdateOrganizationDto } from './dto';
@@ -40,14 +38,14 @@ export class OrganizationController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  findMine(@CurrentUser() user: RequestUser) {
-    return this.orgService.findMine(user.organizationId);
+  findMine() {
+    return this.orgService.findMine();
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch('me')
-  updateMine(@CurrentUser() user: RequestUser, @Body() dto: UpdateOrganizationDto) {
-    return this.orgService.updateMine(user, dto);
+  updateMine(@Body() dto: UpdateOrganizationDto) {
+    return this.orgService.updateMine(dto);
   }
 }

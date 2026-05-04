@@ -13,10 +13,8 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { Auditable } from '@/common/audit';
-import { CurrentUser } from '@/common/decorators';
 import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
-import { RequestUser } from '@/common/types';
 
 import { CreateWorkScheduleDto, UpdateWorkScheduleDto } from './dto';
 import { WorkScheduleService } from './work-schedule.service';
@@ -29,35 +27,31 @@ export class WorkScheduleController {
   constructor(private readonly service: WorkScheduleService) {}
 
   @Get()
-  list(@CurrentUser() user: RequestUser) {
-    return this.service.list(user);
+  list() {
+    return this.service.list();
   }
 
   @Get(':id')
-  findOne(@CurrentUser() user: RequestUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.service.findOne(user, id);
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.findOne(id);
   }
 
   @Post()
   @Auditable({ action: 'WORK_SCHEDULE_CREATE', entity: 'WorkSchedule' })
-  create(@CurrentUser() user: RequestUser, @Body() dto: CreateWorkScheduleDto) {
-    return this.service.create(user, dto);
+  create(@Body() dto: CreateWorkScheduleDto) {
+    return this.service.create(dto);
   }
 
   @Patch(':id')
   @Auditable({ action: 'WORK_SCHEDULE_UPDATE', entity: 'WorkSchedule' })
-  update(
-    @CurrentUser() user: RequestUser,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateWorkScheduleDto,
-  ) {
-    return this.service.update(user, id, dto);
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateWorkScheduleDto) {
+    return this.service.update(id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @Auditable({ action: 'WORK_SCHEDULE_DELETE', entity: 'WorkSchedule' })
-  softDelete(@CurrentUser() user: RequestUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.service.softDelete(user, id);
+  softDelete(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.softDelete(id);
   }
 }

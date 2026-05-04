@@ -1,15 +1,9 @@
-import {
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 
-import { isAppAdmin } from '@/common/auth/access';
-import { RequestUser } from '@/common/types';
+import { requireAppAdmin } from '@/common/auth/access';
+import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import {
@@ -35,6 +29,7 @@ export class AttendanceDeviceService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
     private readonly repo: AttendanceDeviceRepository,
   ) {}
 
@@ -42,21 +37,21 @@ export class AttendanceDeviceService {
   // Admin-side CRUD (HRM appadmin)
   // ──────────────────────────────────────────────────────────────────
 
-  async list(currentUser: RequestUser) {
-    const orgId = this.requireOrg(currentUser);
+  async list() {
+    const orgId = this.ctx.requireOrg();
     return this.repo.findManyByOrg(orgId);
   }
 
-  async findOne(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
+  async findOne(id: string) {
+    const orgId = this.ctx.requireOrg();
     const dev = await this.repo.findByIdByOrg(orgId, id);
     if (!dev) throw new NotFoundException('Device not found');
     return dev;
   }
 
-  async create(currentUser: RequestUser, dto: CreateAttendanceDeviceDto) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async create(dto: CreateAttendanceDeviceDto) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const plaintext = generateToken();
     const tokenHash = await bcrypt.hash(plaintext, BCRYPT_ROUNDS);
@@ -75,9 +70,9 @@ export class AttendanceDeviceService {
     return { device, token: plaintext };
   }
 
-  async update(currentUser: RequestUser, id: string, dto: UpdateAttendanceDeviceDto) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async update(id: string, dto: UpdateAttendanceDeviceDto) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Device not found');
@@ -89,9 +84,9 @@ export class AttendanceDeviceService {
     });
   }
 
-  async regenerateToken(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async regenerateToken(id: string) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Device not found');
@@ -102,9 +97,9 @@ export class AttendanceDeviceService {
     return { device, token: plaintext };
   }
 
-  async remove(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async remove(id: string) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Device not found');
@@ -158,12 +153,7 @@ export class AttendanceDeviceService {
         continue;
       }
 
-      const result = await this.applyEvent(
-        device.id,
-        device.organizationId,
-        empId,
-        event,
-      );
+      const result = await this.applyEvent(device.id, device.organizationId, empId, event);
       if (result === 'accepted') summary.accepted++;
       else if (result === 'duplicate') summary.duplicates++;
     }
@@ -188,9 +178,7 @@ export class AttendanceDeviceService {
     event: AttendanceEventDto,
   ): Promise<'accepted' | 'duplicate'> {
     const ts = new Date(event.timestamp);
-    const dateOnly = new Date(
-      Date.UTC(ts.getUTCFullYear(), ts.getUTCMonth(), ts.getUTCDate()),
-    );
+    const dateOnly = new Date(Date.UTC(ts.getUTCFullYear(), ts.getUTCMonth(), ts.getUTCDate()));
 
     return this.prisma.$transaction(async (tx) => {
       // Idempotency guard. We check before write to avoid overwriting an
@@ -228,8 +216,7 @@ export class AttendanceDeviceService {
       }
 
       // Row exists from an earlier event today: extend the window.
-      const newCheckIn =
-        existing.checkInAt && existing.checkInAt < ts ? existing.checkInAt : ts;
+      const newCheckIn = existing.checkInAt && existing.checkInAt < ts ? existing.checkInAt : ts;
       const newCheckOut =
         existing.checkOutAt && existing.checkOutAt > ts ? existing.checkOutAt : ts;
 
@@ -247,22 +234,6 @@ export class AttendanceDeviceService {
       });
       return 'accepted';
     });
-  }
-
-  // ──────────────────────────────────────────────────────────────────
-  // Helpers
-  // ──────────────────────────────────────────────────────────────────
-
-  private requireOrg(user: RequestUser): string {
-    if (!user.organizationId) {
-      throw new ForbiddenException('Current user is not attached to an organization');
-    }
-    return user.organizationId;
-  }
-
-  private async requireHrmAppAdmin(user: RequestUser, orgId: string) {
-    const ok = await isAppAdmin(user, 'HRM', orgId, this.prisma);
-    if (!ok) throw new ForbiddenException('Need HRM appadmin or admin role');
   }
 }
 

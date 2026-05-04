@@ -8,7 +8,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 
 import { isAppAdmin } from '@/common/auth/access';
-import { RequestUser } from '@/common/types';
+import { RequestContextService } from '@/common/context';
 import { OrgChartService } from '@/apps/hrm/orgchart/orgchart.service';
 import { PrismaService } from '@libs/database/prisma.service';
 
@@ -17,26 +17,23 @@ import { RequestGroupService } from '../request-group/request-group.service';
 import { validateRequestData } from '../request.validator';
 import { getHandler } from '../side-effects';
 
-import {
-  CreateRequestDto,
-  DecideRequestDto,
-  ListRequestsDto,
-} from './dto';
+import { CreateRequestDto, DecideRequestDto, ListRequestsDto } from './dto';
 import { RequestRepository } from './request.repository';
 
 @Injectable()
 export class RequestService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
     private readonly repo: RequestRepository,
     private readonly groups: RequestGroupService,
     private readonly orgChart: OrgChartService,
     private readonly events: EventEmitter2,
   ) {}
 
-  async list(currentUser: RequestUser, query: ListRequestsDto) {
-    const orgId = this.requireOrg(currentUser);
-    const isHrm = await isAppAdmin(currentUser, 'HRM', orgId, this.prisma);
+  async list(query: ListRequestsDto) {
+    const orgId = this.ctx.requireOrg();
+    const isHrm = await isAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const where: Prisma.RequestWhereInput = {};
     if (query.status) where.status = query.status;
@@ -44,7 +41,7 @@ export class RequestService {
     if (query.requesterId) where.requesterId = query.requesterId;
 
     if (!isHrm) {
-      const eid = currentUser.employeeId;
+      const eid = this.ctx.employeeId;
       if (!eid) {
         throw new ForbiddenException(
           'Account is not linked to an employee — cannot view requests',
@@ -55,26 +52,26 @@ export class RequestService {
       if (query.scope === 'mine') Object.assign(where, own);
       else if (query.scope === 'incoming') Object.assign(where, assigned);
       else where.OR = [own, assigned];
-    } else if (query.scope === 'mine' && currentUser.employeeId) {
-      where.requesterId = currentUser.employeeId;
-    } else if (query.scope === 'incoming' && currentUser.employeeId) {
-      where.approverId = currentUser.employeeId;
+    } else if (query.scope === 'mine' && this.ctx.employeeId) {
+      where.requesterId = this.ctx.employeeId;
+    } else if (query.scope === 'incoming' && this.ctx.employeeId) {
+      where.approverId = this.ctx.employeeId;
     }
 
     return this.repo.findManyByOrg(orgId, where);
   }
 
-  async findOne(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
+  async findOne(id: string) {
+    const orgId = this.ctx.requireOrg();
     const r = await this.repo.findByIdByOrg(orgId, id);
     if (!r) throw new NotFoundException('Request not found');
-    await this.assertCanView(currentUser, orgId, r);
+    await this.assertCanView(orgId, r);
     return r;
   }
 
-  async create(currentUser: RequestUser, dto: CreateRequestDto) {
-    const orgId = this.requireOrg(currentUser);
-    const requesterId = currentUser.employeeId;
+  async create(dto: CreateRequestDto) {
+    const orgId = this.ctx.requireOrg();
+    const requesterId = this.ctx.employeeId;
     if (!requesterId) {
       throw new ForbiddenException(
         'Account is not linked to an employee — cannot create requests',
@@ -95,10 +92,7 @@ export class RequestService {
     }
 
     // Approver must be in candidates list — same gate as F4.
-    const { candidates } = await this.orgChart.getApproverCandidates(
-      currentUser,
-      requesterId,
-    );
+    const { candidates } = await this.orgChart.getApproverCandidates(requesterId);
     if (!candidates.some((c) => c.employeeId === dto.approverId)) {
       throw new BadRequestException(
         'approverId is not in the suggested approver candidates',
@@ -121,22 +115,22 @@ export class RequestService {
     return created;
   }
 
-  async approve(currentUser: RequestUser, id: string, dto: DecideRequestDto) {
-    return this.decide(currentUser, id, 'APPROVED', dto.decisionNote);
+  async approve(id: string, dto: DecideRequestDto) {
+    return this.decide(id, 'APPROVED', dto.decisionNote);
   }
 
-  async reject(currentUser: RequestUser, id: string, dto: DecideRequestDto) {
+  async reject(id: string, dto: DecideRequestDto) {
     if (!dto.decisionNote || dto.decisionNote.trim().length === 0) {
       throw new BadRequestException('decisionNote is required when rejecting');
     }
-    return this.decide(currentUser, id, 'REJECTED', dto.decisionNote);
+    return this.decide(id, 'REJECTED', dto.decisionNote);
   }
 
-  async cancel(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
+  async cancel(id: string) {
+    const orgId = this.ctx.requireOrg();
     const r = await this.repo.findByIdByOrg(orgId, id);
     if (!r) throw new NotFoundException('Request not found');
-    if (r.requesterId !== currentUser.employeeId) {
+    if (r.requesterId !== this.ctx.employeeId) {
       throw new ForbiddenException('Only the requester can cancel');
     }
     if (r.status !== 'PENDING') {
@@ -159,16 +153,15 @@ export class RequestService {
   // ──────────────────────────────────────────────────────────────────
 
   private async decide(
-    currentUser: RequestUser,
     id: string,
     next: 'APPROVED' | 'REJECTED',
     decisionNote: string | undefined,
   ) {
-    const orgId = this.requireOrg(currentUser);
+    const orgId = this.ctx.requireOrg();
     const r = await this.repo.findByIdByOrg(orgId, id);
     if (!r) throw new NotFoundException('Request not found');
 
-    if (r.approverId !== currentUser.employeeId) {
+    if (r.approverId !== this.ctx.employeeId) {
       throw new ForbiddenException('Only the assigned approver can decide');
     }
     if (r.status !== 'PENDING') {
@@ -220,21 +213,13 @@ export class RequestService {
     return updated;
   }
 
-  private requireOrg(user: RequestUser): string {
-    if (!user.organizationId) {
-      throw new ForbiddenException('Current user is not attached to an organization');
-    }
-    return user.organizationId;
-  }
-
   private async assertCanView(
-    currentUser: RequestUser,
     orgId: string,
     r: { requesterId: string; approverId: string | null },
   ) {
-    const allowed = await isAppAdmin(currentUser, 'HRM', orgId, this.prisma);
+    const allowed = await isAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
     if (allowed) return;
-    const eid = currentUser.employeeId;
+    const eid = this.ctx.employeeId;
     if (eid && (r.requesterId === eid || r.approverId === eid)) return;
     throw new ForbiddenException('Cannot view this request');
   }

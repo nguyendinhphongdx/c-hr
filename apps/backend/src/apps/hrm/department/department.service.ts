@@ -1,13 +1,8 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-import { isAppAdmin } from '@/common/auth/access';
-import { RequestUser } from '@/common/types';
+import { requireAppAdmin } from '@/common/auth/access';
+import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { CreateDepartmentDto, UpdateDepartmentDto } from './dto';
@@ -17,24 +12,25 @@ import { DepartmentRepository } from './department.repository';
 export class DepartmentService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
     private readonly repo: DepartmentRepository,
   ) {}
 
-  async list(currentUser: RequestUser) {
-    const orgId = this.requireOrg(currentUser);
+  async list() {
+    const orgId = this.ctx.requireOrg();
     return this.repo.findManyByOrg(orgId);
   }
 
-  async findOne(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
+  async findOne(id: string) {
+    const orgId = this.ctx.requireOrg();
     const dept = await this.repo.findByIdByOrg(orgId, id);
     if (!dept) throw new NotFoundException('Department not found');
     return dept;
   }
 
-  async create(currentUser: RequestUser, dto: CreateDepartmentDto) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async create(dto: CreateDepartmentDto) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     if (dto.parentId) await this.assertParentInOrg(orgId, dto.parentId);
     if (dto.managerId) await this.assertManagerInOrg(orgId, dto.managerId);
@@ -59,9 +55,9 @@ export class DepartmentService {
     });
   }
 
-  async update(currentUser: RequestUser, id: string, dto: UpdateDepartmentDto) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async update(id: string, dto: UpdateDepartmentDto) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Department not found');
@@ -94,9 +90,9 @@ export class DepartmentService {
     });
   }
 
-  async softDelete(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async softDelete(id: string) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Department not found');
@@ -108,18 +104,6 @@ export class DepartmentService {
   // ──────────────────────────────────────────────────────────────────
   // Helpers
   // ──────────────────────────────────────────────────────────────────
-
-  private requireOrg(user: RequestUser): string {
-    if (!user.organizationId) {
-      throw new ForbiddenException('Current user is not attached to an organization');
-    }
-    return user.organizationId;
-  }
-
-  private async requireHrmAppAdmin(user: RequestUser, orgId: string) {
-    const ok = await isAppAdmin(user, 'HRM', orgId, this.prisma);
-    if (!ok) throw new ForbiddenException('Need HRM appadmin or admin role');
-  }
 
   private async assertParentInOrg(orgId: string, parentId: string) {
     const ok = await this.repo.existsInOrg(orgId, parentId);

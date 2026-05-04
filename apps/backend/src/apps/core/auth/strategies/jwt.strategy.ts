@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
 import { PrismaService } from '@libs/database/prisma.service';
+import { RequestContextService } from '@/common/context';
 import { IJwtPayload, RequestUser } from '@/common/types';
 
 /**
@@ -25,6 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
   ) {
     const cookieName = configService.get<string>('auth.cookie.accessName', 'access_token');
     super({
@@ -46,6 +48,19 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       },
     });
     if (!user) throw new UnauthorizedException('User no longer exists');
+
+    // Populate the per-request ALS context so services can read auth
+    // data via RequestContextService (ADR 0007). Passport also stores
+    // the returned object on `request.user` for @CurrentUser() callers
+    // that opt into the typed shape.
+    this.ctx.set({
+      userId: user.id,
+      sessionId: payload.sessionId,
+      role: user.role,
+      organizationId: user.organizationId,
+      employeeId: user.employeeId,
+    });
+
     return {
       id: user.id,
       email: user.email,

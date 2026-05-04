@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-04T16:41:00.446Z",
+  "generatedAt": "2026-05-04T16:57:18.228Z",
   "repoRelativeRoot": ".",
-  "count": 44,
+  "count": 45,
   "entries": [
     {
       "id": "AGENTS",
@@ -582,6 +582,38 @@
         "References"
       ],
       "summary": "- **Status**: Accepted (supersedes the per-type tables introduced in F4) - **Date**: 2026-05-04 - **Deciders**: @nguyendinhphongdx"
+    },
+    {
+      "id": "docs:decisions:0007-service-reads-request-context",
+      "path": "docs/decisions/0007-service-reads-request-context.md",
+      "title": "ADR 0007: Service reads from RequestContext, controllers stop threading currentUser",
+      "description": "Services consume the authenticated user via the AsyncLocalStorage RequestContextService instead of receiving a currentUser parameter from controllers. Repositories still take primitives explicitly. Background jobs / auth flow / CLI keep explicit params.",
+      "tags": [
+        "project",
+        "adr",
+        "decision",
+        "request-context",
+        "async-local-storage",
+        "nestjs-cls",
+        "layering"
+      ],
+      "scope": "decision",
+      "category": "decisions",
+      "headings": [
+        "Context",
+        "Decision",
+        "Layer responsibilities",
+        "Helper API — methods on ctx (`Org-level checks, sync`)",
+        "Helper API — standalone functions for **app admin** check (needs DB)",
+        "Background tasks — explicit context",
+        "Where ctx is populated",
+        "Consequences",
+        "Conventions / lint rules to add later",
+        "Migration plan (separate commit)",
+        "Alternatives considered",
+        "References"
+      ],
+      "summary": "- **Status**: Accepted - **Date**: 2026-05-04 - **Deciders**: @nguyendinhphongdx"
     },
     {
       "id": "docs:backend:recipes:add-cli-command",

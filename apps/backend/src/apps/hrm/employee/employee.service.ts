@@ -1,13 +1,12 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 
-import { isAppAdmin } from '@/common/auth/access';
-import { RequestUser } from '@/common/types';
+import { requireAppAdmin } from '@/common/auth/access';
+import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { CreateEmployeeDto, ListEmployeesDto, UpdateEmployeeDto } from './dto';
@@ -21,11 +20,12 @@ const MAX_LIMIT = 100;
 export class EmployeeService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
     private readonly repo: EmployeeRepository,
   ) {}
 
-  async list(currentUser: RequestUser, query: ListEmployeesDto) {
-    const orgId = this.requireOrg(currentUser);
+  async list(query: ListEmployeesDto) {
+    const orgId = this.ctx.requireOrg();
     const page = query.page ?? DEFAULT_PAGE;
     const limit = Math.min(query.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
     const skip = (page - 1) * limit;
@@ -44,16 +44,16 @@ export class EmployeeService {
     return { data, total, page, limit };
   }
 
-  async findOne(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
+  async findOne(id: string) {
+    const orgId = this.ctx.requireOrg();
     const employee = await this.repo.findByIdByOrg(orgId, id);
     if (!employee) throw new NotFoundException('Employee not found');
     return employee;
   }
 
-  async create(currentUser: RequestUser, dto: CreateEmployeeDto) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async create(dto: CreateEmployeeDto) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     if (dto.departmentId) await this.assertDepartmentInOrg(orgId, dto.departmentId);
     await this.assertUserAvailableForLink(orgId, dto.userId);
@@ -76,9 +76,9 @@ export class EmployeeService {
     });
   }
 
-  async update(currentUser: RequestUser, id: string, dto: UpdateEmployeeDto) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async update(id: string, dto: UpdateEmployeeDto) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Employee not found');
@@ -124,9 +124,9 @@ export class EmployeeService {
     });
   }
 
-  async softDelete(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async softDelete(id: string) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Employee not found');
@@ -138,18 +138,6 @@ export class EmployeeService {
   // ──────────────────────────────────────────────────────────────────
   // Helpers
   // ──────────────────────────────────────────────────────────────────
-
-  private requireOrg(user: RequestUser): string {
-    if (!user.organizationId) {
-      throw new ForbiddenException('Current user is not attached to an organization');
-    }
-    return user.organizationId;
-  }
-
-  private async requireHrmAppAdmin(user: RequestUser, orgId: string) {
-    const ok = await isAppAdmin(user, 'HRM', orgId, this.prisma);
-    if (!ok) throw new ForbiddenException('Need HRM appadmin or admin role');
-  }
 
   private async assertDepartmentInOrg(orgId: string, departmentId: string) {
     const dept = await this.prisma.department.findFirst({

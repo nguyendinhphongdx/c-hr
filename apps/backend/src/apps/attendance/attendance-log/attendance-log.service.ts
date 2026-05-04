@@ -1,12 +1,7 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { isAppAdmin } from '@/common/auth/access';
-import { RequestUser } from '@/common/types';
+import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { ListLogsQueryDto, UpdateAttendanceLogDto } from './dto';
@@ -16,12 +11,13 @@ import { AttendanceLogRepository } from './attendance-log.repository';
 export class AttendanceLogService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
     private readonly repo: AttendanceLogRepository,
   ) {}
 
-  async list(currentUser: RequestUser, query: ListLogsQueryDto) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireSelfOrHrmAppAdmin(currentUser, orgId, query.employeeId);
+  async list(query: ListLogsQueryDto) {
+    const orgId = this.ctx.requireOrg();
+    await this.requireSelfOrHrmAppAdmin(orgId, query.employeeId);
 
     const from = parseDateOnly(query.from);
     const to = parseDateOnly(query.to);
@@ -31,13 +27,9 @@ export class AttendanceLogService {
     return this.repo.findByRange(orgId, query.employeeId, from, to);
   }
 
-  async update(
-    currentUser: RequestUser,
-    id: string,
-    dto: UpdateAttendanceLogDto,
-  ) {
-    const orgId = this.requireOrg(currentUser);
-    const ok = await isAppAdmin(currentUser, 'HRM', orgId, this.prisma);
+  async update(id: string, dto: UpdateAttendanceLogDto) {
+    const orgId = this.ctx.requireOrg();
+    const ok = await isAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
     if (!ok) {
       throw new ForbiddenException('Only HRM appadmin can edit logs manually');
     }
@@ -59,20 +51,9 @@ export class AttendanceLogService {
   // Helpers
   // ──────────────────────────────────────────────────────────────────
 
-  private requireOrg(user: RequestUser): string {
-    if (!user.organizationId) {
-      throw new ForbiddenException('Current user is not attached to an organization');
-    }
-    return user.organizationId;
-  }
-
-  private async requireSelfOrHrmAppAdmin(
-    user: RequestUser,
-    orgId: string,
-    employeeId: string,
-  ) {
-    if (user.employeeId === employeeId) return;
-    const ok = await isAppAdmin(user, 'HRM', orgId, this.prisma);
+  private async requireSelfOrHrmAppAdmin(orgId: string, employeeId: string) {
+    if (this.ctx.employeeId === employeeId) return;
+    const ok = await isAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
     if (!ok) {
       throw new ForbiddenException('Can only view your own attendance logs');
     }

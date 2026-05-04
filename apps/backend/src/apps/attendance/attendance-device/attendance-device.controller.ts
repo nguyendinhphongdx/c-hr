@@ -14,10 +14,8 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { Auditable } from '@/common/audit';
 import { Public } from '@/common/decorators/public.decorator';
-import { CurrentUser } from '@/common/decorators';
 import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
-import { RequestUser } from '@/common/types';
 
 import {
   CreateAttendanceDeviceDto,
@@ -34,29 +32,28 @@ export class AttendanceDeviceController {
   constructor(private readonly service: AttendanceDeviceService) {}
 
   @Get()
-  list(@CurrentUser() user: RequestUser) {
-    return this.service.list(user);
+  list() {
+    return this.service.list();
   }
 
   @Get(':id')
-  findOne(@CurrentUser() user: RequestUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.service.findOne(user, id);
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.findOne(id);
   }
 
   @Post()
   @Auditable({ action: 'ATTENDANCE_DEVICE_CREATE', entity: 'AttendanceDevice' })
-  create(@CurrentUser() user: RequestUser, @Body() dto: CreateAttendanceDeviceDto) {
-    return this.service.create(user, dto);
+  create(@Body() dto: CreateAttendanceDeviceDto) {
+    return this.service.create(dto);
   }
 
   @Patch(':id')
   @Auditable({ action: 'ATTENDANCE_DEVICE_UPDATE', entity: 'AttendanceDevice' })
   update(
-    @CurrentUser() user: RequestUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateAttendanceDeviceDto,
   ) {
-    return this.service.update(user, id, dto);
+    return this.service.update(id, dto);
   }
 
   @Post(':id/regenerate-token')
@@ -64,18 +61,15 @@ export class AttendanceDeviceController {
     action: 'ATTENDANCE_DEVICE_REGENERATE_TOKEN',
     entity: 'AttendanceDevice',
   })
-  regenerateToken(
-    @CurrentUser() user: RequestUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
-    return this.service.regenerateToken(user, id);
+  regenerateToken(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.regenerateToken(id);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @Auditable({ action: 'ATTENDANCE_DEVICE_DELETE', entity: 'AttendanceDevice' })
-  remove(@CurrentUser() user: RequestUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.service.remove(user, id);
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.remove(id);
   }
 
   /**

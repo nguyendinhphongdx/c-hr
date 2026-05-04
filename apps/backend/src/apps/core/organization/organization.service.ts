@@ -1,13 +1,7 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
-import { isAdmin } from '@/common/auth/access';
-import { RequestUser } from '@/common/types';
+import { RequestContextService } from '@/common/context';
 import { omit } from '@/common/utils';
 import { PrismaService } from '@libs/database/prisma.service';
 
@@ -21,6 +15,7 @@ const SALT_ROUNDS = 10;
 export class OrganizationService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
     private readonly auth: AuthService,
     private readonly orgRepo: OrganizationRepository,
   ) {}
@@ -68,7 +63,8 @@ export class OrganizationService {
     };
   }
 
-  async findMine(organizationId: string | null) {
+  async findMine() {
+    const organizationId = this.ctx.organizationId;
     if (!organizationId) {
       throw new NotFoundException('Current user is not attached to an organization');
     }
@@ -77,13 +73,14 @@ export class OrganizationService {
     return org;
   }
 
-  async updateMine(currentUser: RequestUser, dto: UpdateOrganizationDto) {
-    if (!currentUser.organizationId) {
+  async updateMine(dto: UpdateOrganizationDto) {
+    const orgId = this.ctx.organizationId;
+    if (!orgId) {
       throw new NotFoundException('Current user is not attached to an organization');
     }
-    if (!isAdmin(currentUser, currentUser.organizationId)) {
+    if (!this.ctx.isAdmin(orgId)) {
       throw new ForbiddenException('Only admin role can update organization');
     }
-    return this.orgRepo.update(currentUser.organizationId, dto);
+    return this.orgRepo.update(orgId, dto);
   }
 }

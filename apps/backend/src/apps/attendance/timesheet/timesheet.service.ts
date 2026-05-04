@@ -1,11 +1,7 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { isAppAdmin } from '@/common/auth/access';
-import { RequestUser } from '@/common/types';
+import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { AttendanceLogRepository } from '../attendance-log/attendance-log.repository';
@@ -49,13 +45,14 @@ export interface TimesheetResponse {
 export class TimesheetService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
     private readonly schedules: WorkScheduleRepository,
     private readonly logs: AttendanceLogRepository,
   ) {}
 
-  async get(currentUser: RequestUser, query: TimesheetQueryDto): Promise<TimesheetResponse> {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireSelfOrHrmAppAdmin(currentUser, orgId, query.employeeId);
+  async get(query: TimesheetQueryDto): Promise<TimesheetResponse> {
+    const orgId = this.ctx.requireOrg();
+    await this.requireSelfOrHrmAppAdmin(orgId, query.employeeId);
 
     const employee = await this.prisma.employee.findFirst({
       where: { id: query.employeeId, organizationId: orgId, deletedAt: null },
@@ -112,20 +109,9 @@ export class TimesheetService {
   // Helpers
   // ──────────────────────────────────────────────────────────────────
 
-  private requireOrg(user: RequestUser): string {
-    if (!user.organizationId) {
-      throw new ForbiddenException('Current user is not attached to an organization');
-    }
-    return user.organizationId;
-  }
-
-  private async requireSelfOrHrmAppAdmin(
-    user: RequestUser,
-    orgId: string,
-    employeeId: string,
-  ) {
-    if (user.employeeId === employeeId) return;
-    const ok = await isAppAdmin(user, 'HRM', orgId, this.prisma);
+  private async requireSelfOrHrmAppAdmin(orgId: string, employeeId: string) {
+    if (this.ctx.employeeId === employeeId) return;
+    const ok = await isAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
     if (!ok) {
       throw new ForbiddenException('Can only view your own timesheet');
     }

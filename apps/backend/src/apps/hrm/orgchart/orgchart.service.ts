@@ -1,10 +1,6 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
-import { RequestUser } from '@/common/types';
+import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
 interface AncestorRow {
@@ -23,15 +19,18 @@ export interface CandidateUser {
 
 @Injectable()
 export class OrgChartService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
+  ) {}
 
   /**
    * Flat list of active departments in the Org. The FE builds a tree from
    * parentId — keeping this server-side as a flat array makes it cheap to
    * cache and easy to filter client-side.
    */
-  async getDepartmentTree(currentUser: RequestUser) {
-    const orgId = this.requireOrg(currentUser);
+  async getDepartmentTree() {
+    const orgId = this.ctx.requireOrg();
     return this.prisma.department.findMany({
       where: { organizationId: orgId, deletedAt: null },
       orderBy: { name: 'asc' },
@@ -44,8 +43,8 @@ export class OrgChartService {
    * employee themselves to avoid self-management. Returns Employee
    * rows (subset) ordered nearest-first.
    */
-  async getReportingLine(currentUser: RequestUser, employeeId: string) {
-    const orgId = this.requireOrg(currentUser);
+  async getReportingLine(employeeId: string) {
+    const orgId = this.ctx.requireOrg();
     const employee = await this.requireEmployeeInOrg(orgId, employeeId);
     const startDeptId = await this.resolveStartDept(orgId, employee);
     if (!startDeptId) return [];
@@ -77,8 +76,8 @@ export class OrgChartService {
    * who should approve. FE shows `suggested` as the default and
    * `candidates` as the dropdown options.
    */
-  async getApproverCandidates(currentUser: RequestUser, employeeId: string) {
-    const orgId = this.requireOrg(currentUser);
+  async getApproverCandidates(employeeId: string) {
+    const orgId = this.ctx.requireOrg();
     const employee = await this.requireEmployeeInOrg(orgId, employeeId);
     const startDeptId = await this.resolveStartDept(orgId, employee);
 
@@ -144,13 +143,6 @@ export class OrgChartService {
   // ──────────────────────────────────────────────────────────────────
   // Helpers
   // ──────────────────────────────────────────────────────────────────
-
-  private requireOrg(user: RequestUser): string {
-    if (!user.organizationId) {
-      throw new ForbiddenException('Current user is not attached to an organization');
-    }
-    return user.organizationId;
-  }
 
   private async requireEmployeeInOrg(orgId: string, id: string) {
     const employee = await this.prisma.employee.findFirst({

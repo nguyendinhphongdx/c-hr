@@ -1,13 +1,8 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-import { isAppAdmin } from '@/common/auth/access';
-import { RequestUser } from '@/common/types';
+import { requireAppAdmin } from '@/common/auth/access';
+import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { CreateWorkScheduleDto, ShiftInputDto, UpdateWorkScheduleDto } from './dto';
@@ -17,24 +12,25 @@ import { WorkScheduleRepository } from './work-schedule.repository';
 export class WorkScheduleService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
     private readonly repo: WorkScheduleRepository,
   ) {}
 
-  async list(currentUser: RequestUser) {
-    const orgId = this.requireOrg(currentUser);
+  async list() {
+    const orgId = this.ctx.requireOrg();
     return this.repo.findManyByOrg(orgId);
   }
 
-  async findOne(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
+  async findOne(id: string) {
+    const orgId = this.ctx.requireOrg();
     const row = await this.repo.findByIdByOrg(orgId, id);
     if (!row) throw new NotFoundException('Work schedule not found');
     return row;
   }
 
-  async create(currentUser: RequestUser, dto: CreateWorkScheduleDto) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async create(dto: CreateWorkScheduleDto) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
     this.assertNoDayOverlap(dto.shifts);
 
     return this.prisma.$transaction(async (tx) => {
@@ -51,9 +47,9 @@ export class WorkScheduleService {
     });
   }
 
-  async update(currentUser: RequestUser, id: string, dto: UpdateWorkScheduleDto) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async update(id: string, dto: UpdateWorkScheduleDto) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Work schedule not found');
@@ -84,9 +80,9 @@ export class WorkScheduleService {
     });
   }
 
-  async softDelete(currentUser: RequestUser, id: string) {
-    const orgId = this.requireOrg(currentUser);
-    await this.requireHrmAppAdmin(currentUser, orgId);
+  async softDelete(id: string) {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Work schedule not found');
@@ -106,18 +102,6 @@ export class WorkScheduleService {
   // ──────────────────────────────────────────────────────────────────
   // Helpers
   // ──────────────────────────────────────────────────────────────────
-
-  private requireOrg(user: RequestUser): string {
-    if (!user.organizationId) {
-      throw new ForbiddenException('Current user is not attached to an organization');
-    }
-    return user.organizationId;
-  }
-
-  private async requireHrmAppAdmin(user: RequestUser, orgId: string) {
-    const ok = await isAppAdmin(user, 'HRM', orgId, this.prisma);
-    if (!ok) throw new ForbiddenException('Need HRM appadmin or admin role');
-  }
 
   /**
    * MVP constraint: 1 day belongs to at most 1 shift in a given schedule.
@@ -139,11 +123,7 @@ export class WorkScheduleService {
   }
 
   /** Clear is_default on every other schedule in the Org. */
-  private async clearDefault(
-    tx: Prisma.TransactionClient,
-    orgId: string,
-    keepId?: string,
-  ) {
+  private async clearDefault(tx: Prisma.TransactionClient, orgId: string, keepId?: string) {
     await tx.workSchedule.updateMany({
       where: {
         organizationId: orgId,
