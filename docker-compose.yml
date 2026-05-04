@@ -1,35 +1,16 @@
 name: c-hr
 
-# Pull in standalone infra service definitions. Each service in services/<name>/
-# can also be started by itself for one-off use (e.g. only postgres for tests).
+# Infra services pulled in whole via `include:` — postgres + redis have no
+# dev overrides and run identically across environments.
 include:
   - ./services/postgres/docker-compose.yml
   - ./services/redis/docker-compose.yml
 
+# Backend uses `extends:` (not `include:`) so docker-compose.dev.yml can
+# layer hot-reload + dev command on top via `-f`. Compose's `include`
+# does not propagate `-f` overrides into included service definitions.
 services:
   backend:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
-    container_name: c-hr-backend
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    # Single source of truth for BE config — same file BE reads natively
-    # (apps/backend/.env). The `environment:` block below only overrides
-    # values that differ inside the compose network (container hostnames,
-    # production NODE_ENV).
-    env_file:
-      - ./apps/backend/.env
-    environment:
-      NODE_ENV: production
-      PORT: 8000
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/c_hr
-      REDIS_HOST: redis
-    ports:
-      - '8000:8000'
-    networks:
-      - c-hr
+    extends:
+      file: ./services/backend/docker-compose.yml
+      service: backend
