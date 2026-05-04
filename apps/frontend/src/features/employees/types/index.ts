@@ -3,17 +3,24 @@ import type { ID, ISODate, Nullable } from "@/lib/types";
 export type EmployeeStatus = "ACTIVE" | "ON_LEAVE" | "TERMINATED";
 export type Gender = "MALE" | "FEMALE" | "OTHER";
 
+export interface EmployeeUser {
+  id: ID;
+  email: string;
+  name: Nullable<string>;
+  avatar: Nullable<string>;
+  dob: Nullable<ISODate>;
+  gender: Nullable<Gender>;
+  phone: Nullable<string>;
+}
+
 export interface Employee {
   id: ID;
   organizationId: ID;
   departmentId: Nullable<ID>;
+  /** Linked User — personal info source of truth (name, email, dob, ...). */
+  user: Nullable<EmployeeUser>;
   code: string;
-  firstName: string;
-  lastName: string;
-  dob: Nullable<ISODate>;
-  gender: Nullable<Gender>;
-  phone: Nullable<string>;
-  email: string;
+  /** Formal job title set by HR. Distinct from User.title (personal). */
   title: Nullable<string>;
   hireDate: Nullable<ISODate>;
   terminationDate: Nullable<ISODate>;
@@ -39,27 +46,17 @@ export interface EmployeesListResponse {
 }
 
 export interface CreateEmployeeInput {
+  /** Required — link to a User in the same Org. Personal info comes from User. */
+  userId: ID;
   code: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  userId?: ID;
   departmentId?: ID;
-  dob?: string;
-  gender?: Gender;
-  phone?: string;
   title?: string;
   hireDate?: string;
 }
 
 export interface UpdateEmployeeInput {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
+  userId?: ID;
   departmentId?: Nullable<ID>;
-  dob?: Nullable<string>;
-  gender?: Nullable<Gender>;
-  phone?: Nullable<string>;
   title?: Nullable<string>;
   hireDate?: Nullable<string>;
   terminationDate?: Nullable<string>;

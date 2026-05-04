@@ -29,9 +29,8 @@ const PAGE_LIMIT = 20;
 
 /**
  * Search-as-you-type Employee picker. Uses GET /employees with the `q`
- * filter (case-insensitive across firstName / lastName / email / code).
- * Selected employee is loaded separately so the trigger shows the right
- * label even when the search text would filter it out.
+ * filter (matches code or linked User's name / email). Selected employee
+ * is loaded separately so the trigger label survives unrelated searches.
  */
 export function EmployeePicker({
   value,
@@ -67,9 +66,9 @@ export function EmployeePicker({
         >
           {selectedEmployee ? (
             <span className="truncate">
-              {selectedEmployee.firstName} {selectedEmployee.lastName}
+              {selectedEmployee.user?.name ?? "(no name)"}
               <span className="ml-2 text-xs text-muted-foreground">
-                {selectedEmployee.email}
+                {selectedEmployee.user?.email}
               </span>
             </span>
           ) : (
@@ -148,10 +147,10 @@ export function EmployeePicker({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm">
-                          {emp.firstName} {emp.lastName}
+                          {emp.user?.name ?? "(no name)"}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {emp.email} · {emp.code}
+                          {emp.user?.email ?? "—"} · {emp.code}
                         </div>
                       </div>
                       {active && <Check className="h-3.5 w-3.5 shrink-0" />}

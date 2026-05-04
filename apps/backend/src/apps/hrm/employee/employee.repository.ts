@@ -11,6 +11,22 @@ interface ListFilter {
   take?: number;
 }
 
+// Personal info now lives on User. Always pull a small slice so callers
+// don't have to remember to include it.
+const USER_VIEW = {
+  user: {
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      avatar: true,
+      dob: true,
+      gender: true,
+      phone: true,
+    },
+  },
+} as const satisfies Prisma.EmployeeInclude;
+
 @Injectable()
 export class EmployeeRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -25,10 +41,9 @@ export class EmployeeRepository {
     if (filter.q) {
       const q = filter.q;
       where.OR = [
-        { firstName: { contains: q, mode: 'insensitive' } },
-        { lastName: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } },
         { code: { contains: q, mode: 'insensitive' } },
+        { user: { is: { name: { contains: q, mode: 'insensitive' } } } },
+        { user: { is: { email: { contains: q, mode: 'insensitive' } } } },
       ];
     }
     return where;
@@ -38,9 +53,10 @@ export class EmployeeRepository {
     const where = this.buildWhere(organizationId, filter);
     return this.prisma.employee.findMany({
       where,
-      orderBy: { firstName: 'asc' },
+      orderBy: { code: 'asc' },
       skip: filter.skip,
       take: filter.take,
+      include: USER_VIEW,
     });
   }
 
@@ -51,6 +67,7 @@ export class EmployeeRepository {
   findByIdByOrg(organizationId: string, id: string) {
     return this.prisma.employee.findFirst({
       where: { id, organizationId, deletedAt: null },
+      include: USER_VIEW,
     });
   }
 

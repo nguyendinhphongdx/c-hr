@@ -58,10 +58,8 @@ export class OrgChartService {
       select: {
         id: true,
         code: true,
-        firstName: true,
-        lastName: true,
-        email: true,
         title: true,
+        user: { select: { id: true, name: true, email: true } },
       },
     });
 
@@ -103,9 +101,7 @@ export class OrgChartService {
       select: { id: true, email: true, name: true, employeeId: true },
     });
 
-    // Pull employee rows for both manager chain + fallback users so the FE
-    // can show consistent display info (employee.firstName/lastName) for
-    // every candidate.
+    // Pull employee rows + their User for display info (name, email).
     const candidateEmployeeIds = new Set<string>([
       ...managerIds,
       ...fallbackUsers.map((u) => u.employeeId).filter((id): id is string => !!id),
@@ -124,18 +120,15 @@ export class OrgChartService {
       },
       select: {
         id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        user: { select: { id: true } },
+        user: { select: { id: true, name: true, email: true } },
       },
     });
 
     const candidates: CandidateUser[] = employees.map((e) => ({
       employeeId: e.id,
       userId: e.user?.id ?? '',
-      email: e.email,
-      name: `${e.firstName} ${e.lastName}`.trim(),
+      email: e.user?.email ?? '',
+      name: e.user?.name ?? '',
     }));
 
     // Suggested = nearest manager (still alive in candidates), else first

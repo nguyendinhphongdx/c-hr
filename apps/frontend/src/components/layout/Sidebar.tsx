@@ -3,8 +3,6 @@
 import {
   Building2,
   Calendar,
-  Clock,
-  Cpu,
   FileText,
   Home,
   Network,
@@ -57,9 +55,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Attendance",
     items: [
-      { href: "/timesheet", label: "Timesheet", icon: Calendar, disabled: true },
-      { href: "/attendance-devices", label: "Devices", icon: Cpu, disabled: true },
-      { href: "/work-schedules", label: "Schedules", icon: Clock, disabled: true },
+      { href: "/timesheet", label: "Timesheet", icon: Calendar },
     ],
   },
   {

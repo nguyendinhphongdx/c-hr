@@ -27,6 +27,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { useDepartments } from "@/features/departments";
 import {
   Select,
   SelectContent,
@@ -34,22 +35,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { UserPicker } from "@/features/users";
 
 import { useCreateEmployee } from "../hooks/useEmployees";
 
+const NO_DEPARTMENT = "__none__";
+
 const schema = z.object({
+  userId: z.string().uuid("Pick a user"),
   code: z
     .string()
     .min(1, "Required")
     .max(50)
     .regex(/^[A-Za-z0-9-_]+$/, "Letters, digits, hyphens, underscores only"),
-  firstName: z.string().min(1, "Required").max(100),
-  lastName: z.string().min(1, "Required").max(100),
-  email: z.string().email("Invalid email"),
   title: z.string().max(100).optional(),
-  phone: z.string().max(32).optional(),
-  gender: z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
   hireDate: z.string().optional(),
+  departmentId: z.union(
+    [z.literal(NO_DEPARTMENT), z.string().uuid("Pick a valid department")],
+    { message: "Pick a valid department" },
+  ),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -57,30 +61,28 @@ type FormValues = z.infer<typeof schema>;
 export function EmployeeCreateView() {
   const router = useRouter();
   const create = useCreateEmployee();
+  const departments = useDepartments();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      userId: "",
       code: "",
-      firstName: "",
-      lastName: "",
-      email: "",
       title: "",
-      phone: "",
+      hireDate: "",
+      departmentId: NO_DEPARTMENT,
     },
   });
 
   const onSubmit = async (values: FormValues) => {
     try {
       const employee = await create.mutateAsync({
+        userId: values.userId,
         code: values.code,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        email: values.email,
         title: values.title || undefined,
-        phone: values.phone || undefined,
-        gender: values.gender,
         hireDate: values.hireDate || undefined,
+        departmentId:
+          values.departmentId === NO_DEPARTMENT ? undefined : values.departmentId,
       });
       toast.success("Employee created");
       router.push(`/employees/${employee.id}`);
@@ -89,7 +91,7 @@ export function EmployeeCreateView() {
         description:
           err instanceof Error
             ? err.message
-            : "Code or email may already be in use.",
+            : "Code may be in use, or the user is already linked.",
       });
     }
   };
@@ -108,11 +110,31 @@ export function EmployeeCreateView() {
             <CardHeader>
               <CardTitle>New employee</CardTitle>
               <CardDescription>
-                Required fields only — link to a User and assign a department
-                from the detail page after creating.
+                Pick a user (required). Personal info — name, email, dob,
+                gender, phone — comes from the User record. HR fields below.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="userId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>User</FormLabel>
+                    <FormControl>
+                      <UserPicker
+                        value={field.value || null}
+                        onChange={(u) => field.onChange(u?.id ?? "")}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Only users not yet linked to another Employee are shown.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="code"
@@ -125,49 +147,6 @@ export function EmployeeCreateView() {
                     <FormDescription>
                       Unique within this Org. Used in URLs and reports.
                     </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -187,46 +166,35 @@ export function EmployeeCreateView() {
                 )}
               />
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
+              <FormField
+                control={form.control}
+                name="departmentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
                       <FormControl>
-                        <Input {...field} />
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gender</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="—" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="MALE">Male</SelectItem>
-                          <SelectItem value="FEMALE">Female</SelectItem>
-                          <SelectItem value="OTHER">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                      <SelectContent>
+                        <SelectItem value={NO_DEPARTMENT}>(no department)</SelectItem>
+                        {departments.data?.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.name}
+                            {d.code ? ` · ${d.code}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

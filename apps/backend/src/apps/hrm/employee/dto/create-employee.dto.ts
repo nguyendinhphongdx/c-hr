@@ -1,8 +1,5 @@
-import { Gender } from '@prisma/client';
 import {
   IsDateString,
-  IsEmail,
-  IsEnum,
   IsOptional,
   IsString,
   IsUUID,
@@ -21,40 +18,14 @@ export class CreateEmployeeDto {
   })
   code: string;
 
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  firstName: string;
-
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  lastName: string;
-
-  @IsEmail()
-  email: string;
-
-  /** When set, links this Employee to an existing User in the same Org. */
-  @IsOptional()
+  /** Required: links this Employee to an existing User in the same Org.
+   *  Personal info (name, email, dob, gender, phone) is read from User. */
   @IsUUID()
-  userId?: string;
+  userId: string;
 
   @IsOptional()
   @IsUUID()
   departmentId?: string;
-
-  @IsOptional()
-  @IsDateString()
-  dob?: string;
-
-  @IsOptional()
-  @IsEnum(Gender)
-  gender?: Gender;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(32)
-  phone?: string;
 
   @IsOptional()
   @IsString()

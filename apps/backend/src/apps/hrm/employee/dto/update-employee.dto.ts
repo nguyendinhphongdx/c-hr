@@ -1,50 +1,27 @@
-import { EmployeeStatus, Gender } from '@prisma/client';
+import { EmployeeStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
-import { IsDateString, IsEmail, IsEnum, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
-// Global ValidationPipe has `enableImplicitConversion: true`, which would
-// otherwise coerce null → "null" for `string` fields and break IsUUID /
-// IsDateString. Keep null as null so IsOptional skips validation.
 const passThrough = ({ value }: { value: unknown }) => value;
 
 export class UpdateEmployeeDto {
+  /** Re-link this employee to a different User in this Org. */
   @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  lastName?: string;
-
-  @IsOptional()
-  @IsEmail()
-  email?: string;
+  @IsUUID()
+  userId?: string;
 
   /** Pass null to detach from a department. */
   @Transform(passThrough)
   @IsOptional()
   @IsUUID()
   departmentId?: string | null;
-
-  @Transform(passThrough)
-  @IsOptional()
-  @IsDateString()
-  dob?: string | null;
-
-  @Transform(passThrough)
-  @IsOptional()
-  @IsEnum(Gender)
-  gender?: Gender | null;
-
-  @Transform(passThrough)
-  @IsOptional()
-  @IsString()
-  @MaxLength(32)
-  phone?: string | null;
 
   @Transform(passThrough)
   @IsOptional()

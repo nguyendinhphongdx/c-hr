@@ -145,11 +145,11 @@ export function EmployeeListView() {
                       href={`/employees/${emp.id}`}
                       className="block w-full font-medium"
                     >
-                      {emp.firstName} {emp.lastName}
+                      {emp.user?.name ?? "—"}
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {emp.email}
+                    {emp.user?.email ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {emp.title ?? "—"}

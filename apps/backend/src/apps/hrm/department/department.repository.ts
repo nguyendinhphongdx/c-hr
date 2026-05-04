@@ -12,7 +12,7 @@ export class DepartmentRepository {
       where: { organizationId, deletedAt: null },
       orderBy: { name: 'asc' },
       include: {
-        manager: { select: { id: true, firstName: true, lastName: true } },
+        manager: { select: { id: true, user: { select: { id: true, name: true, email: true } } } },
       },
     });
   }
@@ -21,7 +21,7 @@ export class DepartmentRepository {
     return this.prisma.department.findFirst({
       where: { id, organizationId, deletedAt: null },
       include: {
-        manager: { select: { id: true, firstName: true, lastName: true } },
+        manager: { select: { id: true, user: { select: { id: true, name: true, email: true } } } },
       },
     });
   }

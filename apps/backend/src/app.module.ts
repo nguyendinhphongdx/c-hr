@@ -13,6 +13,7 @@ import { RedisModule } from './libs/redis/redis.module';
 import { MailModule } from './libs/mail/mail.module';
 import { StorageModule } from './libs/storage';
 
+import { AttendanceModule } from './apps/attendance/attendance.module';
 import { CoreModule } from './apps/core/core.module';
 import { HrmModule } from './apps/hrm/hrm.module';
 
@@ -46,6 +47,7 @@ import { HrmModule } from './apps/hrm/hrm.module';
 
     CoreModule,
     HrmModule,
+    AttendanceModule,
   ],
 })
 export class AppModule {}

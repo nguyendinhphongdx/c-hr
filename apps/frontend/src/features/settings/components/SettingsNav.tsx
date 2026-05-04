@@ -1,10 +1,10 @@
 "use client";
 
-import { Building2, KeyRound, Shield, User } from "lucide-react";
+import { Building2, CalendarClock, KeyRound, Radio, Shield, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { useIsAdmin } from "@/features/auth";
+import { useIsAdmin, useIsAppAdmin } from "@/features/auth";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -13,6 +13,8 @@ interface NavItem {
   icon: typeof User;
   /** When true, only render if useIsAdmin() returns true. */
   adminOnly?: boolean;
+  /** When true, only render if useIsAppAdmin("HRM") returns true. */
+  hrmOnly?: boolean;
 }
 
 const ITEMS: NavItem[] = [
@@ -20,12 +22,19 @@ const ITEMS: NavItem[] = [
   { href: "/settings/security", label: "Security", icon: KeyRound },
   { href: "/settings/organization", label: "Organization", icon: Building2, adminOnly: true },
   { href: "/settings/app-admins", label: "App admins", icon: Shield, adminOnly: true },
+  { href: "/settings/work-schedule", label: "Work schedule", icon: CalendarClock, hrmOnly: true },
+  { href: "/settings/attendance-devices", label: "Attendance devices", icon: Radio, hrmOnly: true },
 ];
 
 export function SettingsNav() {
   const pathname = usePathname();
   const isAdmin = useIsAdmin();
-  const items = ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const isHrmAdmin = useIsAppAdmin("HRM");
+  const items = ITEMS.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.hrmOnly && !isHrmAdmin) return false;
+    return true;
+  });
 
   return (
     <nav className="flex flex-col gap-1">

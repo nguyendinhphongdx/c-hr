@@ -4,10 +4,12 @@ import type { ID, Nullable } from "@/lib/types";
 export interface OrgChartEmployee {
   id: ID;
   code: string;
-  firstName: string;
-  lastName: string;
-  email: string;
   title: Nullable<string>;
+  user: Nullable<{
+    id: ID;
+    name: Nullable<string>;
+    email: string;
+  }>;
 }
 
 export interface ApproverCandidate {

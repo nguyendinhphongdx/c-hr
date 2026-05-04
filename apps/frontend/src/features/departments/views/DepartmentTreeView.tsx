@@ -131,9 +131,9 @@ function TreeNode({
             ({node.code})
           </span>
         )}
-        {node.manager && (
+        {node.manager?.user && (
           <span className="text-xs text-muted-foreground">
-            · {node.manager.firstName} {node.manager.lastName}
+            · {node.manager.user.name ?? node.manager.user.email}
           </span>
         )}
         {canEdit && (

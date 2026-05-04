@@ -321,21 +321,21 @@ User KHÔNG tự tạo log. Chỉ device push hoặc HR tạo qua AttendanceCorr
     @@map("work_shifts")
   }
 
-  enum DeviceBrand { ZKTECO HIKVISION SUPREMA OTHER }
+  enum DeviceBrand { GENERIC ZKTECO HIKVISION SUPREMA OTHER }
 
   model AttendanceDevice {
     id              String      @id @default(uuid())
     organizationId  String      @map("organization_id")
-    brand           DeviceBrand
-    serialNumber    String      @map("serial_number")
-    token           String                                  // bcrypt hashed
+    brand           DeviceBrand @default(GENERIC)
+    serial          String
+    token           String                                       // bcrypt hash; plaintext shown once on regenerate
     name            String
     ipAddress       String?     @map("ip_address")
     lastSeenAt      DateTime?   @map("last_seen_at")
     isActive        Boolean     @default(true) @map("is_active")
     createdAt       DateTime    @default(now()) @map("created_at")
     updatedAt       DateTime    @updatedAt       @map("updated_at")
-    @@unique([organizationId, serialNumber])
+    @@unique([organizationId, serial])
     @@map("attendance_devices")
   }
 
@@ -350,12 +350,12 @@ User KHÔNG tự tạo log. Chỉ device push hoặc HR tạo qua AttendanceCorr
     checkOutAt      DateTime? @map("check_out_at")
     source          AttendanceSource
     deviceId        String?  @map("device_id")
-    deviceLogId     String?  @map("device_log_id")           // idempotency
+    eventLogId      String?  @map("event_log_id")             // idempotency key from device
     note            String?
     createdAt       DateTime @default(now()) @map("created_at")
     updatedAt       DateTime @updatedAt       @map("updated_at")
     @@unique([employeeId, date])
-    @@unique([deviceId, deviceLogId])
+    @@unique([deviceId, eventLogId])
     @@index([organizationId, date])
     @@map("attendance_logs")
   }
@@ -367,12 +367,22 @@ User KHÔNG tự tạo log. Chỉ device push hoặc HR tạo qua AttendanceCorr
 - [ ] **Module `attendance/attendance-device`**:
   - CRUD `/api/v1/attendance-devices`.
   - `regenerateToken(:id)` — tạo token mới, return plaintext 1 lần (lưu hash).
-  - `POST /api/v1/attendance-devices/push` — public endpoint, body có `serial_number` + `token` + array events.
-    - Adapter chọn theo `device.brand`: `ZKTecoAdapter`, `HikvisionAdapter`, `SupremaAdapter`, `OtherAdapter`.
-    - Adapter parse → `AttendanceEvent[] { employeeCode, timestamp, type: IN|OUT }`.
+  - `POST /api/v1/attendance-devices/push` — public endpoint. Body generic JSON:
+
+    ```json
+    {
+      "serial": "ZK-001",
+      "token": "plaintext-from-create",
+      "events": [
+        { "eventLogId": "evt-99821", "employeeCode": "EMP-0001", "timestamp": "2026-05-04T08:12:00Z", "type": "IN" }
+      ]
+    }
+    ```
+
     - Service upsert `AttendanceLog` theo `(employeeId, date)`: nếu chưa có → create; nếu có → update `checkInAt = MIN(existing, new)`, `checkOutAt = MAX(existing, new)`.
-    - Idempotent qua `(deviceId, deviceLogId)` unique — replay không tạo dup.
+    - Idempotent qua `(deviceId, eventLogId)` unique — replay không tạo dup.
     - Update `device.lastSeenAt`.
+  - **Defer**: brand-specific adapter (`ZKTecoAdapter`, `HikvisionAdapter`, ...) — chỉ thêm khi tích hợp real device. MVP dùng 1 generic contract trên cho mọi `brand`.
 - [ ] **Module `attendance/attendance-log`**:
   - `GET /api/v1/attendance-logs?employeeId=&from=&to=` — list. Permission: EMPLOYEE chỉ xem mình; HRM appadmin xem mọi người.
   - `PATCH /api/v1/attendance-logs/:id` — chỉ HRM appadmin (manual fix). `@Auditable`.
@@ -397,13 +407,7 @@ User KHÔNG tự tạo log. Chỉ device push hoặc HR tạo qua AttendanceCorr
     ```
   - Logic pick shift cho 1 ngày: `schedule.shifts.find(s => s.daysOfWeek.includes(isoDayOfWeek(date)))`. Nếu không có shift → ngày nghỉ (`WEEKEND`).
   - `status` derive từ compare log + shift (`PRESENT | LATE | EARLY_LEAVE | ABSENT | WEEKEND`).
-- [ ] Adapter pattern code — interface trong `src/apps/attendance/attendance-device/adapters/`:
-  ```typescript
-  export interface AttendanceDeviceAdapter {
-    parse(payload: unknown): AttendanceEvent[];
-  }
-  ```
-  Implementation chi tiết cho ZKTeco (lib `node-zklib`), Hikvision (HTTP ISAPI JSON), Suprema (BioStar webhook), Other (generic JSON contract `{events:[{code,time,type}]}`).
+- **Defer (MVP skip)**: brand-specific adapter pattern (`AttendanceDeviceAdapter` interface + ZKTeco / Hikvision / Suprema implementations với `node-zklib`, ISAPI, BioStar). Chỉ scaffold khi có real device để integrate.
 
 ### FE
 
@@ -417,8 +421,8 @@ User KHÔNG tự tạo log. Chỉ device push hoặc HR tạo qua AttendanceCorr
     - Workday cells (ngày có shift match) tô background hồng; weekend (không có shift) trắng.
     - Late: highlight giờ in màu vàng. Absent (workday no log): icon warning.
     - Hover ô → tint nhẹ; click clock → Popover time picker (chỉ HRM appadmin edit; EMPLOYEE thường readonly + suggest "Tạo đơn quên chấm" → sang feature 4).
-  - `/timesheet/team` — chọn employee để xem (HRM appadmin/manager).
   - Tự build grid với `date-fns` + Tailwind. Time picker custom (Popover + 2 select hour/minute).
+  - **Defer (MVP skip)**: `/timesheet/team` view cho HRM/manager — gộp vào sau khi feature 1 ổn.
 - [ ] Sidebar enable Timesheet (cho mọi user — xem mình), Settings → Work Schedule + Devices (chỉ HRM appadmin).
 
 ### Done-when

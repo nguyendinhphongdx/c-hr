@@ -54,7 +54,7 @@ export function EmployeeDetailView({ id }: EmployeeDetailViewProps) {
   }
 
   const e = employee.data;
-  const fullName = `${e.firstName} ${e.lastName}`.trim();
+  const fullName = e.user?.name ?? "(no name)";
   const dept = e.departmentId
     ? departments.data?.find((d) => d.id === e.departmentId)
     : null;
@@ -88,10 +88,10 @@ export function EmployeeDetailView({ id }: EmployeeDetailViewProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Field label="Email" value={e.email} mono />
-          <Field label="Phone" value={e.phone ?? "—"} />
-          <Field label="Date of birth" value={formatDate(e.dob)} />
-          <Field label="Gender" value={e.gender ?? "—"} />
+          <Field label="Email" value={e.user?.email ?? "—"} mono />
+          <Field label="Phone" value={e.user?.phone ?? "—"} />
+          <Field label="Date of birth" value={formatDate(e.user?.dob ?? null)} />
+          <Field label="Gender" value={e.user?.gender ?? "—"} />
           <Field label="Hire date" value={formatDate(e.hireDate)} />
           {e.terminationDate && (
             <Field

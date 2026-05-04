@@ -40,5 +40,7 @@ export const config = {
     "/departments/:path*",
     "/orgchart",
     "/orgchart/:path*",
+    "/timesheet",
+    "/timesheet/:path*",
   ],
 };

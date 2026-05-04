@@ -56,30 +56,22 @@ export class EmployeeService {
     await this.requireHrmAppAdmin(currentUser, orgId);
 
     if (dto.departmentId) await this.assertDepartmentInOrg(orgId, dto.departmentId);
-    if (dto.userId) await this.assertUserAvailableForLink(orgId, dto.userId);
+    await this.assertUserAvailableForLink(orgId, dto.userId);
 
     return this.prisma.$transaction(async (tx) => {
       const employee = await tx.employee.create({
         data: {
           organizationId: orgId,
           code: dto.code,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          email: dto.email,
           departmentId: dto.departmentId,
-          dob: dto.dob ? new Date(dto.dob) : undefined,
-          gender: dto.gender,
-          phone: dto.phone,
           title: dto.title,
           hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
         },
       });
-      if (dto.userId) {
-        await tx.user.update({
-          where: { id: dto.userId },
-          data: { employeeId: employee.id },
-        });
-      }
+      await tx.user.update({
+        where: { id: dto.userId },
+        data: { employeeId: employee.id },
+      });
       return employee;
     });
   }
@@ -95,23 +87,40 @@ export class EmployeeService {
       await this.assertDepartmentInOrg(orgId, dto.departmentId);
     }
 
-    return this.repo.update(id, {
-      firstName: dto.firstName ?? undefined,
-      lastName: dto.lastName ?? undefined,
-      email: dto.email ?? undefined,
-      departmentId: dto.departmentId,
-      dob: dto.dob === null ? null : dto.dob ? new Date(dto.dob) : undefined,
-      gender: dto.gender,
-      phone: dto.phone,
-      title: dto.title,
-      hireDate: dto.hireDate === null ? null : dto.hireDate ? new Date(dto.hireDate) : undefined,
-      terminationDate:
-        dto.terminationDate === null
-          ? null
-          : dto.terminationDate
-            ? new Date(dto.terminationDate)
-            : undefined,
-      status: dto.status,
+    if (dto.userId !== undefined) {
+      await this.assertUserAvailableForLink(orgId, dto.userId, id);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const employee = await tx.employee.update({
+        where: { id },
+        data: {
+          departmentId: dto.departmentId,
+          title: dto.title,
+          hireDate:
+            dto.hireDate === null ? null : dto.hireDate ? new Date(dto.hireDate) : undefined,
+          terminationDate:
+            dto.terminationDate === null
+              ? null
+              : dto.terminationDate
+                ? new Date(dto.terminationDate)
+                : undefined,
+          status: dto.status,
+        },
+      });
+
+      if (dto.userId !== undefined) {
+        // Detach the old user (if any), then attach the new one.
+        await tx.user.updateMany({
+          where: { employeeId: id, NOT: { id: dto.userId } },
+          data: { employeeId: null },
+        });
+        await tx.user.update({
+          where: { id: dto.userId },
+          data: { employeeId: id },
+        });
+      }
+      return employee;
     });
   }
 
@@ -152,7 +161,11 @@ export class EmployeeService {
     }
   }
 
-  private async assertUserAvailableForLink(orgId: string, userId: string) {
+  private async assertUserAvailableForLink(
+    orgId: string,
+    userId: string,
+    currentEmployeeId?: string,
+  ) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, organizationId: orgId },
       select: { id: true, employeeId: true },
@@ -160,7 +173,7 @@ export class EmployeeService {
     if (!user) {
       throw new BadRequestException('Target user not found in organization');
     }
-    if (user.employeeId) {
+    if (user.employeeId && user.employeeId !== currentEmployeeId) {
       throw new ConflictException('Target user is already linked to another employee');
     }
   }

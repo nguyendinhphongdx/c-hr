@@ -67,7 +67,7 @@ export function OrgChartView() {
             <SelectContent>
               {employees.data?.data.map((e) => (
                 <SelectItem key={e.id} value={e.id}>
-                  {e.firstName} {e.lastName} · {e.email}
+                  {e.user?.name ?? "(no name)"} · {e.user?.email ?? "—"}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -79,7 +79,7 @@ export function OrgChartView() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Chain for {focused.firstName} {focused.lastName}
+              Chain for {focused.user?.name ?? "(no name)"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -143,7 +143,7 @@ function PersonCard({
   highlight,
 }: {
   label: string;
-  employee: { firstName: string; lastName: string; email: string; title?: string | null };
+  employee: OrgChartEmployee;
   highlight?: boolean;
 }) {
   return (
@@ -158,9 +158,11 @@ function PersonCard({
       </div>
       <div className="mt-1 flex items-baseline justify-between gap-3">
         <span className="text-sm font-medium">
-          {employee.firstName} {employee.lastName}
+          {employee.user?.name ?? "(no name)"}
         </span>
-        <span className="text-xs text-muted-foreground">{employee.email}</span>
+        <span className="text-xs text-muted-foreground">
+          {employee.user?.email ?? "—"}
+        </span>
       </div>
       {employee.title && (
         <div className="mt-1 text-xs text-muted-foreground">{employee.title}</div>

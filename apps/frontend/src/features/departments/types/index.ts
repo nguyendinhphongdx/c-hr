@@ -2,8 +2,11 @@ import type { ID, ISODate, Nullable } from "@/lib/types";
 
 export interface DepartmentManager {
   id: ID;
-  firstName: string;
-  lastName: string;
+  user: Nullable<{
+    id: ID;
+    name: Nullable<string>;
+    email: string;
+  }>;
 }
 
 export interface Department {

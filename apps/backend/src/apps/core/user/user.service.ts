@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { omit } from '@/common/utils';
 import { PrismaService } from '@libs/database/prisma.service';
 
-import { ChangePasswordDto, UpdateUserDto } from './dto';
+import { ChangePasswordDto, ListUsersDto, UpdateUserDto } from './dto';
 
 const SALT_ROUNDS = 10;
 
@@ -81,5 +81,50 @@ export class UserService {
       page,
       limit,
     };
+  }
+
+  /**
+   * Tenant-scoped list used by the Employee form's user picker. Returns
+   * only fields the picker needs (id/email/name/employeeId), with optional
+   * search by name/email and an "available for link" filter.
+   */
+  async listForOrg(organizationId: string, query: ListUsersDto) {
+    const limit = query.limit ?? 100;
+    const where: any = { organizationId };
+
+    if (query.q) {
+      const term = query.q.trim();
+      if (term.length > 0) {
+        where.OR = [
+          { email: { contains: term, mode: 'insensitive' } },
+          { name: { contains: term, mode: 'insensitive' } },
+        ];
+      }
+    }
+
+    if (query.availableForLink) {
+      // Either not linked at all, or linked to the employee being edited.
+      where.AND = [
+        {
+          OR: [
+            { employeeId: null },
+            ...(query.includeLinkedTo ? [{ employeeId: query.includeLinkedTo }] : []),
+          ],
+        },
+      ];
+    }
+
+    const rows = await this.prisma.user.findMany({
+      where,
+      take: limit,
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        employeeId: true,
+      },
+    });
+    return rows;
   }
 }

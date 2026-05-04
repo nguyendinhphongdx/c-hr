@@ -6,6 +6,7 @@ import type { ID, ISODate, Nullable } from "@/lib/types";
 
 export type Role = "sysowner" | "admin" | "user";
 export type AppCode = "HRM";
+export type Gender = "MALE" | "FEMALE" | "OTHER";
 
 export interface User {
   id: ID;
@@ -15,6 +16,10 @@ export interface User {
   /** Personal title set by the user (e.g. "Senior Engineer"). Distinct from
    *  the formal Employee.title set by HR. */
   title: Nullable<string>;
+  /** Personal info — moved here from Employee. */
+  dob: Nullable<ISODate>;
+  gender: Nullable<Gender>;
+  phone: Nullable<string>;
   role: Role;
   /** Null for sysowner. */
   organizationId: Nullable<ID>;

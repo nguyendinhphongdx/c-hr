@@ -49,7 +49,7 @@ export class DepartmentService {
           managerId: dto.managerId,
         },
         include: {
-          manager: { select: { id: true, firstName: true, lastName: true } },
+          manager: { select: { id: true, user: { select: { id: true, name: true, email: true } } } },
         },
       });
       if (dto.managerId) {
@@ -84,7 +84,7 @@ export class DepartmentService {
           managerId: dto.managerId,
         },
         include: {
-          manager: { select: { id: true, firstName: true, lastName: true } },
+          manager: { select: { id: true, user: { select: { id: true, name: true, email: true } } } },
         },
       });
       if (dto.managerId) {

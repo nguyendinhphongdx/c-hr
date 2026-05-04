@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDepartments } from "@/features/departments";
+import { UserPicker } from "@/features/users";
 import type { ID } from "@/lib/types";
 
 import {
@@ -45,16 +46,10 @@ import {
 } from "../hooks/useEmployees";
 
 const NO_DEPARTMENT = "__none__";
-const NO_GENDER = "__none__";
 
 const schema = z.object({
-  firstName: z.string().min(1, "Required").max(100),
-  lastName: z.string().min(1, "Required").max(100),
-  email: z.string().email("Invalid email"),
+  userId: z.string().uuid("Pick a user"),
   title: z.string().max(100).nullable(),
-  phone: z.string().max(32).nullable(),
-  gender: z.enum(["MALE", "FEMALE", "OTHER", NO_GENDER]),
-  dob: z.string().nullable(),
   hireDate: z.string().nullable(),
   terminationDate: z.string().nullable(),
   departmentId: z.union(
@@ -85,13 +80,8 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
+      userId: "",
       title: "",
-      phone: "",
-      gender: NO_GENDER,
-      dob: "",
       hireDate: "",
       terminationDate: "",
       departmentId: NO_DEPARTMENT,
@@ -103,13 +93,8 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
     if (employee.data) {
       const e = employee.data;
       form.reset({
-        firstName: e.firstName,
-        lastName: e.lastName,
-        email: e.email,
+        userId: e.user?.id ?? "",
         title: e.title ?? "",
-        phone: e.phone ?? "",
-        gender: e.gender ?? NO_GENDER,
-        dob: toInputDate(e.dob),
         hireDate: toInputDate(e.hireDate),
         terminationDate: toInputDate(e.terminationDate),
         departmentId: e.departmentId ?? NO_DEPARTMENT,
@@ -144,13 +129,8 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
       await update.mutateAsync({
         id,
         data: {
-          firstName: values.firstName,
-          lastName: values.lastName,
-          email: values.email,
+          userId: values.userId,
           title: values.title || null,
-          phone: values.phone || null,
-          gender: values.gender === NO_GENDER ? null : values.gender,
-          dob: values.dob || null,
           hireDate: values.hireDate || null,
           terminationDate: values.terminationDate || null,
           departmentId:
@@ -165,15 +145,18 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
         description:
           err instanceof Error
             ? err.message
-            : "Email may be in use, or the department isn't in this Org.",
+            : "User may already be linked, or the department isn't in this Org.",
       });
     }
   };
 
+  const linkedUser = employee.data.user;
+  const fullName = linkedUser?.name ?? "(no name)";
+
   const onDelete = async () => {
     if (
       !confirm(
-        `Soft-delete "${employee.data.firstName} ${employee.data.lastName}"? They'll disappear from listings but the row stays in the DB for history.`,
+        `Soft-delete "${fullName}"? They'll disappear from listings but the row stays in the DB for history.`,
       )
     ) {
       return;
@@ -188,8 +171,6 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
       });
     }
   };
-
-  const fullName = `${employee.data.firstName} ${employee.data.lastName}`.trim();
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-6 py-8">
@@ -210,44 +191,28 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
               <FormField
                 control={form.control}
-                name="email"
+                name="userId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>User</FormLabel>
                     <FormControl>
-                      <Input type="email" {...field} />
+                      <UserPicker
+                        value={field.value || null}
+                        onChange={(u) => field.onChange(u?.id ?? "")}
+                        availableForLink
+                        includeLinkedTo={id}
+                        fallback={
+                          linkedUser
+                            ? { name: linkedUser.name, email: linkedUser.email }
+                            : null
+                        }
+                      />
                     </FormControl>
+                    <FormDescription>
+                      Re-link to a different user — personal info will follow.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -283,13 +248,11 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="—" />
+                          <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={NO_DEPARTMENT}>
-                          (no department)
-                        </SelectItem>
+                        <SelectItem value={NO_DEPARTMENT}>(no department)</SelectItem>
                         {departments.data?.map((d) => (
                           <SelectItem key={d.id} value={d.id}>
                             {d.name}
@@ -298,83 +261,12 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>
-                      Drives reporting line. Detach to clear.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
               <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <FormControl>
-                        <Input
-                          value={field.value ?? ""}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gender</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="—" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={NO_GENDER}>—</SelectItem>
-                          <SelectItem value="MALE">Male</SelectItem>
-                          <SelectItem value="FEMALE">Female</SelectItem>
-                          <SelectItem value="OTHER">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <FormField
-                  control={form.control}
-                  name="dob"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date of birth</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          value={field.value ?? ""}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <FormField
                   control={form.control}
                   name="hireDate"
