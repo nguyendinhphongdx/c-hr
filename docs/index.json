@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-04T10:33:24.449Z",
+  "generatedAt": "2026-05-04T11:33:48.293Z",
   "repoRelativeRoot": ".",
   "count": 43,
   "entries": [
@@ -321,6 +321,9 @@
       "category": "plans",
       "headings": [
         "Nguyên tắc (cứng — không đổi)",
+        "Trạng thái hiện tại (cập nhật 2026-05-04)",
+        "Refactor đang dở (cần làm tiếp)",
+        "F3 verify checklist (trước khi đóng F3)",
         "Thứ tự implement",
         "Feature 0 — Foundation",
         "BE",

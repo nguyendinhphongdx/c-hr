@@ -20,6 +20,42 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 6. **1 feature = 1 PR** (BE module + Prisma migration + FE feature + test). Không trộn.
 7. **Audit log** ([ADR 0002](../decisions/0002-audit-log.md)) cho mọi action thay đổi org structure / appadmin / approve workflow.
 
+## Trạng thái hiện tại (cập nhật 2026-05-04)
+
+| # | Feature | Status | Ghi chú |
+| --- | --- | --- | --- |
+| 0 | Foundation | ✅ done | Folder migration, ESLint flat config, audit infra deferred → F1 |
+| 1 | Auth + Org + AppAdmin | ✅ done | Signup Org / me / admin grant/revoke, audit log, isAdmin/isAppAdmin helpers |
+| 2 | HRM core: Department + Employee + OrgChart | ✅ done | CRUD đủ, OrgChart CTE + approver candidates, EmployeePicker, dept manager auto-link, soft-delete, edit pages |
+| 3 | Attendance | 🟡 in progress | BE 4 modules + 3 FE features đã code xong & build sạch. **Còn:** chạy `prisma migrate dev --name f3_user_personal_info` (qua WSL) cho refactor User/Employee. Sau đó verify runtime end-to-end (work-schedule edit, device create/push, timesheet calendar). |
+| 4 | Requests | ⬜ chưa làm | Block bởi F3 chốt + verify |
+
+### Refactor đang dở (cần làm tiếp)
+
+**User/Employee personal-info split** — đã commit trong `feat(attendance,hrm): F3 + move personal info`. Code và schema.prisma đã update; **migration file chưa generate** vì postgres chỉ reach được từ WSL.
+
+Bước tiếp theo cho agent kế:
+
+1. Trong WSL: `cd /mnt/d/Code/CMC/c-hr && pnpm --filter @c-hr/backend exec prisma migrate dev --name f3_user_personal_info`
+2. Verify migration SQL hợp lý (ADD `users.dob/gender/phone`, DROP `employees.first_name/last_name/email/dob/gender/phone`)
+3. Commit migration file riêng: `chore(backend): commit f3_user_personal_info migration`
+4. Smoke test:
+   - `/settings/profile` — patch dob/gender/phone OK
+   - `/employees/new` — UserPicker bắt buộc, sau khi pick thì firstName/lastName không còn cần (hiển thị name từ User)
+   - `/employees/[id]/edit` — re-link user → tên cập nhật ở list, tree manager, orgchart
+   - `/timesheet` — header hiện User.name của login user
+5. Sau khi smoke OK → bắt đầu F4 Requests (leave + attendance correction).
+
+### F3 verify checklist (trước khi đóng F3)
+
+- [ ] Tạo `/settings/work-schedule` với 2 shift (T2-T6 ca chính 8-17, T7 sáng 8-12) → save OK, refetch hiển thị đúng
+- [ ] Validate trùng ngày giữa các shift → 400
+- [ ] Tạo device qua `/settings/attendance-devices` → token plaintext hiện 1 lần
+- [ ] `POST /api/v1/attendance-devices/push` với deviceId + token + 1 event → log xuất hiện trong DB
+- [ ] Replay cùng eventLogId → response `duplicates: 1`, không tạo dup row
+- [ ] `/timesheet` của user đã link Employee → render đúng grid tháng + status WEEKEND/PRESENT/LATE/ABSENT
+- [ ] Manual edit log qua PATCH (HRM admin) → source = `MANUAL_HR`, audit_logs có entry
+
 ## Thứ tự implement
 
 | # | Feature | Bounded context | BE deliverables | FE deliverables | Blocked-by |
@@ -27,7 +63,7 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 0 | **Foundation** | core, common | Migrate `src/modules/` → `src/apps/core/`, `BaseRepository`, `audit_logs` table + `@Auditable` interceptor, `isAdmin` + `isAppAdmin` helpers, fix lint FE | Fix 2 lỗi lint pre-existing, sidebar nav slot cho HRM/Attendance/Requests (disabled cho đến khi feature implement) | — |
 | 1 | **Auth + Org + User + AppAdmin** | core, platform, hrm | `Organization`, mở rộng `User` (`role`, `title`, `organizationId`, `employeeId`), `AppAdmin` model + module gán/xoá (admin Org gán cho user role=user), signup flow Org | Trang đăng ký Org (tạo Org + admin user), trang `/settings/organization`, trang `/settings/app-admins` (admin Org grant/revoke), profile edit (set `User.title`) | 0 |
 | 2 | **HRM core: Department + Employee + OrgChart** | hrm | `Department` (nested + manager), `Employee` (departmentId, title, soft-delete, link User↔Employee), `OrgChartService` (CTE chain query, `getApproverCandidates`), `/orgchart` endpoints | `features/employees/` (list, search, profile), `features/departments/` (CRUD + tree picker), `features/orgchart/` 2 view React Flow (reporting line + department structure) | 1 |
-| 3 | **Attendance: WorkSchedule + Device + Log + Timesheet UI** | attendance | `WorkSchedule` config, `AttendanceDevice` registry + push endpoint, `AttendanceLog` (composite unique `employee_id, date`, idempotent qua `device_log_id`), adapter pattern (`ZKTecoAdapter`, `HikvisionAdapter`), `Timesheet` query API trả về log theo tháng | `/settings/work-schedule`, `/settings/attendance-devices`, `/timesheet` (calendar tháng theo ảnh user gửi — grid 7 cột, mỗi ô check-in/out + clock icon), `/timesheet/team` cho HR/manager xem team | 2 |
+| 3 | **Attendance: WorkSchedule + Device + Log + Timesheet UI** | attendance | `WorkSchedule` config, `AttendanceDevice` registry + push endpoint, `AttendanceLog` (composite unique `employee_id, date`, idempotent qua `event_log_id`), `Timesheet` query API trả về log theo tháng. **MVP simplified:** generic JSON push contract, no brand adapter. | `/settings/work-schedule`, `/settings/attendance-devices`, `/timesheet` (calendar tháng — grid 7 cột, mỗi ô check-in/out + status badge). `/timesheet/team` deferred. | 2 |
 | 4 | **Requests: LeaveRequest + AttendanceCorrection** | requests | Module `requests/leave-request/` + `requests/attendance-correction/`, state machine `PENDING → APPROVED/REJECTED/CANCELLED`, approve workflow dùng `OrgChartService.getApproverCandidates`, approve `AttendanceCorrection` → tạo/update `AttendanceLog` source `CORRECTION`, mail notification async, `@Auditable` cho approve/reject | `features/leave/` (list filtered by role, create form với approver dropdown, detail + approve/reject UI), `features/attendance-correction/` tương tự, badge số đơn pending trên sidebar | 2, 3 |
 
 Mỗi feature **kết thúc xanh khi**:
