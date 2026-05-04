@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronDown, ChevronRight, FolderTree, Loader2, Plus } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  FolderTree,
+  Loader2,
+  Pencil,
+  Plus,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -66,7 +73,12 @@ export function DepartmentTreeView() {
           ) : (
             <ul className="space-y-1">
               {tree.map((node) => (
-                <TreeNode key={node.id} node={node} depth={0} />
+                <TreeNode
+                  key={node.id}
+                  node={node}
+                  depth={0}
+                  canEdit={canManage}
+                />
               ))}
             </ul>
           )}
@@ -76,7 +88,15 @@ export function DepartmentTreeView() {
   );
 }
 
-function TreeNode({ node, depth }: { node: DepartmentNode; depth: number }) {
+function TreeNode({
+  node,
+  depth,
+  canEdit,
+}: {
+  node: DepartmentNode;
+  depth: number;
+  canEdit: boolean;
+}) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = node.children.length > 0;
 
@@ -111,16 +131,25 @@ function TreeNode({ node, depth }: { node: DepartmentNode; depth: number }) {
             ({node.code})
           </span>
         )}
-        {node.managerId && (
-          <span className="ml-auto truncate font-mono text-[10px] text-muted-foreground/70">
-            mgr {node.managerId.slice(0, 8)}…
-          </span>
+        {canEdit && (
+          <Link
+            href={`/departments/${node.id}/edit`}
+            className="ml-auto text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+            aria-label={`Edit ${node.name}`}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Link>
         )}
       </div>
       {hasChildren && expanded && (
         <ul className="space-y-1">
           {node.children.map((child) => (
-            <TreeNode key={child.id} node={child} depth={depth + 1} />
+            <TreeNode
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              canEdit={canEdit}
+            />
           ))}
         </ul>
       )}

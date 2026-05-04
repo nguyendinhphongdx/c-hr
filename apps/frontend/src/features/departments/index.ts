@@ -1,4 +1,5 @@
 export { DepartmentCreateView } from "./views/DepartmentCreateView";
+export { DepartmentEditView } from "./views/DepartmentEditView";
 export { DepartmentTreeView } from "./views/DepartmentTreeView";
 export {
   departmentsKeys,

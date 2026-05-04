@@ -1,9 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -34,12 +35,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-import { EmployeePicker } from "@/features/employees/components/EmployeePicker";
+import { EmployeePicker } from "@/features/employees";
+import type { ID } from "@/lib/types";
 
 import {
-  useCreateDepartment,
+  useDeleteDepartment,
+  useDepartment,
   useDepartments,
+  useUpdateDepartment,
 } from "../hooks/useDepartments";
 
 const NO_PARENT = "__none__";
@@ -47,11 +50,7 @@ const NO_PARENT = "__none__";
 const schema = z.object({
   name: z.string().min(1, "Required").max(100),
   parentId: z.string(),
-  managerId: z
-    .string()
-    .uuid("Must be a UUID")
-    .or(z.literal(""))
-    .optional(),
+  managerId: z.string().nullable(),
   code: z
     .string()
     .max(50)
@@ -61,41 +60,105 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export function DepartmentCreateView() {
+interface DepartmentEditViewProps {
+  id: ID;
+}
+
+export function DepartmentEditView({ id }: DepartmentEditViewProps) {
   const router = useRouter();
-  const create = useCreateDepartment();
+  const dept = useDepartment(id);
   const list = useDepartments();
+  const update = useUpdateDepartment();
+  const remove = useDeleteDepartment();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: "",
       parentId: NO_PARENT,
-      managerId: "",
+      managerId: null,
       code: "",
     },
   });
 
+  // Reset the form once the department row arrives.
+  useEffect(() => {
+    if (dept.data) {
+      form.reset({
+        name: dept.data.name,
+        parentId: dept.data.parentId ?? NO_PARENT,
+        managerId: dept.data.managerId ?? null,
+        code: dept.data.code ?? "",
+      });
+    }
+  }, [dept.data, form]);
+
+  if (dept.isLoading) {
+    return (
+      <div className="mx-auto flex max-w-2xl items-center justify-center gap-2 px-6 py-16 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+      </div>
+    );
+  }
+
+  if (dept.error || !dept.data) {
+    return (
+      <div className="mx-auto max-w-2xl px-6 py-16">
+        <p className="text-sm text-destructive">Department not found.</p>
+        <Button variant="ghost" asChild className="mt-4 gap-2">
+          <Link href="/departments">
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
   const onSubmit = async (values: FormValues) => {
     try {
-      const dept = await create.mutateAsync({
-        name: values.name,
-        parentId:
-          values.parentId === NO_PARENT ? undefined : values.parentId,
-        managerId: values.managerId || undefined,
-        code: values.code || undefined,
+      await update.mutateAsync({
+        id,
+        data: {
+          name: values.name,
+          parentId: values.parentId === NO_PARENT ? null : values.parentId,
+          managerId: values.managerId === null ? null : values.managerId || null,
+          code: values.code || undefined,
+        },
       });
-      toast.success("Department created");
-      router.push(`/departments?focus=${dept.id}`);
+      toast.success("Department updated");
+      router.push("/departments");
     } catch (err) {
-      toast.error("Couldn't create department", {
+      toast.error("Couldn't update department", {
         description:
           err instanceof Error
             ? err.message
-            : "Code may already be in use, or parent / manager invalid.",
+            : "Code conflict, parent cycle, or invalid manager.",
       });
     }
   };
+
+  const onDelete = async () => {
+    if (
+      !confirm(
+        `Soft-delete "${dept.data.name}"? The row stays in the DB for history but disappears from the tree.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await remove.mutateAsync(id);
+      toast.success("Department deleted");
+      router.push("/departments");
+    } catch (err) {
+      toast.error("Couldn't delete", {
+        description: err instanceof Error ? err.message : "Try again later.",
+      });
+    }
+  };
+
+  // Don't let the user pick the dept itself as its own parent (server-side
+  // cycle guard handles deeper cases).
+  const parentOptions = (list.data ?? []).filter((d) => d.id !== id);
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-6 py-8">
@@ -109,11 +172,8 @@ export function DepartmentCreateView() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <Card>
             <CardHeader>
-              <CardTitle>New department</CardTitle>
-              <CardDescription>
-                Pick a parent (or leave as root). Manager can be assigned later
-                from the detail page.
-              </CardDescription>
+              <CardTitle>Edit department</CardTitle>
+              <CardDescription>{dept.data.name}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <FormField
@@ -123,7 +183,7 @@ export function DepartmentCreateView() {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Engineering" autoFocus {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -147,7 +207,7 @@ export function DepartmentCreateView() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value={NO_PARENT}>(root)</SelectItem>
-                        {list.data?.map((d) => (
+                        {parentOptions.map((d) => (
                           <SelectItem key={d.id} value={d.id}>
                             {d.name}
                             {d.code ? ` · ${d.code}` : ""}
@@ -155,6 +215,9 @@ export function DepartmentCreateView() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormDescription>
+                      Server rejects parents that would create a cycle.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -169,10 +232,6 @@ export function DepartmentCreateView() {
                     <FormControl>
                       <Input placeholder="ENG-01" {...field} />
                     </FormControl>
-                    <FormDescription>
-                      Optional. Letters, digits, hyphens, underscores. Unique
-                      within Org.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -186,32 +245,48 @@ export function DepartmentCreateView() {
                     <FormLabel>Manager</FormLabel>
                     <FormControl>
                       <EmployeePicker
-                        value={field.value || null}
-                        onChange={(id) => field.onChange(id ?? "")}
+                        value={field.value}
+                        onChange={(next) => field.onChange(next)}
                       />
                     </FormControl>
                     <FormDescription>
-                      Optional. Search by name, email, or code.
+                      Search by name, email, or code. Clear to detach.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </CardContent>
-            <CardFooter className="justify-end gap-2">
-              <Button type="button" variant="ghost" asChild>
-                <Link href="/departments">Cancel</Link>
-              </Button>
+            <CardFooter className="flex items-center justify-between gap-2">
               <Button
-                type="submit"
-                className="gap-2"
-                disabled={create.isPending}
+                type="button"
+                variant="ghost"
+                className="gap-2 text-destructive hover:text-destructive"
+                onClick={onDelete}
+                disabled={remove.isPending}
               >
-                {create.isPending && (
+                {remove.isPending ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
                 )}
-                Create department
+                Delete
               </Button>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="ghost" asChild>
+                  <Link href="/departments">Cancel</Link>
+                </Button>
+                <Button
+                  type="submit"
+                  className="gap-2"
+                  disabled={update.isPending || !form.formState.isDirty}
+                >
+                  {update.isPending && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  )}
+                  Save changes
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         </form>
