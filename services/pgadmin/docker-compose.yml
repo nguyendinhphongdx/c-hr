@@ -1,0 +1,31 @@
+name: c-hr-pgadmin
+
+services:
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: c-hr-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@c-hr.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - '${PGADMIN_PORT:-5050}:80'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - c-hr
+
+volumes:
+  pgadmin_data:
+    name: c-hr-pgadmin-data
+
+networks:
+  c-hr:
+    name: c-hr
+    driver: bridge

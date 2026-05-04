@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-04T11:33:48.293Z",
+  "generatedAt": "2026-05-04T15:42:39.044Z",
   "repoRelativeRoot": ".",
   "count": 43,
   "entries": [
@@ -322,8 +322,9 @@
       "headings": [
         "Nguyên tắc (cứng — không đổi)",
         "Trạng thái hiện tại (cập nhật 2026-05-04)",
-        "Refactor đang dở (cần làm tiếp)",
-        "F3 verify checklist (trước khi đóng F3)",
+        "F3 verify checklist (đã chạy 2026-05-04 qua curl, BE :8000 + DB Docker)",
+        "Edge findings (non-blocking, ghi chú để fix sau)",
+        "Manual UI smoke (chờ demo qua browser)",
         "Thứ tự implement",
         "Feature 0 — Foundation",
         "BE",

@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Plus, Save, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,18 @@ interface DraftShift extends ShiftInput {
 let nextKey = 1;
 function makeKey() {
   return `s_${nextKey++}`;
+}
+
+function toShiftInput(s: DraftShift): ShiftInput {
+  return {
+    name: s.name,
+    startTime: s.startTime,
+    endTime: s.endTime,
+    daysOfWeek: s.daysOfWeek,
+    breakMinutes: s.breakMinutes,
+    lateGraceMinutes: s.lateGraceMinutes,
+    crossesMidnight: s.crossesMidnight,
+  };
 }
 
 function fromSchedule(s: WorkSchedule | null): {
@@ -91,14 +103,21 @@ export function WorkScheduleSettingsView() {
 
   const [name, setName] = useState("");
   const [shifts, setShifts] = useState<DraftShift[]>([]);
-
-  useEffect(() => {
-    if (!list.isLoading) {
+  // Sync local form state with the loaded schedule by tracking which row id
+  // we last initialised from. Setting state during render (instead of in an
+  // effect) avoids the cascade-render warning from react-hooks/set-state-in-effect.
+  const [lastSyncedId, setLastSyncedId] = useState<string | null | undefined>(
+    undefined,
+  );
+  if (!list.isLoading) {
+    const currentId = current?.id ?? null;
+    if (lastSyncedId !== currentId) {
+      setLastSyncedId(currentId);
       const init = fromSchedule(current ?? null);
       setName(init.name);
       setShifts(init.shifts);
     }
-  }, [list.isLoading, current]);
+  }
 
   if (!canManage) {
     return (
@@ -161,7 +180,7 @@ export function WorkScheduleSettingsView() {
     const payload = {
       name,
       isDefault: true,
-      shifts: shifts.map(({ key: _key, ...rest }) => rest),
+      shifts: shifts.map(toShiftInput),
     };
 
     try {

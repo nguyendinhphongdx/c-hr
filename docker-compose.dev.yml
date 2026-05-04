@@ -6,3 +6,4 @@ name: c-hr
 include:
   - ./services/postgres/docker-compose.yml
   - ./services/redis/docker-compose.yml
+  - ./services/pgadmin/docker-compose.yml

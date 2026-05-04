@@ -27,34 +27,33 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 0 | Foundation | ✅ done | Folder migration, ESLint flat config, audit infra deferred → F1 |
 | 1 | Auth + Org + AppAdmin | ✅ done | Signup Org / me / admin grant/revoke, audit log, isAdmin/isAppAdmin helpers |
 | 2 | HRM core: Department + Employee + OrgChart | ✅ done | CRUD đủ, OrgChart CTE + approver candidates, EmployeePicker, dept manager auto-link, soft-delete, edit pages |
-| 3 | Attendance | 🟡 in progress | BE 4 modules + 3 FE features đã code xong & build sạch. **Còn:** chạy `prisma migrate dev --name f3_user_personal_info` (qua WSL) cho refactor User/Employee. Sau đó verify runtime end-to-end (work-schedule edit, device create/push, timesheet calendar). |
-| 4 | Requests | ⬜ chưa làm | Block bởi F3 chốt + verify |
+| 3 | Attendance | ✅ done | BE 4 modules + 3 FE features. Migration f3_user_personal_info applied. API smoke 7/7 verify items pass (curl). FE typecheck/lint sạch. UI render manual smoke pending khi user demo. |
+| 4 | Requests | ⬜ chưa làm | Tiếp theo |
 
-### Refactor đang dở (cần làm tiếp)
+### F3 verify checklist (đã chạy 2026-05-04 qua curl, BE :8000 + DB Docker)
 
-**User/Employee personal-info split** — đã commit trong `feat(attendance,hrm): F3 + move personal info`. Code và schema.prisma đã update; **migration file chưa generate** vì postgres chỉ reach được từ WSL.
+- [x] Tạo work-schedule với 2 shift (T2-T6 ca chính 8-17, T7 sáng 8-12) → 201, refetch đúng
+- [x] PATCH với daysOfWeek trùng → HTTP 400 + message "Day 3 appears in both 'Ca A' and 'Ca B'"
+- [x] Tạo device → 201, plaintext token field separate, hash trong DB
+- [x] `POST /attendance-devices/push` 1 event → `accepted: 1`, log row xuất hiện đúng `(employee, date)`
+- [x] Replay 1-event push → `accepted: 0, duplicates: 1`, row count vẫn = 1
+- [x] `GET /timesheet?employeeId=&year=2026&month=5` → grid 31 ngày: weekday có shift Ca chính, T7 có Sáng T7, CN status WEEKEND, ngày có log status PRESENT/LATE/EARLY_LEAVE
+- [x] PATCH `/attendance-logs/:id` (admin) → `source: 'MANUAL_HR'`, `note` updated. `audit_logs` có entry `ATTENDANCE_LOG_UPDATE` với `actor_user_id` đúng
 
-Bước tiếp theo cho agent kế:
+### Edge findings (non-blocking, ghi chú để fix sau)
 
-1. Trong WSL: `cd /mnt/d/Code/CMC/c-hr && pnpm --filter @c-hr/backend exec prisma migrate dev --name f3_user_personal_info`
-2. Verify migration SQL hợp lý (ADD `users.dob/gender/phone`, DROP `employees.first_name/last_name/email/dob/gender/phone`)
-3. Commit migration file riêng: `chore(backend): commit f3_user_personal_info migration`
-4. Smoke test:
-   - `/settings/profile` — patch dob/gender/phone OK
-   - `/employees/new` — UserPicker bắt buộc, sau khi pick thì firstName/lastName không còn cần (hiển thị name từ User)
-   - `/employees/[id]/edit` — re-link user → tên cập nhật ở list, tree manager, orgchart
-   - `/timesheet` — header hiện User.name của login user
-5. Sau khi smoke OK → bắt đầu F4 Requests (leave + attendance correction).
+1. **Multi-event push idempotency**: bảng `attendance_logs` chỉ store 1 `event_log_id` per `(employee, date)` row. Khi push IN+OUT cùng 1 ngày trong 1 request, chỉ event đầu được track; replay event thứ 2 trả `accepted: 1` thay vì `duplicates: 1`. Không phá data (row không dup, range timestamps merge OK), nhưng counter lệch. Fix khi vào prod: tách bảng `attendance_events` riêng, aggregate sang `attendance_logs`.
+2. **`audit_logs.entity_id` empty cho CREATE actions** (DEPARTMENT_CREATE, EMPLOYEE_CREATE, ATTENDANCE_DEVICE_CREATE, WORK_SCHEDULE_CREATE). UPDATE actions ghi đúng. Pre-existing — `AuditInterceptor` chưa capture entity id từ response sau khi handler trả về. Fix: extract id từ response body trong interceptor (sau ResponseTransform).
+3. **Error envelope code label**: BadRequestException trả body có `error.code: "INTERNAL_SERVER_ERROR"` nhưng HTTP status 400 đúng. Issue ở exception filter mapping → label cần map theo HttpException type. Nhỏ, FE đã unwrap `success/data` envelope nên không thấy.
+4. **Timezone**: timestamps lưu UTC, nhưng status logic so wall-clock với shift `startTime "08:00"` (local). Test push UTC `01:12Z` (Vietnam 08:12) bị parse thành 01:12 → status sai logic. Cần convert sang Org timezone trước khi compare. Defer cho proper i18n pass.
 
-### F3 verify checklist (trước khi đóng F3)
+### Manual UI smoke (chờ demo qua browser)
 
-- [ ] Tạo `/settings/work-schedule` với 2 shift (T2-T6 ca chính 8-17, T7 sáng 8-12) → save OK, refetch hiển thị đúng
-- [ ] Validate trùng ngày giữa các shift → 400
-- [ ] Tạo device qua `/settings/attendance-devices` → token plaintext hiện 1 lần
-- [ ] `POST /api/v1/attendance-devices/push` với deviceId + token + 1 event → log xuất hiện trong DB
-- [ ] Replay cùng eventLogId → response `duplicates: 1`, không tạo dup row
-- [ ] `/timesheet` của user đã link Employee → render đúng grid tháng + status WEEKEND/PRESENT/LATE/ABSENT
-- [ ] Manual edit log qua PATCH (HRM admin) → source = `MANUAL_HR`, audit_logs có entry
+- `/settings/work-schedule` — render form, add/remove shift, save thành công
+- `/settings/attendance-devices` — tạo device, modal show plaintext token 1 lần
+- `/timesheet` — calendar grid render đúng, today highlight, hover popover (admin time picker)
+- `/settings/profile` — patch User dob/gender/phone OK
+- `/employees/new` + `[id]/edit` — UserPicker hoạt động, name hiển thị từ User
 
 ## Thứ tự implement
 
