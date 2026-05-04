@@ -1,5 +1,16 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+
+// This script doesn't go through NestJS bootstrap, so @nestjs/config
+// isn't loading env for us. Mirror the cascade from src/app.module.ts
+// (first found wins; loadEnvFile does not overwrite already-set vars).
+for (const rel of ['.env.local', '.env', '../../.env']) {
+  const abs = resolve(process.cwd(), rel);
+  if (existsSync(abs)) process.loadEnvFile(abs);
+}
 
 const prisma = new PrismaClient();
 
