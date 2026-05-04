@@ -74,7 +74,7 @@ const RESOURCES: QuickAction[] = [
 
 export function HomeView() {
   const { user } = useAuth();
-  const firstName = user?.full_name?.split(" ")[0] ?? null;
+  const firstName = user?.name?.split(" ")[0] ?? null;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-10 px-6 py-10">

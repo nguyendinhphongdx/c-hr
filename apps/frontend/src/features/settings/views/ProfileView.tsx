@@ -19,6 +19,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -28,7 +29,8 @@ import { Input } from "@/components/ui/input";
 import { useAuth, useUpdateProfile } from "@/features/auth";
 
 const schema = z.object({
-  full_name: z.string().min(1, "Required").max(100),
+  name: z.string().min(1, "Required").max(100),
+  title: z.string().max(100).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -39,17 +41,20 @@ export function ProfileView() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { full_name: user?.full_name ?? "" },
+    defaultValues: { name: user?.name ?? "", title: user?.title ?? "" },
   });
 
   // Re-sync the form when the user record loads after first paint.
   useEffect(() => {
-    if (user) form.reset({ full_name: user.full_name ?? "" });
+    if (user) form.reset({ name: user.name ?? "", title: user.title ?? "" });
   }, [user, form]);
 
   const onSubmit = async (values: FormValues) => {
     try {
-      await update.mutateAsync({ full_name: values.full_name });
+      await update.mutateAsync({
+        name: values.name,
+        title: values.title || undefined,
+      });
       toast.success("Profile updated");
     } catch (err) {
       toast.error("Couldn't update profile", {
@@ -72,13 +77,30 @@ export function ProfileView() {
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
-              name="full_name"
+              name="name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Full name</FormLabel>
                   <FormControl>
                     <Input placeholder="Ada Lovelace" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Senior Engineer" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Personal title — shown next to your name. HR sets the
+                    formal job title separately.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -95,7 +117,12 @@ export function ProfileView() {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => form.reset({ full_name: user?.full_name ?? "" })}
+              onClick={() =>
+                form.reset({
+                  name: user?.name ?? "",
+                  title: user?.title ?? "",
+                })
+              }
               disabled={!form.formState.isDirty || update.isPending}
             >
               Cancel

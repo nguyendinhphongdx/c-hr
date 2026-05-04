@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { resetSession } from "@/lib/api/client";
 import { authService } from "../services/authService";
 import type {
+  AppCode,
   ChangePasswordInput,
   ForgotPasswordInput,
   LoginInput,
@@ -20,8 +21,13 @@ export const authKeys = {
   me: ["auth", "me"] as const,
 };
 
+/**
+ * Reads /users/me — returns the user *with* their Organization and
+ * AppAdmin grants. The me record is the canonical source of "what
+ * Org am I in" and "what apps am I admin of" everywhere on the FE.
+ */
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery({
+  const { data: me, isLoading, error } = useQuery({
     queryKey: authKeys.me,
     queryFn: authService.getMe,
     retry: false,
@@ -29,11 +35,33 @@ export function useAuth() {
   });
 
   return {
-    user: user ?? null,
+    user: me ?? null,
+    organization: me?.organization ?? null,
+    appAdmins: me?.appAdmins ?? [],
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!me,
     error,
   };
+}
+
+/**
+ * Mirror of common/auth/access.ts (BE) on the client side — same
+ * hierarchy: sysowner ⊃ admin (Org) ⊃ appadmin ⊃ user. Used to gate
+ * UI (hide nav items, disable buttons). Real authorization lives on
+ * the server; client checks are presentation only.
+ */
+export function useIsAdmin(): boolean {
+  const { user } = useAuth();
+  if (!user) return false;
+  if (user.role === "sysowner") return true;
+  return user.role === "admin";
+}
+
+export function useIsAppAdmin(app: AppCode): boolean {
+  const { user, appAdmins } = useAuth();
+  if (!user) return false;
+  if (user.role === "sysowner" || user.role === "admin") return true;
+  return appAdmins.some((g) => g.appCode === app);
 }
 
 export function useLogin() {
@@ -42,9 +70,10 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: (data: LoginInput) => authService.login(data),
-    onSuccess: (res) => {
-      queryClient.setQueryData(authKeys.me, res.user);
-      router.push(res.user.is_verified ? "/home" : "/verify-email/pending");
+    onSuccess: () => {
+      // Re-fetch /users/me — login response only carries the bare user.
+      queryClient.invalidateQueries({ queryKey: authKeys.me });
+      router.push("/home");
     },
   });
 }
@@ -55,9 +84,9 @@ export function useRegister() {
 
   return useMutation({
     mutationFn: (data: RegisterInput) => authService.register(data),
-    onSuccess: (res) => {
-      queryClient.setQueryData(authKeys.me, res.user);
-      router.push("/verify-email/pending");
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.me });
+      router.push("/home");
     },
   });
 }
@@ -73,8 +102,9 @@ export function useSignupOrg() {
 
   return useMutation({
     mutationFn: (data: OrgSignupInput) => authService.signupOrg(data),
-    onSuccess: (res) => {
-      queryClient.setQueryData(authKeys.me, res.user);
+    onSuccess: () => {
+      // Force /users/me re-fetch so organization + appAdmins land in the cache.
+      queryClient.invalidateQueries({ queryKey: authKeys.me });
       router.push("/home");
     },
   });

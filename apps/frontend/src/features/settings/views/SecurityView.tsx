@@ -53,8 +53,8 @@ export function SecurityView() {
   const onSubmit = async (values: FormValues) => {
     try {
       await changePassword.mutateAsync({
-        current_password: values.current_password,
-        new_password: values.new_password,
+        currentPassword: values.current_password,
+        newPassword: values.new_password,
       });
       toast.success("Password updated");
       form.reset();

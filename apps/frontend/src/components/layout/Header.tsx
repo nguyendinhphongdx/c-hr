@@ -34,7 +34,7 @@ export function Header({ sidebarCollapsed, onToggleSidebar }: HeaderProps) {
   const { user } = useAuth();
   const logout = useLogout();
 
-  const initials = getInitials(user?.full_name ?? user?.email ?? null);
+  const initials = getInitials(user?.name ?? user?.email ?? null);
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur">
@@ -66,7 +66,7 @@ export function Header({ sidebarCollapsed, onToggleSidebar }: HeaderProps) {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="space-y-0.5">
             <p className="text-sm font-medium leading-none">
-              {user?.full_name ?? "Guest"}
+              {user?.name ?? "Guest"}
             </p>
             <p className="text-xs leading-none text-muted-foreground">
               {user?.email}

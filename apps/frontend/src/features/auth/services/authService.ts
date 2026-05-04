@@ -4,6 +4,7 @@ import type {
   ChangePasswordInput,
   ForgotPasswordInput,
   LoginInput,
+  MeResponse,
   OAuthProvider,
   OrgSignupInput,
   OrgSignupResponse,
@@ -38,8 +39,12 @@ export const authService = {
     await apiClient.post("/auth/logout");
   },
 
-  getMe: async (): Promise<User> => {
-    const res = await apiClient.get<User>("/auth/me");
+  /**
+   * Logged-in user + their Organization + AppAdmin grants in one round
+   * trip. Backed by GET /users/me (apps/backend F1.6).
+   */
+  getMe: async (): Promise<MeResponse> => {
+    const res = await apiClient.get<MeResponse>("/users/me");
     return res.data;
   },
 
@@ -81,13 +86,13 @@ export const authService = {
     return { sent: true };
   },
 
-  changePassword: async (data: ChangePasswordInput): Promise<{ ok: true }> => {
-    await apiClient.post("/auth/change-password", data);
-    return { ok: true };
+  changePassword: async (data: ChangePasswordInput): Promise<{ success: true }> => {
+    const res = await apiClient.patch<{ success: true }>("/users/me/password", data);
+    return res.data;
   },
 
   updateProfile: async (data: UpdateProfileInput): Promise<User> => {
-    const res = await apiClient.patch<User>("/auth/me", data);
+    const res = await apiClient.patch<User>("/users/me", data);
     return res.data;
   },
 };

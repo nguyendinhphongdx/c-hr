@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { Sparkles } from "lucide-react";
 
@@ -9,8 +9,6 @@ import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { SITE } from "@/lib/seo";
 import { useAuth } from "../hooks/useAuth";
 import { BrandPanel } from "./BrandPanel";
-
-const VERIFY_PENDING_PATH = "/verify-email/pending";
 
 interface AuthLayoutProps {
   title: string;
@@ -21,24 +19,18 @@ interface AuthLayoutProps {
 /**
  * Shared layout for `/login`, `/register`, `/forgot-password`, etc.
  *
- * Behavior: if a verified user lands on any auth page, bounce them to /home.
- * Unverified users are sent to /verify-email/pending (unless that's where
- * they already are). The actual redirect is server-gated by middleware.ts;
- * this client effect is the secondary safety net + provides snappier UX.
+ * Behavior: an authenticated user who lands on any auth page is bounced to
+ * /home. The real redirect is server-gated by middleware.ts; this client
+ * effect is a secondary safety net for snappier UX.
  */
 export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
-    if (isLoading || !isAuthenticated || !user) return;
-    if (user.is_verified) {
-      router.replace("/home");
-    } else if (pathname !== VERIFY_PENDING_PATH) {
-      router.replace(VERIFY_PENDING_PATH);
-    }
-  }, [isLoading, isAuthenticated, user, pathname, router]);
+    if (isLoading || !isAuthenticated) return;
+    router.replace("/home");
+  }, [isLoading, isAuthenticated, router]);
 
   return (
     <div className="relative flex min-h-screen">
