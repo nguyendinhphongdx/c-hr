@@ -5,6 +5,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 
 import { configs } from './config';
 
+import { AuditModule } from './common/audit';
 import { ContextModule } from './common/context';
 import { DatabaseModule } from './libs/database/database.module';
 import { LoggerModule } from './libs/logger/logger.module';
@@ -37,6 +38,7 @@ import { CoreModule } from './apps/core/core.module';
     RedisModule,
     MailModule,
     StorageModule,
+    AuditModule,
 
     CoreModule,
   ],
