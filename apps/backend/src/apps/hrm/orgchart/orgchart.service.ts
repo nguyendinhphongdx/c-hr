@@ -1,0 +1,205 @@
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
+import { RequestUser } from '@/common/types';
+import { PrismaService } from '@libs/database/prisma.service';
+
+interface AncestorRow {
+  id: string;
+  parent_id: string | null;
+  manager_id: string | null;
+  depth: number;
+}
+
+export interface CandidateUser {
+  userId: string;
+  employeeId: string | null;
+  email: string;
+  name: string | null;
+}
+
+@Injectable()
+export class OrgChartService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Flat list of active departments in the Org. The FE builds a tree from
+   * parentId — keeping this server-side as a flat array makes it cheap to
+   * cache and easy to filter client-side.
+   */
+  async getDepartmentTree(currentUser: RequestUser) {
+    const orgId = this.requireOrg(currentUser);
+    return this.prisma.department.findMany({
+      where: { organizationId: orgId, deletedAt: null },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  /**
+   * Walk the department parent chain starting from `employeeId`'s
+   * department, collecting the managerId at each hop. Excludes the
+   * employee themselves to avoid self-management. Returns Employee
+   * rows (subset) ordered nearest-first.
+   */
+  async getReportingLine(currentUser: RequestUser, employeeId: string) {
+    const orgId = this.requireOrg(currentUser);
+    const employee = await this.requireEmployeeInOrg(orgId, employeeId);
+    if (!employee.departmentId) return [];
+
+    const managerIds = await this.collectManagerChain(employee.departmentId, employeeId);
+    if (managerIds.length === 0) return [];
+
+    const managers = await this.prisma.employee.findMany({
+      where: { id: { in: managerIds }, organizationId: orgId, deletedAt: null },
+      select: {
+        id: true,
+        code: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        title: true,
+      },
+    });
+
+    // Preserve nearest-first order (managerIds is already in that order).
+    const byId = new Map(managers.map((m) => [m.id, m]));
+    return managerIds.map((id) => byId.get(id)).filter((m): m is NonNullable<typeof m> => !!m);
+  }
+
+  /**
+   * Per ADR 0004 + domain.md "Approver lookup logic":
+   *   - suggested = getNearestManager(X). Null → first HRM appadmin.
+   *   - candidates = manager chain ∪ HRM appadmins ∪ admin Org users.
+   *
+   * Used by Leave/Correction request flows (F4) when the requester picks
+   * who should approve. FE shows `suggested` as the default and
+   * `candidates` as the dropdown options.
+   */
+  async getApproverCandidates(currentUser: RequestUser, employeeId: string) {
+    const orgId = this.requireOrg(currentUser);
+    const employee = await this.requireEmployeeInOrg(orgId, employeeId);
+
+    // Manager chain (nearest first).
+    const managerIds = employee.departmentId
+      ? await this.collectManagerChain(employee.departmentId, employeeId)
+      : [];
+
+    // HRM appadmins + Org admins. Both groups have permission to approve
+    // org-structure-related workflows; surfacing them as candidates lets the
+    // requester pick a fallback when no manager is set up.
+    const fallbackUsers = await this.prisma.user.findMany({
+      where: {
+        organizationId: orgId,
+        OR: [
+          { role: 'admin' },
+          { role: 'sysowner' },
+          { appAdmins: { some: { appCode: 'HRM', organizationId: orgId } } },
+        ],
+        employeeId: { not: null },
+      },
+      select: { id: true, email: true, name: true, employeeId: true },
+    });
+
+    // Pull employee rows for both manager chain + fallback users so the FE
+    // can show consistent display info (employee.firstName/lastName) for
+    // every candidate.
+    const candidateEmployeeIds = new Set<string>([
+      ...managerIds,
+      ...fallbackUsers.map((u) => u.employeeId).filter((id): id is string => !!id),
+    ]);
+    candidateEmployeeIds.delete(employeeId);
+
+    if (candidateEmployeeIds.size === 0) {
+      return { suggested: null, candidates: [] as CandidateUser[] };
+    }
+
+    const employees = await this.prisma.employee.findMany({
+      where: {
+        id: { in: Array.from(candidateEmployeeIds) },
+        organizationId: orgId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        user: { select: { id: true } },
+      },
+    });
+
+    const candidates: CandidateUser[] = employees.map((e) => ({
+      employeeId: e.id,
+      userId: e.user?.id ?? '',
+      email: e.email,
+      name: `${e.firstName} ${e.lastName}`.trim(),
+    }));
+
+    // Suggested = nearest manager (still alive in candidates), else first
+    // HRM appadmin / admin in the candidate list.
+    const nearest = managerIds.find((id) => candidateEmployeeIds.has(id)) ?? null;
+    const suggested = nearest
+      ? (candidates.find((c) => c.employeeId === nearest) ?? null)
+      : (candidates[0] ?? null);
+
+    return { suggested, candidates };
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  // Helpers
+  // ──────────────────────────────────────────────────────────────────
+
+  private requireOrg(user: RequestUser): string {
+    if (!user.organizationId) {
+      throw new ForbiddenException('Current user is not attached to an organization');
+    }
+    return user.organizationId;
+  }
+
+  private async requireEmployeeInOrg(orgId: string, id: string) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId: orgId, deletedAt: null },
+      select: { id: true, departmentId: true },
+    });
+    if (!employee) throw new NotFoundException('Employee not found in organization');
+    return employee;
+  }
+
+  /**
+   * Walk the department parent chain via Postgres recursive CTE,
+   * returning the manager ids ordered nearest-first. Skips the
+   * `selfEmployeeId` so an employee never reports to themselves.
+   * Capped at 64 hops as a runaway-cycle defense.
+   */
+  private async collectManagerChain(
+    startDeptId: string,
+    selfEmployeeId: string,
+  ): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<AncestorRow[]>`
+      WITH RECURSIVE ancestor(id, parent_id, manager_id, depth) AS (
+        SELECT id, parent_id, manager_id, 0
+        FROM departments
+        WHERE id = ${startDeptId} AND deleted_at IS NULL
+        UNION ALL
+        SELECT d.id, d.parent_id, d.manager_id, a.depth + 1
+        FROM departments d
+        JOIN ancestor a ON d.id = a.parent_id
+        WHERE d.deleted_at IS NULL AND a.depth < 64
+      )
+      SELECT * FROM ancestor ORDER BY depth ASC
+    `;
+
+    const seen = new Set<string>();
+    const managerIds: string[] = [];
+    for (const row of rows) {
+      const m = row.manager_id;
+      if (!m || m === selfEmployeeId || seen.has(m)) continue;
+      seen.add(m);
+      managerIds.push(m);
+    }
+    return managerIds;
+  }
+}
