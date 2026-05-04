@@ -51,7 +51,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/employees", label: "Employees", icon: Users },
       { href: "/departments", label: "Departments", icon: Building2 },
-      { href: "/orgchart", label: "OrgChart", icon: Network, disabled: true },
+      { href: "/orgchart", label: "OrgChart", icon: Network },
     ],
   },
   {
