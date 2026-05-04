@@ -1,0 +1,12 @@
+# Cross-platform line endings.
+#
+# All text files are stored AND checked out as LF. This makes Prettier's
+# `endOfLine: "lf"` match the file on disk regardless of the contributor's
+# `core.autocrlf` setting. Windows scripts that must be CRLF are carved out
+# explicitly below.
+* text=auto eol=lf
+
+# Windows shell scripts — interpreters require CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
