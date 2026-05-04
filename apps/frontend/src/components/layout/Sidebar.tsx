@@ -1,31 +1,74 @@
 "use client";
 
 import {
+  Building2,
+  Calendar,
+  Clock,
+  Cpu,
+  FileText,
   Home,
+  Network,
+  PencilLine,
   Settings,
   Sparkles,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { SITE } from "@/lib/seo";
+import { cn } from "@/lib/utils";
 
 interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Render as non-clickable placeholder until the feature lands. */
+  disabled?: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/home", label: "Home", icon: Home },
-  { href: "/settings", label: "Settings", icon: Settings },
+interface NavSection {
+  /** Optional section heading; omit for the top group (Home / Settings). */
+  label?: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { href: "/home", label: "Home", icon: Home },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
+  {
+    label: "HRM",
+    items: [
+      { href: "/employees", label: "Employees", icon: Users, disabled: true },
+      { href: "/departments", label: "Departments", icon: Building2, disabled: true },
+      { href: "/orgchart", label: "OrgChart", icon: Network, disabled: true },
+    ],
+  },
+  {
+    label: "Attendance",
+    items: [
+      { href: "/timesheet", label: "Timesheet", icon: Calendar, disabled: true },
+      { href: "/attendance-devices", label: "Devices", icon: Cpu, disabled: true },
+      { href: "/work-schedules", label: "Schedules", icon: Clock, disabled: true },
+    ],
+  },
+  {
+    label: "Requests",
+    items: [
+      { href: "/leave", label: "Leave", icon: FileText, disabled: true },
+      { href: "/attendance-corrections", label: "Corrections", icon: PencilLine, disabled: true },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -54,36 +97,80 @@ export function Sidebar({ collapsed }: SidebarProps) {
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 p-2">
-        {NAV_ITEMS.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const link = (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                active
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                collapsed && "justify-center px-0",
-              )}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-
-          if (!collapsed) return link;
-          return (
-            <Tooltip key={item.href} delayDuration={0}>
-              <TooltipTrigger asChild>{link}</TooltipTrigger>
-              <TooltipContent side="right">{item.label}</TooltipContent>
-            </Tooltip>
-          );
-        })}
+      <nav className="flex-1 space-y-3 overflow-y-auto p-2 scrollbar-thin">
+        {NAV_SECTIONS.map((section, idx) => (
+          <div key={section.label ?? idx} className="space-y-1">
+            {section.label &&
+              (collapsed ? (
+                <div className="mx-2 my-2 border-t border-border/60" />
+              ) : (
+                <div className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  {section.label}
+                </div>
+              ))}
+            {section.items.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                collapsed={collapsed}
+                active={
+                  !item.disabled &&
+                  (pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`))
+                }
+              />
+            ))}
+          </div>
+        ))}
       </nav>
     </aside>
+  );
+}
+
+function NavLink({
+  item,
+  collapsed,
+  active,
+}: {
+  item: NavItem;
+  collapsed: boolean;
+  active: boolean;
+}) {
+  const baseClasses = cn(
+    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+    item.disabled
+      ? "cursor-not-allowed text-muted-foreground/50"
+      : active
+        ? "bg-accent text-accent-foreground"
+        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+    collapsed && "justify-center px-0",
+  );
+
+  const inner = (
+    <>
+      <item.icon className="h-4 w-4 shrink-0" />
+      {!collapsed && <span>{item.label}</span>}
+    </>
+  );
+
+  const node = item.disabled ? (
+    <div aria-disabled="true" className={baseClasses}>
+      {inner}
+    </div>
+  ) : (
+    <Link href={item.href} className={baseClasses}>
+      {inner}
+    </Link>
+  );
+
+  if (!collapsed && !item.disabled) return node;
+
+  return (
+    <Tooltip delayDuration={0}>
+      <TooltipTrigger asChild>{node}</TooltipTrigger>
+      <TooltipContent side="right">
+        {item.disabled ? `${item.label} — coming soon` : item.label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
