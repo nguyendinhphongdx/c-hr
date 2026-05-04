@@ -18,9 +18,8 @@ export class GcsStorageProvider implements StorageProvider {
 
     let Storage: any;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       Storage = require('@google-cloud/storage').Storage;
-    } catch (e) {
+    } catch {
       throw new Error(
         'STORAGE_TYPE=gcs requires @google-cloud/storage. Run: pnpm add @google-cloud/storage',
       );

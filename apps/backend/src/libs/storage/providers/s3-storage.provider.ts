@@ -24,16 +24,15 @@ export class S3StorageProvider implements StorageProvider {
 
     let S3Client: any;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const aws = require('@aws-sdk/client-s3');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+
       const presigner = require('@aws-sdk/s3-request-presigner');
       S3Client = aws.S3Client;
       this.GetObjectCommand = aws.GetObjectCommand;
       this.PutObjectCommand = aws.PutObjectCommand;
       this.DeleteObjectCommand = aws.DeleteObjectCommand;
       this.getSignedUrlFn = presigner.getSignedUrl;
-    } catch (e) {
+    } catch {
       throw new Error(
         'STORAGE_TYPE=s3 requires @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner. Run: pnpm add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner',
       );
@@ -41,8 +40,7 @@ export class S3StorageProvider implements StorageProvider {
 
     this.client = new S3Client({
       region: this.region,
-      credentials:
-        accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
+      credentials: accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
     });
     this.logger.log(`S3 storage initialized: bucket=${this.bucket} region=${this.region}`);
   }
