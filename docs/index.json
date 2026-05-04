@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-04T04:41:49.780Z",
+  "generatedAt": "2026-05-04T08:11:47.000Z",
   "repoRelativeRoot": ".",
-  "count": 42,
+  "count": 43,
   "entries": [
     {
       "id": "AGENTS",
@@ -369,6 +369,26 @@
         "Sau Phase 4"
       ],
       "summary": "**Project**: C-HR (C-OpenAI Human Resource) — SaaS quản lý nhân sự cho doanh nghiệp. **Stack**: Next.js 16 (frontend) + NestJS 10 (backend) + Postgres 16 + Redis 7, monorepo."
+    },
+    {
+      "id": "docs:plans:verify",
+      "path": "docs/plans/verify.md",
+      "title": "Pending verification — F1 + F2 runtime checks",
+      "description": "Items shipped without runtime verification yet. Walk through these in a browser + Prisma Studio after `./scripts/dev.sh start:dev` + migrate + seed.",
+      "tags": [
+        "project",
+        "plan",
+        "verify"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "F1 — Auth + Org + AppAdmin",
+        "F2 — Department + Employee + OrgChart",
+        "Audit log",
+        "Known gaps (won't fix in F2)"
+      ],
+      "summary": "Backlog of things shipped through commits since 2026-05-04 that have **only** been verified at compile time (`pnpm build` / `pnpm typecheck`). Each entry gives the smallest set of clicks / curl calls that prove the path works end-to-end."
     },
     {
       "id": "docs:decisions:_template",
