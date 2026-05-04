@@ -18,7 +18,11 @@ export class OptionalAuthGuard extends AuthGuard('jwt') {
 
   handleRequest(err: any, user: any) {
     if (err || !user) return null;
-    this.contextService.set({ userId: user.id, sessionId: user.sessionId });
+    this.contextService.set({
+      userId: user.id,
+      sessionId: user.sessionId,
+      organizationId: user.organizationId,
+    });
     return user;
   }
 }

@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -34,7 +30,7 @@ export class AuthService {
       },
     });
 
-    const tokens = await this.issueTokens(user.id, user.email);
+    const tokens = await this.issueTokens(user);
     return { user: this.sanitize(user), ...tokens };
   }
 
@@ -45,7 +41,7 @@ export class AuthService {
     const ok = await bcrypt.compare(dto.password, user.password);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 
-    const tokens = await this.issueTokens(user.id, user.email);
+    const tokens = await this.issueTokens(user);
     return { user: this.sanitize(user), ...tokens };
   }
 
@@ -62,12 +58,30 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user) throw new UnauthorizedException('User no longer exists');
 
-    return this.issueTokens(user.id, user.email);
+    return this.issueTokens(user);
   }
 
-  private async issueTokens(userId: string, email: string): Promise<IAuthTokens> {
+  /**
+   * Issue access + refresh tokens. Public so signup flows
+   * (OrganizationService.signup) can mint tokens after creating the User
+   * in the same transaction.
+   */
+  async issueTokens(user: {
+    id: string;
+    email: string;
+    role: IJwtPayload['role'];
+    organizationId: string | null;
+    employeeId: string | null;
+  }): Promise<IAuthTokens> {
     const sessionId = uuidv4();
-    const payload: IJwtPayload = { sub: userId, email, sessionId };
+    const payload: IJwtPayload = {
+      sub: user.id,
+      email: user.email,
+      sessionId,
+      role: user.role,
+      organizationId: user.organizationId,
+      employeeId: user.employeeId,
+    };
 
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('auth.jwtAccessSecret'),

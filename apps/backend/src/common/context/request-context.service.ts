@@ -4,6 +4,8 @@ import { ClsService } from 'nestjs-cls';
 export interface RequestContextData {
   userId?: string;
   sessionId?: string;
+  /** Org of the current user. Null for sysowner. Undefined when no auth. */
+  organizationId?: string | null;
   ip?: string;
   userAgent?: string;
 }
@@ -38,6 +40,10 @@ export class RequestContextService {
     return this.cls.get('sessionId');
   }
 
+  get organizationId(): string | null | undefined {
+    return this.cls.get('organizationId');
+  }
+
   get ip(): string | undefined {
     return this.cls.get('ip');
   }
@@ -56,6 +62,7 @@ export class RequestContextService {
     return {
       userId: this.userId,
       sessionId: this.sessionId,
+      organizationId: this.organizationId,
       ip: this.ip,
       userAgent: this.userAgent,
     };
