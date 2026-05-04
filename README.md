@@ -23,8 +23,8 @@
 ├── docs/                     Single source of truth (kiến trúc, quy ước, ADR, plan)
 ├── mcp/docs-server/          1 MCP server expose docs cho AI agent
 ├── scripts/dev.sh            dev CLI
-├── docker-compose.yml        root orchestration
-├── docker-compose.dev.yml    override hot-reload BE
+├── docker-compose.yml        full stack: postgres + redis + backend + frontend
+├── docker-compose.dev.yml    infra only (postgres + redis) — BE/FE chạy native
 ├── pnpm-workspace.yaml
 ├── .mcp.json                 c-hr-docs server
 ├── .claude/                  permissions + subagents (code-reviewer, scaffolders)
@@ -40,31 +40,30 @@
 ## Quick start
 
 ```bash
-# 1. Copy env per app — root không còn .env, compose đọc env_file của
-#    từng service (apps/backend/.env cho BE, services/* dùng default).
+# 1. Copy env per app (cả 2 file gitignored — phải tạo trước khi start).
 cp apps/backend/.env.example apps/backend/.env
 cp apps/frontend/.env.example apps/frontend/.env.local
 # Sửa các JWT_*_SECRET trong apps/backend/.env trước khi start.
 
-# 2. Install deps
+# 2. Install deps (1 lockfile duy nhất ở root)
 pnpm install
 
-# 3. Start postgres + redis
-./scripts/dev.sh start infra
+# 3. Start infra (postgres + redis container)
+./scripts/dev.sh start:dev
 
-# 4. Migrate DB
+# 4. Migrate DB + seed demo data
 ./scripts/dev.sh migrate
+./scripts/dev.sh seed
 
-# 5. Chạy dev (2 terminal)
+# 5. Chạy BE + FE native (mỗi app 1 terminal)
 ./scripts/dev.sh dev backend     # http://localhost:8000
 ./scripts/dev.sh dev frontend    # http://localhost:3000
 ```
 
-Hoặc chạy full stack qua Docker (BE hot-reload, FE phải native):
+Hoặc chạy **full stack trong container** để verify prod-like (chậm hơn, ít hot-reload):
 
 ```bash
-./scripts/dev.sh start:dev all
-./scripts/dev.sh dev frontend
+./scripts/dev.sh start            # postgres + redis + backend + frontend
 ```
 
 ## CLI
@@ -75,16 +74,27 @@ Hoặc chạy full stack qua Docker (BE hot-reload, FE phải native):
 
 | Command | Tác dụng |
 |---|---|
-| `start [target]` | docker compose up (target: `all` / `infra` / `postgres` / `redis` / `backend`) |
-| `start:dev [target]` | up với override hot-reload |
-| `stop [target]` | stop containers |
-| `dev <target>` | native dev server (`backend` / `frontend`) |
-| `logs [target]` | tail logs (default: `backend`) |
+| `start:dev` | Chỉ infra (postgres + redis) trong container. BE/FE chạy native. **Default workflow.** |
+| `start [target]` | Full stack trong container (default `all` = postgres + redis + backend + frontend). Build image nếu thiếu. |
+| `stop [target]` | Stop containers |
+| `dev <target>` | Native dev server (`backend` / `frontend`) |
+| `logs [target]` | Tail logs (default: `backend`) |
 | `status` | docker compose ps |
+| `build [target]` | Rebuild image (default: `backend`) |
 | `migrate` | prisma migrate dev |
 | `seed` | prisma seed |
-| `prisma <args>` | pass-through prisma CLI |
-| `clean [target]` | xoá containers + volumes (DESTRUCTIVE) |
+| `prisma <args>` | Pass-through prisma CLI |
+| `clean [target]` | Xoá containers + volumes (DESTRUCTIVE — drops DB) |
+
+## Gotchas / known issues
+
+- **`apps/backend/.env` phải tồn tại + có `DATABASE_URL`** trước khi `migrate` / `seed` / `start`. Prisma CLI đọc trực tiếp file này (không cascade qua root). Copy từ `.env.example` nếu chưa có.
+- **`apps/frontend/.env.local` phải tồn tại** trước `./scripts/dev.sh start` — compose `env_file:` directive yêu cầu file thật, sẽ fail nếu thiếu. Copy từ `.env.example`.
+- **`NEXT_PUBLIC_*` vars baked vào FE bundle lúc build.** Khi container `frontend` build, `NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1` được nhúng vào JS bundle. Đổi giá trị → phải `./scripts/dev.sh build frontend`.
+- **BE Dockerfile dùng `pnpm install` (không `--frozen-lockfile`)** vì workspace lock chỉ có ở root, không được copy vào build context per-app. Image dev OK nhưng không byte-reproducible. TODO: chuyển build context lên root khi cần CI determinism.
+- **Container WSL/Windows file watching** chậm khi mount source code. Khuyến nghị: dùng `start:dev` + native pnpm (mặc định) thay vì cố mount source vào container.
+- **Migration phải chạy lại** sau khi pull về branch có Prisma schema mới: `./scripts/dev.sh migrate`. Kiểm tra `apps/backend/prisma/migrations/` có folder mới chưa apply không.
+- **Audit log async write** — `@Auditable` ghi qua EventEmitter. Nếu Postgres down giữa request, audit entry mất nhưng request vẫn return 200. Để chặt chẽ hơn (transactional outbox) sẽ revisit khi traffic lớn.
 
 ## Tài liệu
 
