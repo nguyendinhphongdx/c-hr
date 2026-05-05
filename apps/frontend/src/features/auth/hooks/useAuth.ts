@@ -71,6 +71,9 @@ export function useLogin() {
   return useMutation({
     mutationFn: (data: LoginInput) => authService.login(data),
     onSuccess: () => {
+      // Clear any stale refresh-failed flag from a previous expired
+      // session so the next 401 in this fresh session can refresh again.
+      resetSession();
       // Re-fetch /users/me — login response only carries the bare user.
       queryClient.invalidateQueries({ queryKey: authKeys.me });
       router.push("/home");
@@ -85,6 +88,7 @@ export function useRegister() {
   return useMutation({
     mutationFn: (data: RegisterInput) => authService.register(data),
     onSuccess: () => {
+      resetSession();
       queryClient.invalidateQueries({ queryKey: authKeys.me });
       router.push("/home");
     },
@@ -103,6 +107,7 @@ export function useSignupOrg() {
   return useMutation({
     mutationFn: (data: OrgSignupInput) => authService.signupOrg(data),
     onSuccess: () => {
+      resetSession();
       // Force /users/me re-fetch so organization + appAdmins land in the cache.
       queryClient.invalidateQueries({ queryKey: authKeys.me });
       router.push("/home");
@@ -158,6 +163,7 @@ export function useVerifyOtp() {
   return useMutation({
     mutationFn: (data: VerifyOtpInput) => authService.verifyOtp(data),
     onSuccess: () => {
+      resetSession();
       queryClient.invalidateQueries({ queryKey: authKeys.me });
       router.push("/home");
     },

@@ -55,29 +55,64 @@ function redirectToLogin(): void {
 
 type RetryableConfig = AxiosRequestConfig & { _retry?: boolean };
 
+/**
+ * Endpoints that should NOT trigger a refresh attempt on 401:
+ *  - `/auth/login`        — wrong password / unverified email is the
+ *    user's own input, not an expired session.
+ *  - `/auth/refresh`      — recursing on the refresh endpoint itself
+ *    is a session failure, surface it directly.
+ *  - `/auth/logout`       — already discarding the session.
+ *  - `/auth/register`     — pre-auth.
+ *  - `/organizations/signup` — pre-auth (creates Org + first admin).
+ */
+const NO_REFRESH_PATHS = [
+  "/auth/login",
+  "/auth/refresh",
+  "/auth/logout",
+  "/auth/register",
+  "/organizations/signup",
+];
+
+function isAuthFlowEndpoint(url: string | undefined): boolean {
+  if (!url) return false;
+  return NO_REFRESH_PATHS.some((p) => url.includes(p));
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const config = error.config as RetryableConfig | undefined;
 
+    // Skip the refresh dance entirely for non-401, missing config, or
+    // already-retried requests. Also skip for auth-flow endpoints — a 401
+    // from /auth/login is "wrong password", not "session expired".
     if (
       refreshFailed ||
       error.response?.status !== 401 ||
       !config ||
-      config._retry
+      config._retry ||
+      isAuthFlowEndpoint(config.url)
     ) {
       return Promise.reject(error);
     }
 
     config._retry = true;
 
+    // Try to refresh the session. If THIS step fails, the session is
+    // toast — flag it and bounce to login.
     try {
       await performRefresh();
-      return apiClient(config);
     } catch {
       refreshFailed = true;
       redirectToLogin();
       return Promise.reject(error);
     }
+
+    // Refresh succeeded — replay the original request once. Whatever
+    // happens here (200, 4xx, 5xx) is the call's own concern; do NOT
+    // treat it as a session failure. The interceptor will run again for
+    // any error, but `_retry=true` short-circuits it on 401, and other
+    // statuses propagate to the caller's catch.
+    return apiClient(config);
   },
 );
