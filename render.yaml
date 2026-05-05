@@ -38,21 +38,11 @@ services:
       - key: DIRECT_URL
         sync: false
 
-      - key: REDIS_HOST
+      - key: REDIS_URL
         fromService:
           type: keyvalue
           name: c-hr-redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          type: keyvalue
-          name: c-hr-redis
-          property: port
-      - key: REDIS_PASSWORD
-        fromService:
-          type: keyvalue
-          name: c-hr-redis
-          property: password
+          property: connectionString
 
       - key: JWT_ACCESS_SECRET
         generateValue: true
