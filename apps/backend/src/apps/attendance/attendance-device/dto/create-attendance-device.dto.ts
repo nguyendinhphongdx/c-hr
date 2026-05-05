@@ -13,9 +13,9 @@ export class CreateAttendanceDeviceDto {
   @MaxLength(100)
   serial: string;
 
-  @IsOptional()
+  /** Required — admin must pick the device brand on create. */
   @IsEnum(DeviceBrand)
-  brand?: DeviceBrand;
+  brand: DeviceBrand;
 
   @IsOptional()
   @IsString()

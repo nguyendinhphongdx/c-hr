@@ -1,6 +1,6 @@
 import type { ID, ISODate, Nullable } from "@/lib/types";
 
-export type DeviceBrand = "GENERIC" | "ZKTECO" | "HIKVISION" | "SUPREMA" | "OTHER";
+export type DeviceBrand = "ZKTECO" | "HIKVISION" | "SUPREMA" | "OTHER";
 
 export interface AttendanceDevice {
   id: ID;
@@ -18,7 +18,7 @@ export interface AttendanceDevice {
 export interface CreateDeviceInput {
   name: string;
   serial: string;
-  brand?: DeviceBrand;
+  brand: DeviceBrand;
   ipAddress?: string;
 }
 

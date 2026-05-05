@@ -358,12 +358,12 @@ User KHÔNG tự tạo log. Chỉ device push hoặc HR tạo qua AttendanceCorr
     @@map("work_shifts")
   }
 
-  enum DeviceBrand { GENERIC ZKTECO HIKVISION SUPREMA OTHER }
+  enum DeviceBrand { ZKTECO HIKVISION SUPREMA OTHER }
 
   model AttendanceDevice {
     id              String      @id @default(uuid())
     organizationId  String      @map("organization_id")
-    brand           DeviceBrand @default(GENERIC)
+    brand           DeviceBrand                                  // required, no default — admin must pick on create
     serial          String
     token           String                                       // bcrypt hash; plaintext shown once on regenerate
     name            String

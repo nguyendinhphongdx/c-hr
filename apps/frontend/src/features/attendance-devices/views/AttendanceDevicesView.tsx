@@ -41,13 +41,7 @@ import {
 } from "../hooks/useAttendanceDevices";
 import type { DeviceBrand } from "../types";
 
-const BRANDS: DeviceBrand[] = [
-  "GENERIC",
-  "ZKTECO",
-  "HIKVISION",
-  "SUPREMA",
-  "OTHER",
-];
+const BRANDS: DeviceBrand[] = ["ZKTECO", "HIKVISION", "SUPREMA", "OTHER"];
 
 function formatLastSeen(value: string | null): string {
   if (!value) return "Chưa kết nối";
@@ -280,13 +274,14 @@ function CreateDeviceDialog({
 }) {
   const [name, setName] = useState("");
   const [serial, setSerial] = useState("");
-  const [brand, setBrand] = useState<DeviceBrand>("GENERIC");
+  // Empty until admin explicitly picks — brand is required, no default.
+  const [brand, setBrand] = useState<DeviceBrand | "">("");
   const [ipAddress, setIpAddress] = useState("");
 
   const reset = () => {
     setName("");
     setSerial("");
-    setBrand("GENERIC");
+    setBrand("");
     setIpAddress("");
   };
 
@@ -327,10 +322,10 @@ function CreateDeviceDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="device-brand">Brand</Label>
+            <Label htmlFor="device-brand">Brand *</Label>
             <Select value={brand} onValueChange={(v) => setBrand(v as DeviceBrand)}>
               <SelectTrigger id="device-brand">
-                <SelectValue />
+                <SelectValue placeholder="Chọn loại máy..." />
               </SelectTrigger>
               <SelectContent>
                 {BRANDS.map((b) => (
@@ -357,15 +352,16 @@ function CreateDeviceDialog({
             Cancel
           </Button>
           <Button
-            onClick={() =>
+            onClick={() => {
+              if (!brand) return;
               onCreate({
                 name,
                 serial,
                 brand,
                 ipAddress: ipAddress || undefined,
-              })
-            }
-            disabled={pending || !name || !serial}
+              });
+            }}
+            disabled={pending || !name || !serial || !brand}
             className="gap-2"
           >
             {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

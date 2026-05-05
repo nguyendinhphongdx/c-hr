@@ -37,7 +37,6 @@ enum Gender {
 }
 
 enum DeviceBrand {
-  GENERIC
   ZKTECO
   HIKVISION
   SUPREMA
@@ -239,7 +238,7 @@ model WorkShift {
 model AttendanceDevice {
   id             String      @id @default(uuid())
   organizationId String      @map("organization_id")
-  brand          DeviceBrand @default(GENERIC)
+  brand          DeviceBrand
   serial         String
   /// bcrypt hash. Plaintext chỉ trả 1 lần khi create / regenerate.
   token          String
