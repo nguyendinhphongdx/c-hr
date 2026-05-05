@@ -2,14 +2,20 @@
 
 import {
   Copy,
+  Eye,
+  Info,
   Loader2,
+  MoreHorizontal,
   Plus,
+  Power,
+  PowerOff,
   RefreshCcw,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +26,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -36,6 +49,7 @@ import {
   useAttendanceDevices,
   useCreateAttendanceDevice,
   useDeleteAttendanceDevice,
+  useGetAttendanceDeviceToken,
   useRegenerateAttendanceDeviceToken,
   useUpdateAttendanceDevice,
 } from "../hooks/useAttendanceDevices";
@@ -52,6 +66,11 @@ interface TokenDialogState {
   deviceId: ID;
   token: string;
   serial: string;
+  /**
+   * `created` — vừa tạo / regenerate, hiển thị warning về token cũ;
+   * `view` — admin chủ động xem lại, không có warning đặc biệt.
+   */
+  mode: "created" | "view";
 }
 
 export function AttendanceDevicesView() {
@@ -59,6 +78,7 @@ export function AttendanceDevicesView() {
   const list = useAttendanceDevices();
   const create = useCreateAttendanceDevice();
   const update = useUpdateAttendanceDevice();
+  const getToken = useGetAttendanceDeviceToken();
   const regen = useRegenerateAttendanceDeviceToken();
   const remove = useDeleteAttendanceDevice();
 
@@ -95,11 +115,35 @@ export function AttendanceDevicesView() {
         deviceId: result.device.id,
         token: result.token,
         serial: result.device.serial,
+        mode: "created",
       });
     } catch (err) {
       toast.error("Tạo device thất bại", {
         description:
           err instanceof Error ? err.message : "Serial có thể đang được dùng.",
+      });
+    }
+  };
+
+  const onViewToken = async (id: ID, serial: string) => {
+    try {
+      const { token } = await getToken.mutateAsync(id);
+      setTokenDialog({ deviceId: id, token, serial, mode: "view" });
+    } catch (err) {
+      toast.error("Không lấy được token", {
+        description: err instanceof Error ? err.message : "Try again later.",
+      });
+    }
+  };
+
+  const onCopyToken = async (id: ID) => {
+    try {
+      const { token } = await getToken.mutateAsync(id);
+      await navigator.clipboard.writeText(token);
+      toast.success("Token copied vào clipboard");
+    } catch (err) {
+      toast.error("Copy thất bại", {
+        description: err instanceof Error ? err.message : "Try again later.",
       });
     }
   };
@@ -118,6 +162,7 @@ export function AttendanceDevicesView() {
         deviceId: id,
         token: result.token,
         serial,
+        mode: "created",
       });
     } catch (err) {
       toast.error("Regenerate thất bại", {
@@ -157,14 +202,40 @@ export function AttendanceDevicesView() {
         <div>
           <h2 className="text-xl font-semibold">Attendance devices</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Đầu đọc chấm công đã đăng ký với Org. Mỗi device có 1 token; cấu
-            hình token vào device để push log về.
+            Đầu đọc chấm công đã đăng ký với Org. Đăng ký mỗi device 1 lần để
+            nhận token; ZK-Bridge ở văn phòng dùng token để push log về.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
           <Plus className="h-4 w-4" /> Add device
         </Button>
       </div>
+
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertTitle>Cách dùng token</AlertTitle>
+        <AlertDescription className="space-y-2 text-sm">
+          <ol className="list-decimal space-y-1 pl-5">
+            <li>
+              Bấm <strong>Add device</strong> để đăng ký 1 đầu đọc — server
+              sinh ra 1 token JWT đại diện cho device đó.
+            </li>
+            <li>
+              Mở <strong>menu ⋯</strong> ở mỗi dòng → <strong>Copy token</strong>
+              {" "}để lấy token vào clipboard, paste vào ZK-Bridge ở văn phòng
+              (trang <code>/devices</code> của bridge).
+            </li>
+            <li>
+              Token có thể xem lại / copy lại bất cứ lúc nào — không còn giới
+              hạn &quot;chỉ hiển thị 1 lần&quot;.
+            </li>
+            <li>
+              Nghi ngờ token bị lộ → <strong>Regenerate token</strong> — token
+              cũ ngừng hoạt động ngay, bridge phải paste token mới.
+            </li>
+          </ol>
+        </AlertDescription>
+      </Alert>
 
       <div className="rounded-md border bg-background">
         {list.isLoading ? (
@@ -206,32 +277,60 @@ export function AttendanceDevicesView() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onRegenerate(dev.id, dev.serial)}
-                        title="Regenerate token"
-                      >
-                        <RefreshCcw className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onToggleActive(dev.id, !dev.isActive)}
-                      >
-                        {dev.isActive ? "Disable" : "Enable"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => onDelete(dev.id, dev.serial)}
-                        title="Delete device"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          aria-label={`Actions for ${dev.serial}`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={() => onCopyToken(dev.id)}>
+                          <Copy className="mr-2 h-3.5 w-3.5" />
+                          Copy token
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onViewToken(dev.id, dev.serial)}
+                        >
+                          <Eye className="mr-2 h-3.5 w-3.5" />
+                          View token
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onRegenerate(dev.id, dev.serial)}
+                        >
+                          <RefreshCcw className="mr-2 h-3.5 w-3.5" />
+                          Regenerate token
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => onToggleActive(dev.id, !dev.isActive)}
+                        >
+                          {dev.isActive ? (
+                            <>
+                              <PowerOff className="mr-2 h-3.5 w-3.5" />
+                              Disable
+                            </>
+                          ) : (
+                            <>
+                              <Power className="mr-2 h-3.5 w-3.5" />
+                              Enable
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => onDelete(dev.id, dev.serial)}
+                        >
+                          <Trash2 className="mr-2 h-3.5 w-3.5" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
@@ -297,8 +396,8 @@ function CreateDeviceDialog({
         <DialogHeader>
           <DialogTitle>Add attendance device</DialogTitle>
           <DialogDescription>
-            Token plaintext sẽ chỉ hiện 1 lần ngay sau khi tạo — copy ngay vào
-            cấu hình của device.
+            Sau khi tạo, token sẽ hiện ngay để copy vào ZK-Bridge. Admin có
+            thể quay lại xem / copy token bất cứ lúc nào qua menu ⋯.
           </DialogDescription>
         </DialogHeader>
 
@@ -388,8 +487,9 @@ function TokenDialog({
         <DialogHeader>
           <DialogTitle>Token cho {state?.serial}</DialogTitle>
           <DialogDescription>
-            Token này chỉ hiển thị 1 lần. Copy và cấu hình vào device ngay —
-            sau khi đóng dialog, không thể xem lại.
+            {state?.mode === "created"
+              ? "Token mới đã được sinh. Token cũ (nếu có) đã ngừng hoạt động — paste token này vào ZK-Bridge."
+              : "Token JWT của device. Có thể quay lại đây xem / copy lại bất cứ lúc nào."}
           </DialogDescription>
         </DialogHeader>
 
@@ -405,7 +505,7 @@ function TokenDialog({
           >
             <Copy className="h-3.5 w-3.5" /> Copy
           </Button>
-          <Button onClick={onClose}>Đã lưu</Button>
+          <Button onClick={onClose}>Đóng</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

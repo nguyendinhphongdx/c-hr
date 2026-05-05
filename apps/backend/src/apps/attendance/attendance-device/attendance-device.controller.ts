@@ -17,11 +17,7 @@ import { Public } from '@/common/decorators/public.decorator';
 import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
 
-import {
-  CreateAttendanceDeviceDto,
-  PushAttendanceDto,
-  UpdateAttendanceDeviceDto,
-} from './dto';
+import { CreateAttendanceDeviceDto, PushAttendanceDto, UpdateAttendanceDeviceDto } from './dto';
 import { AttendanceDeviceService } from './attendance-device.service';
 
 @ApiTags('attendance-devices')
@@ -41,6 +37,15 @@ export class AttendanceDeviceController {
     return this.service.findOne(id);
   }
 
+  /**
+   * Re-sign the current JWT for this device. Token can be retrieved any time
+   * — the create modal no longer needs "show once" UX.
+   */
+  @Get(':id/token')
+  getToken(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.getToken(id);
+  }
+
   @Post()
   @Auditable({ action: 'ATTENDANCE_DEVICE_CREATE', entity: 'AttendanceDevice' })
   create(@Body() dto: CreateAttendanceDeviceDto) {
@@ -49,10 +54,7 @@ export class AttendanceDeviceController {
 
   @Patch(':id')
   @Auditable({ action: 'ATTENDANCE_DEVICE_UPDATE', entity: 'AttendanceDevice' })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateAttendanceDeviceDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateAttendanceDeviceDto) {
     return this.service.update(id, dto);
   }
 
@@ -73,9 +75,9 @@ export class AttendanceDeviceController {
   }
 
   /**
-   * Public push endpoint. Authenticated by deviceId + token in body — no
-   * JWT. Returns a small summary so the device / bridge script can log
-   * accepted vs. duplicate vs. unknown-employee counts.
+   * Public push endpoint. Authenticated by JWT in body (token contains
+   * deviceId + version, signed by server). Returns a small summary so the
+   * bridge can log accepted vs. duplicate vs. unknown-employee counts.
    */
   @Public()
   @Post('push')

@@ -35,6 +35,14 @@ export const attendanceDevicesService = {
     return res.data;
   },
 
+  /** Re-sign + fetch the current JWT for this device. Stateless on server. */
+  getToken: async (id: ID): Promise<{ token: string }> => {
+    const res = await apiClient.get<{ token: string }>(
+      `/attendance-devices/${id}/token`,
+    );
+    return res.data;
+  },
+
   regenerateToken: async (id: ID): Promise<CreateDeviceResponse> => {
     const res = await apiClient.post<CreateDeviceResponse>(
       `/attendance-devices/${id}/regenerate-token`,

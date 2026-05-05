@@ -8,6 +8,10 @@ export default registerAs('auth', () => ({
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'change-me-refresh-secret',
   jwtAccessExpiration: process.env.JWT_ACCESS_EXPIRATION || '15m',
   jwtRefreshExpiration: process.env.JWT_REFRESH_EXPIRATION || '7d',
+  // Separate secret for attendance-device JWTs so a leak of one secret does
+  // not compromise the other. Tokens are non-expiring (validity controlled
+  // via per-device `version` counter).
+  jwtDeviceSecret: process.env.JWT_DEVICE_SECRET || 'change-me-device-secret',
 
   cookie: {
     accessName: ACCESS_COOKIE,

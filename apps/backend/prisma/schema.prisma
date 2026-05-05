@@ -240,8 +240,9 @@ model AttendanceDevice {
   organizationId String      @map("organization_id")
   brand          DeviceBrand
   serial         String
-  /// bcrypt hash. Plaintext chỉ trả 1 lần khi create / regenerate.
-  token          String
+  /// Bumped khi regenerate-token để invalidate JWT cũ. JWT push include `v`,
+  /// server reject nếu `v != device.version`.
+  version        Int         @default(1)
   name           String
   ipAddress      String?     @map("ip_address")
   lastSeenAt     DateTime?   @map("last_seen_at")

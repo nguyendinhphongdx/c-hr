@@ -1,7 +1,14 @@
-import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 
+import authConfig from '@/config/auth.config';
 import { requireAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
@@ -14,8 +21,12 @@ import {
 } from './dto';
 import { AttendanceDeviceRepository } from './attendance-device.repository';
 
-const TOKEN_BYTES = 32;
-const BCRYPT_ROUNDS = 10;
+const JWT_AUDIENCE = 'attendance-device';
+
+interface DeviceTokenPayload {
+  sub: string;
+  v: number;
+}
 
 export interface PushSummary {
   accepted: number;
@@ -31,6 +42,9 @@ export class AttendanceDeviceService {
     private readonly prisma: PrismaService,
     private readonly ctx: RequestContextService,
     private readonly repo: AttendanceDeviceRepository,
+    private readonly jwt: JwtService,
+    @Inject(authConfig.KEY)
+    private readonly auth: ConfigType<typeof authConfig>,
   ) {}
 
   // ──────────────────────────────────────────────────────────────────
@@ -53,21 +67,15 @@ export class AttendanceDeviceService {
     const orgId = this.ctx.requireOrg();
     await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
-    const plaintext = generateToken();
-    const tokenHash = await bcrypt.hash(plaintext, BCRYPT_ROUNDS);
-
     const device = await this.repo.create({
       organizationId: orgId,
       name: dto.name,
       serial: dto.serial,
       brand: dto.brand,
       ipAddress: dto.ipAddress,
-      token: tokenHash,
     });
 
-    // Plaintext returned ONLY here. Save it on the device side; we won't
-    // surface it again.
-    return { device, token: plaintext };
+    return { device, token: this.signToken(device.id, device.version) };
   }
 
   async update(id: string, dto: UpdateAttendanceDeviceDto) {
@@ -84,6 +92,23 @@ export class AttendanceDeviceService {
     });
   }
 
+  /**
+   * Re-sign the *current* JWT for this device. No state change. Lets admins
+   * recover the token at any time without rotating it (no "show once").
+   */
+  async getToken(id: string): Promise<{ token: string }> {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
+
+    const existing = await this.repo.findByIdByOrg(orgId, id);
+    if (!existing) throw new NotFoundException('Device not found');
+    return { token: this.signToken(existing.id, existing.version) };
+  }
+
+  /**
+   * Bump version → invalidates every JWT minted for this device so far. Then
+   * sign + return a fresh one. Use when a token is suspected leaked.
+   */
   async regenerateToken(id: string) {
     const orgId = this.ctx.requireOrg();
     await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
@@ -91,10 +116,8 @@ export class AttendanceDeviceService {
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Device not found');
 
-    const plaintext = generateToken();
-    const tokenHash = await bcrypt.hash(plaintext, BCRYPT_ROUNDS);
-    const device = await this.repo.update(id, { token: tokenHash });
-    return { device, token: plaintext };
+    const device = await this.repo.update(id, { version: { increment: 1 } });
+    return { device, token: this.signToken(device.id, device.version) };
   }
 
   async remove(id: string) {
@@ -108,7 +131,7 @@ export class AttendanceDeviceService {
   }
 
   // ──────────────────────────────────────────────────────────────────
-  // Public push endpoint — auth via deviceId + token
+  // Public push endpoint — auth via JWT in body
   // ──────────────────────────────────────────────────────────────────
 
   /**
@@ -117,14 +140,7 @@ export class AttendanceDeviceService {
    * (deviceId, eventLogId): a replayed push of the same event is a no-op.
    */
   async push(dto: PushAttendanceDto): Promise<PushSummary> {
-    const device = await this.repo.findByIdRaw(dto.deviceId);
-    if (!device || !device.isActive) {
-      // Return the same generic error for missing / disabled devices to
-      // avoid leaking which devices exist.
-      throw new UnauthorizedException('Invalid device or token');
-    }
-    const ok = await bcrypt.compare(dto.token, device.token);
-    if (!ok) throw new UnauthorizedException('Invalid device or token');
+    const device = await this.verifyToken(dto.token);
 
     // Resolve all employee codes in this push to ids in one query.
     const codes = Array.from(new Set(dto.events.map((e) => e.employeeCode)));
@@ -167,6 +183,43 @@ export class AttendanceDeviceService {
     return summary;
   }
 
+  // ──────────────────────────────────────────────────────────────────
+  // Token helpers
+  // ──────────────────────────────────────────────────────────────────
+
+  private signToken(deviceId: string, version: number): string {
+    return this.jwt.sign({ sub: deviceId, v: version } satisfies DeviceTokenPayload, {
+      secret: this.auth.jwtDeviceSecret,
+      audience: JWT_AUDIENCE,
+    });
+  }
+
+  /**
+   * Decode + verify JWT, then check the version counter against the row.
+   * Returns the device row on success; throws Unauthorized otherwise.
+   * Errors are intentionally generic — do not leak whether deviceId existed
+   * vs. signature was invalid vs. version was stale.
+   */
+  private async verifyToken(token: string) {
+    let payload: DeviceTokenPayload;
+    try {
+      payload = await this.jwt.verifyAsync<DeviceTokenPayload>(token, {
+        secret: this.auth.jwtDeviceSecret,
+        audience: JWT_AUDIENCE,
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid token');
+    }
+    if (!payload?.sub || typeof payload.v !== 'number') {
+      throw new UnauthorizedException('Invalid token');
+    }
+    const device = await this.repo.findByIdRaw(payload.sub);
+    if (!device || !device.isActive || device.version !== payload.v) {
+      throw new UnauthorizedException('Invalid token');
+    }
+    return device;
+  }
+
   /**
    * One event = one row update for that (employee, date). On replay (same
    * deviceId+eventLogId) returns 'duplicate' and leaves the row alone.
@@ -181,8 +234,6 @@ export class AttendanceDeviceService {
     const dateOnly = new Date(Date.UTC(ts.getUTCFullYear(), ts.getUTCMonth(), ts.getUTCDate()));
 
     return this.prisma.$transaction(async (tx) => {
-      // Idempotency guard. We check before write to avoid overwriting an
-      // existing row on retry.
       const replay = await tx.attendanceLog.findUnique({
         where: {
           deviceId_eventLogId: {
@@ -215,7 +266,6 @@ export class AttendanceDeviceService {
         return 'accepted';
       }
 
-      // Row exists from an earlier event today: extend the window.
       const newCheckIn = existing.checkInAt && existing.checkInAt < ts ? existing.checkInAt : ts;
       const newCheckOut =
         existing.checkOutAt && existing.checkOutAt > ts ? existing.checkOutAt : ts;
@@ -225,9 +275,6 @@ export class AttendanceDeviceService {
         data: {
           checkInAt: newCheckIn,
           checkOutAt: newCheckOut,
-          // Keep the earliest deviceId/eventLogId so the unique pair stays
-          // stable; replays of *this* eventLogId are caught above. Latest
-          // event id is recorded only if the row had none.
           deviceId: existing.deviceId ?? deviceId,
           eventLogId: existing.eventLogId ?? event.eventLogId,
         },
@@ -235,8 +282,4 @@ export class AttendanceDeviceService {
       return 'accepted';
     });
   }
-}
-
-function generateToken(): string {
-  return randomBytes(TOKEN_BYTES).toString('hex');
 }

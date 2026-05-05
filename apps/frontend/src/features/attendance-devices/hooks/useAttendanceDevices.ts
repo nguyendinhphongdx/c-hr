@@ -41,6 +41,12 @@ export function useUpdateAttendanceDevice() {
   });
 }
 
+export function useGetAttendanceDeviceToken() {
+  return useMutation({
+    mutationFn: (id: ID) => attendanceDevicesService.getToken(id),
+  });
+}
+
 export function useRegenerateAttendanceDeviceToken() {
   const queryClient = useQueryClient();
   return useMutation({

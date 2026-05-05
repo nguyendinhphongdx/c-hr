@@ -6,7 +6,6 @@ import {
   IsEnum,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -41,11 +40,11 @@ export class AttendanceEventDto {
 }
 
 export class PushAttendanceDto {
-  /** Returned at create-time. The device must include this in every push. */
-  @IsUUID()
-  deviceId: string;
-
-  /** Plaintext token from create / regenerate. Verified against bcrypt hash. */
+  /**
+   * Plaintext token from create / regenerate. Server resolves the device by
+   * SHA-256(token) lookup, then verifies via bcrypt — no separate deviceId
+   * field is needed. Tokens are random 256-bit so collision is negligible.
+   */
   @IsString()
   @MaxLength(255)
   token: string;
