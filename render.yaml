@@ -1,0 +1,100 @@
+services:
+  - type: keyvalue
+    name: c-hr-redis
+    plan: starter
+    region: singapore
+    ipAllowList: []
+
+  - type: web
+    name: c-hr-backend
+    runtime: node
+    plan: starter
+    region: singapore
+    rootDir: .
+    buildCommand: |
+      corepack enable
+      corepack prepare pnpm@10.33.0 --activate
+      pnpm install --frozen-lockfile
+      pnpm --filter @c-hr/backend prisma:generate
+      pnpm --filter @c-hr/backend build
+    preDeployCommand: pnpm --filter @c-hr/backend prisma:migrate:deploy
+    startCommand: pnpm --filter @c-hr/backend start:prod
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8000
+      - key: API_PREFIX
+        value: api/v1
+      - key: API_BASE_URL
+        sync: false
+      - key: LOG_LEVEL
+        value: info
+
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: c-hr-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: c-hr-redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          type: keyvalue
+          name: c-hr-redis
+          property: password
+
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRATION
+        value: 15m
+      - key: JWT_REFRESH_EXPIRATION
+        value: 7d
+
+      - key: CORS_ORIGIN
+        sync: false
+      - key: COOKIE_DOMAIN
+        sync: false
+      - key: AUTH_ACCESS_COOKIE_NAME
+        value: access_token
+      - key: AUTH_REFRESH_COOKIE_NAME
+        value: refresh_token
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: none
+
+      - key: STORAGE_TYPE
+        value: local
+      - key: STORAGE_LOCAL_PATH
+        value: ./uploads
+
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_SECURE
+        value: "false"
+
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
