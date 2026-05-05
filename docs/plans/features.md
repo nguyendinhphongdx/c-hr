@@ -593,6 +593,7 @@ Replaces the original F4 (LeaveRequest + AttendanceCorrection per-type tables) w
 
 Optional, không scope MVP:
 
+- **ZK-Bridge** (`services/zk-bridge/`) — pull-side adapter cho ZKTeco / Hikvision / Suprema. Sống trong monorepo nhưng **deploy tách rời** ở LAN văn phòng khách hàng (poll device qua TCP/SDK → push sang `/attendance-devices/push` trên cloud). Spec đầy đủ: [zk-bridge.md](zk-bridge.md). Trigger: F1–F5 đóng + có khách hàng thật cần tích hợp device thật.
 - **Audit log viewer UI** cho HRM appadmin xem theo entity / actor / time range.
 - **Notifications real-time** (Redis Pub/Sub + WebSocket) thay cho email.
 - **Time-off accrual** (cộng dồn phép theo tháng).

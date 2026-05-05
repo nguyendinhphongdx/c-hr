@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-04T16:57:18.228Z",
+  "generatedAt": "2026-05-05T02:10:05.822Z",
   "repoRelativeRoot": ".",
-  "count": 45,
+  "count": 46,
   "entries": [
     {
       "id": "AGENTS",
@@ -398,6 +398,41 @@
         "Known gaps (won't fix in F2)"
       ],
       "summary": "Backlog of things shipped through commits since 2026-05-04 that have **only** been verified at compile time (`pnpm build` / `pnpm typecheck`). Each entry gives the smallest set of clicks / curl calls that prove the path works end-to-end."
+    },
+    {
+      "id": "docs:plans:zk-bridge",
+      "path": "docs/plans/zk-bridge.md",
+      "title": "ZK-Bridge — pull-side adapter for ZKTeco / Hikvision attendance devices",
+      "description": "Sống trong monorepo (services/zk-bridge), nhưng *deploy tách rời* tại LAN văn phòng khách hàng. Polls device qua TCP/SDK, dịch sang generic JSON contract, push vào C-HR backend ở cloud.",
+      "tags": [
+        "project",
+        "plan",
+        "attendance",
+        "integration",
+        "deployment",
+        "post-mvp"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Vì sao cần",
+        "Tại sao trong monorepo nhưng deploy tách rời",
+        "Phạm vi MVP của bridge",
+        "Local UI + first-start setup",
+        "First-start flow",
+        "UI views (cần)",
+        "LAN scan",
+        "Auto-start on boot (cross-platform)",
+        "SQLite schema",
+        "Layout dự kiến (revised)",
+        "Generic JSON contract (đã chốt — F3)",
+        "Quy trình triển khai (khách hàng)",
+        "Bảo mật",
+        "Khi nào bắt đầu",
+        "Defer cho phiên bản tiếp theo",
+        "References"
+      ],
+      "summary": "> **Trạng thái**: Defer sang sau khi F1–F5 đóng + có khách hàng thật cần tích hợp device. Trước đó **không** code. > > **Vị trí**: `services/zk-bridge/` (monorepo) nhưng deploy **độc lập** tại văn phòng khách hàng — không chạy cùng C-HR backend."
     },
     {
       "id": "docs:decisions:_template",
