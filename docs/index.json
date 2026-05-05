@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-05T10:06:16.212Z",
+  "generatedAt": "2026-05-05T17:15:24.393Z",
   "repoRelativeRoot": ".",
   "count": 46,
   "entries": [
@@ -321,7 +321,7 @@
       "category": "plans",
       "headings": [
         "Nguyên tắc (cứng — không đổi)",
-        "Trạng thái hiện tại (cập nhật 2026-05-04)",
+        "Trạng thái hiện tại (cập nhật 2026-05-06)",
         "F3 verify checklist (đã chạy 2026-05-04 qua curl, BE :8000 + DB Docker)",
         "Edge findings (non-blocking, ghi chú để fix sau)",
         "Manual UI smoke (chờ demo qua browser)",
@@ -352,6 +352,21 @@
         "BE",
         "FE",
         "Done-when",
+        "Feature 6 — Collaboration: Comments + Activities",
+        "Design rationale",
+        "Open decisions (cần chốt trước khi code)",
+        "BE — Schema",
+        "BE — Module layout",
+        "BE — CommentService API",
+        "BE — Sanitize HTML",
+        "BE — ActivityService API",
+        "BE — Action naming convention",
+        "BE — Endpoints",
+        "BE — Wire-in `RequestService`",
+        "FE — Tiptap richtext editor",
+        "FE — Pilot Request integration",
+        "Done-when",
+        "Defers (F6.x / future)",
         "Sau Feature 4 (roadmap dài hơi)",
         "Workflow mỗi feature (template)"
       ],

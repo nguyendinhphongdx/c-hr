@@ -20,7 +20,7 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 6. **1 feature = 1 PR** (BE module + Prisma migration + FE feature + test). Không trộn.
 7. **Audit log** ([ADR 0002](../decisions/0002-audit-log.md)) cho mọi action thay đổi org structure / appadmin / approve workflow.
 
-## Trạng thái hiện tại (cập nhật 2026-05-04)
+## Trạng thái hiện tại (cập nhật 2026-05-06)
 
 | # | Feature | Status | Ghi chú |
 | --- | --- | --- | --- |
@@ -30,6 +30,7 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 3 | Attendance | ✅ done | BE 4 modules + 3 FE features. Migration f3_user_personal_info applied. API smoke 7/7 verify items pass (curl). FE typecheck/lint sạch. UI render manual smoke pending khi user demo. |
 | 4 | Requests (per-type) | ⛔ superseded | F4 đã build LeaveRequest + AttendanceCorrection riêng — refactor sang F5 universal engine vì cần mở rộng (out-of-office, OT, …). Tables drop trong migration `f5_universal_requests`. |
 | 5 | Requests (universal engine) | ✅ done | RequestGroup + Request polymorphic, `data: Json` validated theo `group.fieldsSchema`. 3 group seed: `leave`, `checkin`, `checkout`. Side-effect registry dispatch theo group code (checkin/checkout upsert AttendanceLog, leave no-op MVP). FE: master-detail UI + DynamicForm render theo schema. ADR 0006. |
+| 6 | Collaboration: Comments + Activities | 📋 planned | Generic comment (richtext, polymorphic `objectType + objectId`) + activity feed append-only. Pilot wire-in cho Request (timeline panel + comment richtext + ApprovalFlow component). ACL pattern (AclCalculator + view interface, không BaseEntity wrap) deferred — implement song song hoặc PR riêng. |
 
 ### F3 verify checklist (đã chạy 2026-05-04 qua curl, BE :8000 + DB Docker)
 
@@ -66,6 +67,7 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 3 | **Attendance: WorkSchedule + Device + Log + Timesheet UI** | attendance | `WorkSchedule` config, `AttendanceDevice` registry + push endpoint, `AttendanceLog` (composite unique `employee_id, date`, idempotent qua `event_log_id`), `Timesheet` query API trả về log theo tháng. **MVP simplified:** generic JSON push contract, no brand adapter. | `/settings/work-schedule`, `/settings/attendance-devices`, `/timesheet` (calendar tháng — grid 7 cột, mỗi ô check-in/out + status badge). `/timesheet/team` deferred. | 2 |
 | 4 | ⛔ **Requests per-type** (superseded by F5) | requests | Đã build `LeaveRequest` + `AttendanceCorrection` rời. Refactor sang universal engine F5 vì cần mở rộng linh hoạt cho các loại đơn khác (OT, OOO, …). Drop trong migration `f5_universal_requests`. | — | — |
 | 5 | **Requests: Universal engine + form-builder defer** | requests | `RequestGroup` (system-wide, `fieldsSchema` JSON) + `Request` polymorphic. Validation engine self-built. Side-effect registry keyed by group code (checkin/checkout upsert AttendanceLog). 3 group seed: `leave`, `checkin`, `checkout`. ADR 0006. | `/requests` master-detail (list + preview pane). `DynamicForm` render từ `fieldsSchema`. `/requests/new` chọn group → form. Sidebar gộp 1 link "Requests". | 2, 3 |
+| 6 | **Collaboration: Comments + Activities** (generic, polymorphic) | collaboration (new bounded context) | Bảng `comments` (richtext HTML sanitize) + `activities` (append-only event log), polymorphic `objectType + objectId + userId`. 2 module `@Global` (CommentService + ActivityService). CommentService auto-emit `<object>.commented` activity. Sanitize HTML qua `sanitize-html`. Wire-in pilot vào Request module (3 endpoint: `/requests/:id/comments` GET+POST, `/requests/:id/activities` GET). | Tiptap richtext editor cho comment, timeline panel bên phải `RequestPreview` (FE merge 2 stream comments + activities theo `createdAt`), `<ApprovalFlow>` component (avatar from→to + status arrow) dùng ở list row + detail header. | 5 |
 
 Mỗi feature **kết thúc xanh khi**:
 
@@ -588,6 +590,343 @@ Replaces the original F4 (LeaveRequest + AttendanceCorrection per-type tables) w
 - Employee A tạo đơn nghỉ → suggested = nearest manager → A submit → manager B nhận trong "Đơn cần duyệt" → approve → email gửi đi → trạng thái cập nhật.
 - CEO (chain rỗng) tạo đơn → candidates = HRM appadmins → CEO chọn chính mình → đơn xuất hiện trong "Đơn cần duyệt" của CEO → CEO approve thường → audit log ghi cả requester=approver=cùng người.
 - Employee tạo đơn quên chấm → manager approve → AttendanceLog xuất hiện trong timesheet với source `CORRECTION`.
+
+## Feature 6 — Collaboration: Comments + Activities
+
+Generic comment + activity log gắn vào bất kỳ object nào trong hệ thống (Request đầu tiên; sau là Employee, Department, Project, …). Tránh tạo bảng comment/activity riêng cho mỗi entity (anti-pattern: 5 entity = 5 bảng giống nhau). Tham khảo pattern [rework-talent](file:///Users/dinhphong/Documents/Base.vn/rework-talent/apps/api) — `ActivityLog` của họ generic ✓, nhưng `ProposalComment` per-entity ✗ (không scale tốt cho HRM nhiều entity).
+
+### Design rationale
+
+- **Polymorphic**: `objectType: String` (tên Prisma model — `"Request"`, `"Employee"`) + `objectId: String` + `userId: String` (actor). Không có FK đến target — trade-off chấp nhận để generic.
+- **Hai bảng tách** (không gộp 1 bảng):
+  - `comments`: mutable (edit/delete/thread), body lớn (HTML), có `editedAt` + soft-delete
+  - `activities`: immutable append-only, payload nhẹ (metadata Json), không edit
+  - Gộp 1 bảng → activity bloat khi user edit + index dày không cần thiết
+- **Hai module `@Global`** trong bounded context mới `apps/collaboration/`: feature module bất kỳ inject `CommentService` + `ActivityService` thay vì copy-paste CRUD.
+- **Route per-feature, service generic**: mỗi feature có route riêng (`/requests/:id/comments`, `/employees/:id/comments`) load entity của chính mình + check permission, **delegate** CRUD cho `CommentService`. Tránh route generic `POST /comments` vì cần ACL theo từng object class.
+- **CommentService auto-emit activity**: khi comment.create thành công → `ActivityService.log({ action: '<objectType.toLowerCase()>.commented', metadata: { commentId, preview } })`. Feature module không phải tự log "commented".
+- **FE merge 2 stream**: gọi `/comments` + `/activities` song song, sort theo `createdAt` để render unified timeline (Slack/Linear style). Đơn giản hơn 1 endpoint trả heterogeneous.
+- **ACL deferred**: pattern [AclCalculator](file:///Users/dinhphong/Documents/Base.vn/rework-talent/apps/api/src/common/domain/base.acl.calculator.ts) + view interface (port từ rework-talent, **không** wrap BaseEntity) sẽ làm PR riêng. V1 dùng inline check `isRequester || isApprover || isHrmAppAdmin` cho 3 endpoint Request, comment author tự sửa/xoá của mình. ADR ghi lại sau khi pilot.
+
+### Open decisions (cần chốt trước khi code)
+
+| # | Câu hỏi | Default đề xuất |
+| --- | --- | --- |
+| D1 | Edit window comment | **15 phút** + tag `(đã sửa)` indicator. Cân bằng giữa fix typo và audit trail. Slack/Discord không giới hạn — không phù hợp cho HR audit. |
+| D2 | `isInternal` default | **`false`** (transparent) — requester thấy mọi comment. HR muốn private thì tick checkbox "Nội bộ" trước khi gửi. |
+| D3 | Mentions v1 scope | **Lưu+render thuần** — FE accept `mentions: [{userId, name}]` từ tiptap, BE store snapshot. Không có picker UI / autocomplete / notification. V2 thêm sau. |
+| D4 | Soft-delete display | **Placeholder `"[Đã xoá]"`** giữ vị trí trong thread. Slack/Linear cùng pattern — tránh thread "rỗng" giữa chừng làm mất context. |
+
+### BE — Schema
+
+```prisma
+// Generic comment — gắn vào bất kỳ object nào.
+model Comment {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+
+  /// Tên Prisma model (Pascal): "Request", "Employee", "Department", ...
+  objectType     String    @map("object_type")
+  objectId       String    @map("object_id")
+
+  userId         String    @map("user_id")              // commenter
+  bodyHtml       String    @db.Text @map("body_html")   // sanitized HTML
+  bodyText       String    @db.Text @map("body_text")   // plain mirror — preview/notify/search
+  mentions       Json?                                   // [{ userId, name }] snapshot
+
+  parentId       String?   @map("parent_id")            // 1-level threading
+  parent         Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        Comment[] @relation("CommentReplies")
+
+  isInternal     Boolean   @default(false) @map("is_internal")
+
+  editedAt       DateTime? @map("edited_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt      @map("updated_at")
+
+  user           User      @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, objectType, objectId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+// Generic activity — append-only event log.
+model Activity {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+
+  objectType     String   @map("object_type")
+  objectId       String   @map("object_id")
+  objectLabel    String?  @map("object_label")          // snapshot text cho feed
+
+  /// Dotted: "request.created", "request.commented",
+  /// "request.side_effect.checkin_corrected"
+  action         String
+
+  userId         String?  @map("user_id")               // null = system action
+  metadata       Json?                                   // payload tuỳ ý theo action
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, objectType, objectId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@index([action])
+  @@map("activities")
+}
+```
+
+Thêm relation ngược ở `User`:
+
+```prisma
+comments   Comment[]
+activities Activity[]
+```
+
+Migration: `add_comments_and_activities`. Không touch table khác.
+
+### BE — Module layout
+
+```text
+apps/backend/src/apps/collaboration/
+├── collaboration.module.ts          # imports CommentModule + ActivityModule, re-export
+├── comment/
+│   ├── comment.module.ts            # @Global() — service inject vào mọi feature
+│   ├── comment.controller.ts        # PATCH/DELETE /comments/:id (author self-ops)
+│   ├── comment.service.ts           # sanitize, CRUD, emit activity 'X.commented'
+│   ├── comment.repository.ts
+│   ├── comment.types.ts             # CommentDto, CreateCommentInput, ...
+│   ├── sanitize.ts                  # sanitize-html wrapper, htmlToText helper
+│   └── dto/
+│       ├── create-comment.dto.ts
+│       ├── update-comment.dto.ts
+│       └── index.ts
+└── activity/
+    ├── activity.module.ts           # @Global()
+    ├── activity.service.ts          # log() fire-and-forget, listFor, logMany
+    ├── activity.repository.ts
+    ├── activity.types.ts
+    └── dto/
+        ├── log-activity.dto.ts
+        └── index.ts
+```
+
+`AppModule` import `CollaborationModule`.
+
+### BE — CommentService API
+
+```ts
+interface CreateCommentInput {
+  organizationId: string;
+  objectType: string;
+  objectId: string;
+  userId: string;
+  bodyHtml: string;                // raw HTML từ tiptap, sẽ sanitize trong service
+  parentId?: string;
+  isInternal?: boolean;
+  mentions?: Array<{ userId: string; name?: string }>;
+}
+
+interface UpdateCommentInput {
+  bodyHtml: string;
+  mentions?: Array<{ userId: string; name?: string }>;
+}
+
+interface ListCommentsOptions {
+  parentId?: string | null;        // null = top-level only; undefined = flat all
+  limit?: number;                  // default 50
+  cursor?: string;
+}
+
+class CommentService {
+  // Feature module gọi sau khi check user có quyền comment object
+  async create(input: CreateCommentInput): Promise<CommentDto>;
+  async update(id: string, userId: string, input: UpdateCommentInput): Promise<CommentDto>;
+  async softDelete(id: string, userId: string, allowModeration?: boolean): Promise<void>;
+
+  async listFor(orgId: string, objectType: string, objectId: string, opts?: ListCommentsOptions): Promise<CommentDto[]>;
+  async findById(id: string): Promise<CommentDto | null>;
+  async countFor(orgId: string, refs: Array<{ objectType; objectId }>): Promise<Map<string, number>>;
+}
+```
+
+**Logic chính**:
+
+- `create`: sanitize bodyHtml → derive bodyText → validate `parentId` (cùng object, parent không có grandchild) → save → emit activity `<objectType.toLowerCase()>.commented`
+- `update`: check `userId === comment.userId` + within `EDIT_WINDOW_MS` (15 phút), set `editedAt = now`
+- `softDelete`: set `deletedAt`. FE thấy placeholder `"[Đã xoá]"`. Cross-author delete (moderation) qua flag `allowModeration` — feature controller check ACL trước khi pass.
+- `countFor`: bulk count cho list view (badge "5 comments")
+
+### BE — Sanitize HTML
+
+```ts
+import sanitizeHtml from 'sanitize-html';
+
+const ALLOWED_TAGS = [
+  'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+  'code', 'pre',
+  'blockquote',
+  'ul', 'ol', 'li',
+  'h2', 'h3',
+  'a',
+  'span',  // mention pill
+];
+
+export function sanitize(input: string): string {
+  return sanitizeHtml(input, {
+    allowedTags: ALLOWED_TAGS,
+    allowedAttributes: {
+      a: ['href', 'target', 'rel'],
+      span: ['data-mention-user-id', 'data-mention-name', 'class'],
+      code: ['class'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
+    transformTags: {
+      a: sanitizeHtml.simpleTransform('a', { target: '_blank', rel: 'noopener noreferrer' }),
+    },
+  });
+}
+
+export function htmlToText(html: string): string {
+  return html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+}
+```
+
+Strip mọi `<script>`, `<style>`, inline event handlers, `javascript:` URLs. Auto-add `rel="noopener noreferrer"` cho link external.
+
+### BE — ActivityService API
+
+```ts
+interface LogActivityInput {
+  organizationId: string;
+  objectType: string;
+  objectId: string;
+  action: string;                  // "request.created" | ...
+  userId?: string;                 // null = system
+  objectLabel?: string;
+  metadata?: Record<string, unknown>;
+}
+
+class ActivityService {
+  /** Fire-and-forget. Không bao giờ throw — error chỉ log. */
+  log(input: LogActivityInput): void;
+  async logMany(inputs: LogActivityInput[]): Promise<void>;
+  async listFor(orgId: string, objectType: string, objectId: string, opts?: ListActivitiesOptions): Promise<ActivityDto[]>;
+}
+```
+
+**Fire-and-forget**: `log()` return `void`, internal `repo.create().catch(err => logger.error(...))`. Không break main flow nếu activity log fail.
+
+### BE — Action naming convention
+
+Format: `<object>.<verb>` lowercase, nested cho side-effect.
+
+| Action | Khi nào | metadata |
+| --- | --- | --- |
+| `request.created` | Tạo đơn | `{ groupCode, approverId }` |
+| `request.approved` | Duyệt | `{ decisionNote }` |
+| `request.rejected` | Từ chối | `{ decisionNote }` |
+| `request.cancelled` | Huỷ | `{}` |
+| `request.commented` | Có comment mới (auto từ CommentService) | `{ commentId, preview }` |
+| `request.side_effect.checkin_corrected` | Side-effect approve checkin | `{ employeeId, date, checkInAt }` |
+| `request.side_effect.checkout_corrected` | Side-effect approve checkout | `{ employeeId, date, checkOutAt }` |
+
+Khi rollout sang object khác: `employee.profile_updated`, `department.member_added`, …
+
+### BE — Endpoints
+
+**Generic** (`CommentController`):
+
+```text
+PATCH  /comments/:id     { bodyHtml, mentions? }    — author edit own (15min window)
+DELETE /comments/:id                                 — author delete own (soft-delete)
+```
+
+**Per-feature** (Request pilot — `RequestController` thêm 3 method):
+
+```text
+GET    /requests/:id/comments                        — list, group theo parentId
+POST   /requests/:id/comments  { bodyHtml, parentId?, isInternal?, mentions? }
+GET    /requests/:id/activities                      — timeline activity riêng
+```
+
+V1 ACL inline (chưa refactor sang AclCalculator):
+
+- `GET comments`/`GET activities`: `isRequester || isApprover || isHrmAppAdmin`
+- `POST comments`: cùng rule trên (viewer = commenter)
+
+### BE — Wire-in `RequestService`
+
+Thêm `activities.log({...})` sau commit DB tại 4 method (`create`, `approve`, `reject`, `cancel`) + 2 side-effect handler (`applyCheckinCorrection`, `applyCheckoutCorrection`). Comment auto-log đã handled bởi CommentService.
+
+### FE — Tiptap richtext editor
+
+```text
+apps/frontend/src/features/collaboration/
+├── components/
+│   ├── CommentEditor.tsx        # tiptap StarterKit + toolbar (B I U • code link blockquote)
+│   ├── CommentList.tsx          # render array CommentDto, threading 1-level
+│   ├── CommentItem.tsx          # 1 comment + edit/delete buttons
+│   ├── ActivityTimeline.tsx     # render array ActivityDto + icon per action type
+│   ├── UnifiedTimeline.tsx      # merge comments + activities theo createdAt
+│   └── ApprovalFlow.tsx         # <Avatar requester/> ──→ <Avatar approver/> + status icon
+├── hooks/
+│   ├── useObjectComments.ts     # generic — useQuery(['comments', objectType, objectId])
+│   └── useObjectActivities.ts   # generic
+├── services/
+│   ├── commentService.ts
+│   └── activityService.ts
+└── types/
+    └── index.ts                  # CommentDto, ActivityDto, mention types
+```
+
+Dependencies cần thêm:
+
+- `@tiptap/react` + `@tiptap/starter-kit` (B/I/U, lists, headings, links, blockquote, code) — lazy import qua `dynamic()` để không bloat first-load
+- `@tiptap/extension-link` — auto-link
+- (v2) `@tiptap/extension-mention` cho picker
+
+### FE — Pilot Request integration
+
+1. **`RequestPreview` panel** (right side hiện tại) thêm 3 section:
+   - `<ApprovalFlow requester={r.requester} approver={r.approver} status={r.status} />` thay header text "Người gửi/duyệt" cũ
+   - `<UnifiedTimeline objectType="Request" objectId={r.id} />` ở dưới `DynamicDataView`
+   - `<CommentEditor onSubmit={...} />` ở cuối panel
+2. **`RequestListView` rows**: thêm `<ApprovalFlow size="sm" />` thay 2 dòng text requester/approver hiện tại.
+3. Có thể xét refactor sang **3-pane Outlook layout** (sidebar lọc + dense list + detail) trong cùng PR hoặc PR sau — quyết định khi user xác nhận scope.
+
+### Done-when
+
+- BE: `pnpm --filter @c-hr/backend build` xanh, migration `add_comments_and_activities` applied, swagger có `/comments/:id` (PATCH/DELETE), `/requests/:id/comments` (GET/POST), `/requests/:id/activities` (GET).
+- FE: `pnpm --filter @c-hr/frontend check` xanh, route `/requests` render comment editor + timeline + ApprovalFlow.
+- Smoke E2E (curl):
+  - [ ] `POST /requests/:id/comments` → comment lưu, body sanitize (test với `<script>alert(1)</script>` → strip)
+  - [ ] `GET /requests/:id/comments` → trả comment vừa tạo
+  - [ ] `GET /requests/:id/activities` → có `request.commented` event tự động sau POST comment
+  - [ ] `PATCH /comments/:id` trong 15 phút → 200, có `editedAt`
+  - [ ] `PATCH /comments/:id` sau 15 phút → 403 "Quá hạn sửa"
+  - [ ] `DELETE /comments/:id` author → 200 soft-delete, FE thấy `"[Đã xoá]"`
+  - [ ] `POST /requests/:id/approve` → activity `request.approved` được log
+- Smoke UI:
+  - User A tạo đơn → A thấy comment editor + timeline empty
+  - User A comment "test" → activity `request.commented` xuất hiện trong timeline
+  - User B (approver) comment lại → A thấy comment B trong cùng thread
+  - B approve đơn → timeline có `request.approved` + `request.side_effect.*` (nếu checkin/checkout)
+  - A sửa comment trong 15 phút → "(đã sửa)" indicator
+  - A xoá comment → "[Đã xoá]" placeholder
+
+### Defers (F6.x / future)
+
+- **F6.2 — ACL refactor**: port `AclCalculator<TView, TAcl>` + `BaseAcl` + `EntityContext` từ rework-talent vào `common/domain/`. Tạo `RequestAclCalculator` + `RequestAclView` interface. Refactor `RequestService.assertCanView/decide/cancel` + 3 comment/activity endpoint sang dùng calculator. ADR mới ("Object-owned ACL, no BaseEntity wrap"). Risk: refactor không nhỏ — tách PR riêng.
+- **F6.3 — Mention picker + notifications**: `@tiptap/extension-mention` + endpoint `GET /users/search?q=&inOrg=true` + push notification khi được mention.
+- **F6.4 — Comment moderation**: HRM appadmin xoá comment người khác (cross-author). Cần `ObjectLoaderRegistry` để load object và check ACL `canDeleteAnyComment`.
+- **F6.5 — Rollout cho object khác**: `Employee` (HR note hồ sơ), `Department` (manager note), tương lai Project/Performance. Mỗi object thêm 3 route + 1 ACL calculator, không touch CommentService/ActivityService.
+- **F6.6 — Activity feed dashboard**: trang `/activities` cho HRM appadmin xem stream toàn Org (filter theo action, user, time range). Tận dụng index `(organizationId, createdAt DESC)`.
+- **Audit log integration**: hiện `audit_logs` (ADR 0002) ghi từ `@Auditable` interceptor cho admin ops; `activities` ghi từ service layer cho user-facing timeline. Hai bảng song song, không gộp — audit_logs cho compliance, activities cho UX. Có thể xét gộp sau nếu duplicate quá nhiều.
 
 ## Sau Feature 4 (roadmap dài hơi)
 
