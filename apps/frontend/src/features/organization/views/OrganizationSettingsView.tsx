@@ -31,7 +31,7 @@ import { useAuth, useIsAdmin } from "@/features/auth";
 import { useUpdateOrganization } from "../hooks/useOrganization";
 
 const schema = z.object({
-  name: z.string().min(2, "At least 2 characters").max(100),
+  name: z.string().min(2, "Ít nhất 2 ký tự").max(100),
   timezone: z.string().max(64),
   currency: z.string().max(8),
 });
@@ -66,9 +66,9 @@ export function OrganizationSettingsView() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Organization</CardTitle>
+          <CardTitle>Doanh nghiệp</CardTitle>
           <CardDescription>
-            You don&apos;t belong to an organization yet.
+            Bạn chưa thuộc Org nào.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -80,10 +80,10 @@ export function OrganizationSettingsView() {
   const onSubmit = async (values: FormValues) => {
     try {
       await update.mutateAsync(values);
-      toast.success("Organization updated");
+      toast.success("Đã cập nhật doanh nghiệp");
     } catch (err) {
-      toast.error("Couldn't update organization", {
-        description: err instanceof Error ? err.message : "Try again later.",
+      toast.error("Không cập nhật được doanh nghiệp", {
+        description: err instanceof Error ? err.message : "Thử lại sau.",
       });
     }
   };
@@ -93,11 +93,11 @@ export function OrganizationSettingsView() {
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <Card>
           <CardHeader>
-            <CardTitle>Organization</CardTitle>
+            <CardTitle>Doanh nghiệp</CardTitle>
             <CardDescription>
               {readOnly
-                ? "Read-only — only Org admin can edit these fields."
-                : "Settings shared by everyone in this Organization."}
+                ? "Chỉ đọc — chỉ Org admin mới sửa được các trường này."
+                : "Thiết lập dùng chung cho mọi thành viên trong Org này."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -106,7 +106,7 @@ export function OrganizationSettingsView() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Tên</FormLabel>
                   <FormControl>
                     <Input disabled={readOnly} {...field} />
                   </FormControl>
@@ -115,10 +115,10 @@ export function OrganizationSettingsView() {
               )}
             />
             <div className="space-y-2">
-              <FormLabel>Slug</FormLabel>
+              <FormLabel>Mã định danh</FormLabel>
               <Input value={organization.slug} disabled />
               <p className="text-xs text-muted-foreground">
-                Slug is fixed at signup and used in URLs.
+                Mã định danh cố định từ lúc đăng ký và dùng trong URL.
               </p>
             </div>
             <FormField
@@ -126,13 +126,13 @@ export function OrganizationSettingsView() {
               name="timezone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Timezone</FormLabel>
+                  <FormLabel>Múi giờ</FormLabel>
                   <FormControl>
                     <Input disabled={readOnly} {...field} />
                   </FormControl>
                   <FormDescription>
-                    IANA name, e.g. <code>Asia/Ho_Chi_Minh</code>. Used for
-                    attendance + payroll period boundaries.
+                    Tên IANA, ví dụ <code>Asia/Ho_Chi_Minh</code>. Dùng cho biên
+                    kỳ chấm công + payroll.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -143,12 +143,12 @@ export function OrganizationSettingsView() {
               name="currency"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Currency</FormLabel>
+                  <FormLabel>Tiền tệ</FormLabel>
                   <FormControl>
                     <Input disabled={readOnly} {...field} />
                   </FormControl>
                   <FormDescription>
-                    ISO 4217 code, e.g. <code>VND</code>, <code>USD</code>.
+                    Mã ISO 4217, ví dụ <code>VND</code>, <code>USD</code>.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -169,7 +169,7 @@ export function OrganizationSettingsView() {
                 }
                 disabled={!form.formState.isDirty || update.isPending}
               >
-                Cancel
+                Huỷ
               </Button>
               <Button
                 type="submit"
@@ -179,7 +179,7 @@ export function OrganizationSettingsView() {
                 {update.isPending && (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 )}
-                Save changes
+                Lưu
               </Button>
             </CardFooter>
           )}

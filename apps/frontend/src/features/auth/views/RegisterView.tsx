@@ -4,8 +4,8 @@ import { RegisterForm } from "../components/RegisterForm";
 export function RegisterView() {
   return (
     <AuthLayout
-      title="Create your account"
-      subtitle="Get started in under a minute. No credit card required."
+      title="Tạo Org cho doanh nghiệp"
+      subtitle="Khởi tạo trong chưa đầy một phút. Không cần thẻ ngân hàng."
     >
       <RegisterForm />
     </AuthLayout>

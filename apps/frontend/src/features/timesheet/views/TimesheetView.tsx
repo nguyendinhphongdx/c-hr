@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,10 @@ const STATUS_CLASSES: Record<DayStatus, string> = {
 };
 
 const STATUS_LABEL: Record<DayStatus, string> = {
-  PRESENT: "On time",
-  LATE: "Late",
-  EARLY_LEAVE: "Early",
-  ABSENT: "Absent",
+  PRESENT: "Đúng giờ",
+  LATE: "Trễ",
+  EARLY_LEAVE: "Về sớm",
+  ABSENT: "Vắng",
   WEEKEND: "Off",
 };
 
@@ -34,7 +34,29 @@ const DAY_LABELS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 function formatHHMM(value: string | null): string {
   if (!value) return "--:--";
   const d = new Date(value);
-  return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+  // Local time (browser tz) — BE stores UTC but user expects wall-clock.
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function workedDuration(checkInAt: string | null, checkOutAt: string | null): string | null {
+  if (!checkInAt || !checkOutAt) return null;
+  const ms = new Date(checkOutAt).getTime() - new Date(checkInAt).getTime();
+  if (ms <= 0) return null;
+  const total = Math.floor(ms / 60_000);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${h}h ${String(m).padStart(2, "0")}m`;
+}
+
+/**
+ * When the Org has no schedule configured, every day comes back as
+ * WEEKEND. If the user has logs that day, surface PRESENT instead so
+ * the cell isn't a confusing blank. With a schedule, trust the BE.
+ */
+function deriveDisplayStatus(day: TimesheetDay): DayStatus {
+  if (day.status !== "WEEKEND") return day.status;
+  if (day.checkInAt || day.checkOutAt) return "PRESENT";
+  return "WEEKEND";
 }
 
 function todayKey(): string {
@@ -42,31 +64,51 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Parse `?ym=YYYY-MM` → { year, month }. Falls back to current month
+ *  when missing or malformed so the URL is the single source of truth
+ *  but we never crash on garbage input. */
+function parseYm(raw: string | null): { year: number; month: number } {
+  const now = new Date();
+  if (raw) {
+    const m = /^(\d{4})-(\d{1,2})$/.exec(raw);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]);
+      if (mo >= 1 && mo <= 12) return { year: y, month: mo };
+    }
+  }
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
+}
+
+function formatYm(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
 export function TimesheetView() {
   const { user } = useAuth();
   const employee = useEmployee(user?.employeeId ?? null);
-  const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { year, month } = parseYm(searchParams.get("ym"));
 
   const employeeId = user?.employeeId ?? null;
   const sheet = useTimesheet(employeeId, year, month);
 
+  const navigateTo = (y: number, mo: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("ym", formatYm(y, mo));
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   const goPrev = () => {
-    if (month === 1) {
-      setYear(year - 1);
-      setMonth(12);
-    } else {
-      setMonth(month - 1);
-    }
+    if (month === 1) navigateTo(year - 1, 12);
+    else navigateTo(year, month - 1);
   };
   const goNext = () => {
-    if (month === 12) {
-      setYear(year + 1);
-      setMonth(1);
-    } else {
-      setMonth(month + 1);
-    }
+    if (month === 12) navigateTo(year + 1, 1);
+    else navigateTo(year, month + 1);
   };
 
   if (!employeeId) {
@@ -81,7 +123,7 @@ export function TimesheetView() {
     <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Timesheet</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Bảng giờ làm</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Lịch chấm công của{" "}
             <span className="font-medium text-foreground">
@@ -90,13 +132,13 @@ export function TimesheetView() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goPrev} aria-label="Previous month">
+          <Button variant="outline" size="icon" onClick={goPrev} aria-label="Tháng trước">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="min-w-32 text-center text-sm font-medium">
             Tháng {month}/{year}
           </span>
-          <Button variant="outline" size="icon" onClick={goNext} aria-label="Next month">
+          <Button variant="outline" size="icon" onClick={goNext} aria-label="Tháng sau">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -112,10 +154,10 @@ export function TimesheetView() {
         <CardContent>
           {sheet.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+              <Loader2 className="h-4 w-4 animate-spin" /> Đang tải…
             </div>
           ) : sheet.error ? (
-            <p className="py-6 text-sm text-destructive">Couldn&apos;t load timesheet.</p>
+            <p className="py-6 text-sm text-destructive">Không tải được bảng giờ làm.</p>
           ) : sheet.data ? (
             <CalendarGrid days={sheet.data.days} />
           ) : null}
@@ -162,11 +204,14 @@ function CalendarGrid({ days }: { days: TimesheetDay[] }) {
 
 function DayCell({ day, isToday }: { day: TimesheetDay; isToday: boolean }) {
   const dayNum = Number(day.date.slice(8, 10));
+  const displayStatus = deriveDisplayStatus(day);
+  const hasLog = !!(day.checkInAt || day.checkOutAt);
+  const duration = workedDuration(day.checkInAt, day.checkOutAt);
   return (
     <div
       className={cn(
-        "min-h-24 rounded-md border p-2 text-xs",
-        STATUS_CLASSES[day.status],
+        "min-h-28 rounded-md border p-2 text-xs",
+        STATUS_CLASSES[displayStatus],
       )}
     >
       <div className="flex items-center justify-between">
@@ -178,30 +223,45 @@ function DayCell({ day, isToday }: { day: TimesheetDay; isToday: boolean }) {
         >
           {dayNum}
         </span>
-        {day.status !== "WEEKEND" && (
+        {displayStatus !== "WEEKEND" && (
           <Badge variant="outline" className="text-[10px] font-normal">
-            {STATUS_LABEL[day.status]}
+            {STATUS_LABEL[displayStatus]}
           </Badge>
         )}
       </div>
-      {day.shift && (
-        <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <span aria-hidden>→|</span>
-            <span className={cn(day.status === "LATE" && "text-amber-700 font-medium")}>
+      {(day.shift || hasLog) && (
+        <div className="mt-2 space-y-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground/70">
+              Vào
+            </span>
+            <span
+              className={cn(
+                "tabular-nums text-[11px]",
+                displayStatus === "LATE" && "text-amber-700 font-semibold",
+              )}
+            >
               {formatHHMM(day.checkInAt)}
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            <span aria-hidden>|→</span>
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground/70">
+              Ra
+            </span>
             <span
               className={cn(
-                day.status === "EARLY_LEAVE" && "text-orange-700 font-medium",
+                "tabular-nums text-[11px]",
+                displayStatus === "EARLY_LEAVE" && "text-orange-700 font-semibold",
               )}
             >
               {formatHHMM(day.checkOutAt)}
             </span>
           </div>
+          {duration && (
+            <div className="mt-1 border-t border-current/10 pt-1 text-right text-[10px] tabular-nums text-muted-foreground/80">
+              {duration}
+            </div>
+          )}
         </div>
       )}
     </div>

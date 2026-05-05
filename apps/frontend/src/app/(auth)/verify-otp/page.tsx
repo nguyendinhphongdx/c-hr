@@ -5,9 +5,9 @@ import { createMetadata } from "@/lib/seo";
 import { VerifyOtpRouteHandler } from "./VerifyOtpRouteHandler";
 
 export const metadata = createMetadata({
-  title: "Verify your code",
+  title: "Xác minh mã OTP",
   path: "/verify-otp",
-  description: "Enter the 6-digit verification code we sent you.",
+  description: "Nhập mã 6 chữ số đã gửi đến bạn.",
   noIndex: true,
 });
 

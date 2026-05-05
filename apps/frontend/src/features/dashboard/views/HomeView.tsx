@@ -2,15 +2,16 @@
 
 import {
   ArrowRight,
-  BookOpen,
+  Building2,
+  Calendar,
+  Inbox,
   Settings,
   Sparkles,
-  Terminal,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 
-import { GithubIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -20,55 +21,53 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/features/auth";
-import { SITE } from "@/lib/seo";
-
-type IconComponent =
-  | LucideIcon
-  | ((props: { className?: string }) => React.JSX.Element);
 
 interface QuickAction {
   href: string;
-  icon: IconComponent;
+  icon: LucideIcon;
   label: string;
   description: string;
-  external?: boolean;
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
     href: "/settings/profile",
     icon: Settings,
-    label: "Complete your profile",
-    description: "Add a name and avatar so your team recognises you.",
+    label: "Hoàn thiện hồ sơ",
+    description: "Thêm tên, ảnh đại diện và số điện thoại để đồng nghiệp dễ nhận ra bạn.",
   },
   {
     href: "/settings/security",
     icon: Sparkles,
-    label: "Secure your account",
-    description: "Set a strong password and review session devices.",
+    label: "Đặt mật khẩu mạnh",
+    description: "Đổi mật khẩu định kỳ và xem lại các phiên đăng nhập đang hoạt động.",
   },
 ];
 
-const RESOURCES: QuickAction[] = [
+const SHORTCUTS: QuickAction[] = [
   {
-    href: SITE.github,
-    icon: GithubIcon,
-    label: "Browse the source",
-    description: "All conventions live in CLAUDE.md and docs/.",
-    external: true,
+    href: "/employees",
+    icon: Users,
+    label: "Nhân viên",
+    description: "Tra cứu, thêm và sửa hồ sơ nhân viên trong Org.",
   },
   {
-    href: "/docs",
-    icon: BookOpen,
-    label: "Read the docs",
-    description: "Architecture, recipes, and reference material.",
+    href: "/departments",
+    icon: Building2,
+    label: "Phòng ban",
+    description: "Dựng cây phòng ban, chỉ định manager phụ trách.",
   },
   {
-    href: SITE.github,
-    icon: Terminal,
-    label: "Run the CLI",
-    description: "Use `pnpm dev` for hot reload, `pnpm check` for lint+typecheck.",
-    external: true,
+    href: "/timesheet",
+    icon: Calendar,
+    label: "Bảng giờ làm",
+    description: "Xem chấm công của Org theo tháng — tổng hợp từ máy chấm công.",
+  },
+  {
+    href: "/requests",
+    icon: Inbox,
+    label: "Đơn từ",
+    description: "Tạo đơn xin nghỉ, đơn quên chấm; duyệt đơn của team bạn.",
   },
 ];
 
@@ -78,36 +77,47 @@ export function HomeView() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-10 px-6 py-10">
-      {/* Hero card */}
       <div className="animate-fade-up rounded-2xl border border-border bg-linear-to-br from-primary/5 via-background to-background p-8">
         <Badge variant="secondary" className="mb-4">
-          Welcome
+          Chào mừng
         </Badge>
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          Welcome back{firstName ? `, ${firstName}` : ""}.
+          Chào{firstName ? `, ${firstName}` : " bạn"}.
         </h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          You&apos;re running on the {SITE.name}. Replace this view with your
-          actual landing screen — the quick actions below are placeholders.
+          Đây là trang chủ C-HR của bạn. Dùng các phím tắt bên dưới để vào nhanh
+          các module đang dùng nhiều nhất.
         </p>
       </div>
 
-      {/* Stats row */}
       <div
         className="animate-fade-up grid gap-4 md:grid-cols-3"
         style={{ animationDelay: "100ms" }}
       >
-        <StatCard label="Today" value="0" hint="Items created in the last 24h" />
-        <StatCard label="This week" value="0" hint="Activity since Monday" />
-        <StatCard label="All time" value="0" hint="Total items in workspace" />
+        <StatCard
+          label="Hôm nay"
+          value="—"
+          hint="Số nhân viên đã chấm công đầu giờ"
+        />
+        <StatCard
+          label="Tuần này"
+          value="—"
+          hint="Đơn từ đang chờ bạn duyệt"
+        />
+        <StatCard
+          label="Tháng này"
+          value="—"
+          hint="Tổng số chấm công đã ghi nhận"
+        />
       </div>
 
-      {/* Quick actions */}
       <div
         className="animate-fade-up space-y-4"
         style={{ animationDelay: "200ms" }}
       >
-        <h2 className="text-lg font-semibold tracking-tight">Quick start</h2>
+        <h2 className="text-lg font-semibold tracking-tight">
+          Hoàn thiện thiết lập
+        </h2>
         <div className="grid gap-3 md:grid-cols-2">
           {QUICK_ACTIONS.map((action) => (
             <ActionCard key={action.href} {...action} />
@@ -115,15 +125,14 @@ export function HomeView() {
         </div>
       </div>
 
-      {/* Resources */}
       <div
         className="animate-fade-up space-y-4"
         style={{ animationDelay: "300ms" }}
       >
-        <h2 className="text-lg font-semibold tracking-tight">Resources</h2>
-        <div className="grid gap-3 md:grid-cols-3">
-          {RESOURCES.map((resource) => (
-            <ActionCard key={resource.label} {...resource} />
+        <h2 className="text-lg font-semibold tracking-tight">Vào nhanh</h2>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          {SHORTCUTS.map((s) => (
+            <ActionCard key={s.href} {...s} />
           ))}
         </div>
       </div>
@@ -151,32 +160,23 @@ function StatCard({
   );
 }
 
-function ActionCard({ href, icon: Icon, label, description, external }: QuickAction) {
-  const content = (
-    <Card className="group h-full transition-colors hover:border-primary/40">
-      <CardHeader>
-        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Icon className="h-4 w-4" />
-        </div>
-        <CardTitle className="flex items-center justify-between text-base">
-          {label}
-          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
-        </CardTitle>
-        <CardDescription className="leading-relaxed">{description}</CardDescription>
-      </CardHeader>
-    </Card>
-  );
-
-  if (external) {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className="block">
-        {content}
-      </a>
-    );
-  }
+function ActionCard({ href, icon: Icon, label, description }: QuickAction) {
   return (
     <Link href={href} className="block">
-      {content}
+      <Card className="group h-full transition-colors hover:border-primary/40">
+        <CardHeader>
+          <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Icon className="h-4 w-4" />
+          </div>
+          <CardTitle className="flex items-center justify-between text-base">
+            {label}
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+          </CardTitle>
+          <CardDescription className="leading-relaxed">
+            {description}
+          </CardDescription>
+        </CardHeader>
+      </Card>
     </Link>
   );
 }

@@ -6,9 +6,9 @@ export function HowItWorks() {
   return (
     <Section
       id="how"
-      eyebrow="Three steps"
-      title="From clone to running app"
-      description="No yak-shaving. No “rename twelve files”. The init script handles the boring parts."
+      eyebrow="Ba bước"
+      title="Từ đăng ký đến vận hành"
+      description="Không phải dự án triển khai sáu tháng. Khởi động trong tuần đầu, nâng dần từng module."
     >
       <div className="relative grid gap-6 md:grid-cols-3">
         {/* Connector line — desktop only */}

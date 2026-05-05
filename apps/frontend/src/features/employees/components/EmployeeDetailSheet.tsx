@@ -67,7 +67,7 @@ export function EmployeeDetailSheet({ id, onClose }: EmployeeDetailSheetProps) {
   const departments = useDepartments();
 
   const e = employee.data;
-  const fullName = e?.user?.name ?? "(no name)";
+  const fullName = e?.user?.name ?? "(không tên)";
   const dept = e?.departmentId
     ? departments.data?.find((d) => d.id === e.departmentId)
     : null;
@@ -78,11 +78,11 @@ export function EmployeeDetailSheet({ id, onClose }: EmployeeDetailSheetProps) {
       <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-xl">
         {employee.isLoading ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang tải…
           </div>
         ) : !e ? (
           <div className="flex h-full items-center justify-center text-sm text-destructive">
-            Employee not found.
+            Không tìm thấy nhân viên.
           </div>
         ) : (
           <>
@@ -127,7 +127,7 @@ export function EmployeeDetailSheet({ id, onClose }: EmployeeDetailSheetProps) {
                     "—"
                   )}
                 </FieldRow>
-                <FieldRow icon={<Phone className="h-3.5 w-3.5" />} label="Phone">
+                <FieldRow icon={<Phone className="h-3.5 w-3.5" />} label="Số điện thoại">
                   {e.user?.phone ? (
                     <a
                       href={`tel:${e.user.phone}`}

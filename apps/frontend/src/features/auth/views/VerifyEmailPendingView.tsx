@@ -27,28 +27,28 @@ export function VerifyEmailPendingView() {
   const handleResend = async () => {
     try {
       await resend.mutateAsync();
-      toast.success("Verification email sent");
+      toast.success("Đã gửi email xác minh");
       setCooldown(30);
     } catch {
-      toast.error("Could not send verification email");
+      toast.error("Không gửi được email xác minh");
     }
   };
 
   return (
     <AuthLayout
-      title="Verify your email"
+      title="Xác minh email"
       subtitle={
         user?.email
-          ? `We sent a verification link to ${user.email}.`
-          : "Check your inbox for the verification link."
+          ? `Chúng tôi đã gửi đường dẫn xác minh đến ${user.email}.`
+          : "Hãy kiểm tra hộp thư để mở đường dẫn xác minh."
       }
     >
       <div className="space-y-5">
         <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4 text-sm">
           <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           <p className="text-muted-foreground">
-            Click the link in the email to activate your account. If you
-            don&apos;t see it, check your spam folder.
+            Bấm vào đường dẫn trong email để kích hoạt tài khoản. Nếu không
+            thấy, hãy kiểm tra hộp thư rác.
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export function VerifyEmailPendingView() {
           ) : (
             <RefreshCw className="h-3.5 w-3.5" />
           )}
-          {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend verification email"}
+          {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại email xác minh"}
         </Button>
 
         <button
@@ -71,7 +71,7 @@ export function VerifyEmailPendingView() {
           onClick={() => logout.mutate()}
           className="block w-full text-center text-sm text-muted-foreground hover:text-foreground"
         >
-          Use a different account
+          Đăng nhập tài khoản khác
         </button>
       </div>
     </AuthLayout>

@@ -35,7 +35,7 @@ const PAGE_LIMIT = 20;
 export function EmployeePicker({
   value,
   onChange,
-  placeholder = "Select employee…",
+  placeholder = "Chọn nhân viên…",
   disabled = false,
   status = "ACTIVE",
 }: EmployeePickerProps) {
@@ -66,7 +66,7 @@ export function EmployeePicker({
         >
           {selectedEmployee ? (
             <span className="truncate">
-              {selectedEmployee.user?.name ?? "(no name)"}
+              {selectedEmployee.user?.name ?? "(không tên)"}
               <span className="ml-2 text-xs text-muted-foreground">
                 {selectedEmployee.user?.email}
               </span>
@@ -79,7 +79,7 @@ export function EmployeePicker({
               <span
                 role="button"
                 tabIndex={0}
-                aria-label="Clear"
+                aria-label="Xoá"
                 className="text-muted-foreground hover:text-foreground"
                 onClick={(e) => {
                   e.preventDefault();
@@ -111,7 +111,7 @@ export function EmployeePicker({
             <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               autoFocus
-              placeholder="Search by name, email, or code"
+              placeholder="Tìm theo tên, email hoặc mã"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-8 pl-7 text-sm"
@@ -121,11 +121,11 @@ export function EmployeePicker({
         <div className="max-h-64 overflow-y-auto">
           {list.isLoading ? (
             <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+              <Loader2 className="h-3 w-3 animate-spin" /> Đang tải…
             </div>
           ) : !list.data?.data.length ? (
             <p className="p-3 text-xs text-muted-foreground">
-              No employees match.
+              Không có nhân viên phù hợp.
             </p>
           ) : (
             <ul className="py-1">
@@ -147,7 +147,7 @@ export function EmployeePicker({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm">
-                          {emp.user?.name ?? "(no name)"}
+                          {emp.user?.name ?? "(không tên)"}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
                           {emp.user?.email ?? "—"} · {emp.code}

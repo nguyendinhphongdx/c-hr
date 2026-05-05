@@ -7,7 +7,6 @@ export function organizationJsonLd() {
     name: SITE.name,
     url: SITE.url,
     logo: new URL("/icon.png", SITE.url).toString(),
-    sameAs: [SITE.github].filter(Boolean),
   };
 }
 

@@ -2,7 +2,7 @@ import { WorkScheduleSettingsView } from "@/features/work-schedule";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
-  title: "Work schedule",
+  title: "Ca làm chuẩn",
   path: "/admin/work-schedule",
   noIndex: true,
 });

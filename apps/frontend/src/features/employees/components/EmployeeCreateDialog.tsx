@@ -40,19 +40,19 @@ import { useCreateEmployee } from "../hooks/useEmployees";
 const NO_DEPARTMENT = "__none__";
 
 const schema = z.object({
-  email: z.string().email("Invalid email").max(255),
-  name: z.string().min(1, "Required").max(100),
-  password: z.string().min(8, "At least 8 characters").max(100),
+  email: z.string().email("Email không hợp lệ").max(255),
+  name: z.string().min(1, "Bắt buộc").max(100),
+  password: z.string().min(8, "Ít nhất 8 ký tự").max(100),
   code: z
     .string()
-    .min(1, "Required")
+    .min(1, "Bắt buộc")
     .max(50)
-    .regex(/^[A-Za-z0-9-_]+$/, "Letters, digits, hyphens, underscores only"),
+    .regex(/^[A-Za-z0-9-_]+$/, "Chỉ chữ cái, số, gạch ngang, gạch dưới"),
   title: z.string().max(100).optional(),
   hireDate: z.string().optional(),
   departmentId: z.union(
-    [z.literal(NO_DEPARTMENT), z.string().uuid("Pick a valid department")],
-    { message: "Pick a valid department" },
+    [z.literal(NO_DEPARTMENT), z.string().uuid("Chọn phòng ban hợp lệ")],
+    { message: "Chọn phòng ban hợp lệ" },
   ),
 });
 
@@ -100,16 +100,16 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
         departmentId:
           values.departmentId === NO_DEPARTMENT ? undefined : values.departmentId,
       });
-      toast.success("Employee created", {
-        description: `${values.name} can log in with ${values.email}.`,
+      toast.success("Đã tạo nhân viên", {
+        description: `${values.name} có thể đăng nhập bằng ${values.email}.`,
       });
       onClose();
     } catch (err) {
-      toast.error("Couldn't create employee", {
+      toast.error("Không tạo được nhân viên", {
         description:
           err instanceof Error
             ? err.message
-            : "Email or code may already be in use.",
+            : "Email hoặc mã có thể đã được dùng.",
       });
     }
   };
@@ -118,7 +118,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Add staff</DialogTitle>
+          <DialogTitle>Thêm nhân viên</DialogTitle>
           <DialogDescription>
             Tạo đồng thời tài khoản User (login) + hồ sơ Employee. Chia sẻ
             password ban đầu cho nhân viên qua kênh an toàn — họ tự đổi sau.
@@ -222,7 +222,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={NO_DEPARTMENT}>(none)</SelectItem>
+                        <SelectItem value={NO_DEPARTMENT}>(không có)</SelectItem>
                         {departments.data?.map((d) => (
                           <SelectItem key={d.id} value={d.id}>
                             {d.name}
@@ -254,7 +254,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
 
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            Huỷ
           </Button>
           <Button
             type="submit"
@@ -263,7 +263,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
             className="gap-2"
           >
             {create.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Create
+            Tạo
           </Button>
         </DialogFooter>
       </DialogContent>

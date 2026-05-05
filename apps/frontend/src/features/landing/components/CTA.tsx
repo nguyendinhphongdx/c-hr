@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { GithubIcon } from "@/components/icons";
-import { SITE } from "@/lib/seo";
 import { Reveal } from "./Reveal";
 
 export function CTA() {
@@ -15,13 +13,13 @@ export function CTA() {
       <div className="relative mx-auto max-w-4xl px-6 py-24 text-center md:py-32">
         <Reveal>
           <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
-            Ready to ship something?
+            Sẵn sàng vận hành nhân sự bài bản?
           </h2>
         </Reveal>
         <Reveal delay={100}>
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            Clone, install, and you have auth, theming, forms, and a typed
-            data layer running before lunch.
+            Tạo Org cho doanh nghiệp của bạn trong vài phút. Dùng thử đầy đủ tính năng,
+            không yêu cầu thẻ ngân hàng.
           </p>
         </Reveal>
         <Reveal delay={200}>
@@ -30,18 +28,15 @@ export function CTA() {
               href="/register"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 hover:shadow-xl active:scale-[0.98]"
             >
-              Start free
+              Bắt đầu miễn phí
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <a
-              href={SITE.github}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/login"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-8 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
             >
-              <GithubIcon className="h-4 w-4" />
-              Star on GitHub
-            </a>
+              Đăng nhập
+            </Link>
           </div>
         </Reveal>
       </div>

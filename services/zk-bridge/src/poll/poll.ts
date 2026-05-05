@@ -18,6 +18,13 @@ import { translateZkRecord } from './translate';
 import type { AttendanceEvent } from './types';
 import { fetchAttendances } from './zk-client';
 
+// Cap số record gửi mỗi cycle. Bridge không filter cursor — pull bao
+// nhiêu lib trả, take last N (newest), push hết cho C-HR. Server dedup
+// qua unique (deviceId, eventLogId) → push trùng = no-op an toàn.
+// Pattern này match flow cũ với `bulkCreate({ updateOnDuplicate })`:
+// đơn giản, tự healing khi cursor lệch / device reset / partial read.
+const LIMIT_RECENT_RECORDS = 2000;
+
 export interface DeviceCycleResult {
   deviceId: number;
   deviceName: string;
@@ -116,10 +123,18 @@ async function runDeviceCycle(
   const zkStart = Date.now();
   let records;
   try {
-    records = await fetchAttendances(device.host, device.port);
-    console.log(
-      `[poll] device "${device.name}" — fetched ${records.length} record(s) from ZK in ${Date.now() - zkStart}ms`,
-    );
+    const fetched = await fetchAttendances(device.host, device.port);
+    records = fetched.data;
+    const zkMs = Date.now() - zkStart;
+    if (fetched.err) {
+      console.warn(
+        `[poll] "${device.name}" partial read after ${zkMs}ms — ${fetched.err} (got ${records.length}); cursor stays put, retry next cycle.`,
+      );
+    } else {
+      console.log(
+        `[poll] "${device.name}" pulled ${records.length} from ZK in ${zkMs}ms`,
+      );
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await finishCycle(cycleId, {
@@ -142,12 +157,16 @@ async function runDeviceCycle(
   }
 
   pulled = records.length;
-  const fresh = records
-    .filter((r) => r.deviceUserId && r.deviceUserId !== '0')
+  const usable = records.filter((r) => r.deviceUserId && r.deviceUserId !== '0');
+  // Cap newest LIMIT_RECENT (lib returns oldest-first, slice(-N) = newest),
+  // then keep only events past the cursor. Server still dedups via unique
+  // (deviceId, eventLogId) as a safety net for the rare double-send.
+  const recent = usable.slice(-LIMIT_RECENT_RECORDS);
+  const fresh = recent
     .filter((r) => Number(r.userSn) > device.lastEventLogId)
     .map(translateZkRecord);
   console.log(
-    `[poll] device "${device.name}" — ${fresh.length} fresh event(s) after dedupe (cursor=${device.lastEventLogId})`,
+    `[poll] "${device.name}" — ${usable.length} usable, ${recent.length} recent, ${fresh.length} fresh after cursor=${device.lastEventLogId}`,
   );
 
   if (fresh.length === 0) {

@@ -62,27 +62,28 @@ export function VerifyOtpView({ destination }: VerifyOtpViewProps) {
   const handleResend = async () => {
     try {
       await resend.mutateAsync();
-      toast.success("New code sent", {
+      toast.success("Đã gửi mã mới", {
         description: destination
-          ? `Check ${destination} for the latest code.`
-          : "Check your inbox for the latest code.",
+          ? `Hãy kiểm tra ${destination} để xem mã mới.`
+          : "Hãy kiểm tra hộp thư để xem mã mới.",
       });
       setCode("");
       setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
-      toast.error("Couldn't resend code", {
-        description: err instanceof Error ? err.message : "Try again shortly.",
+      toast.error("Không gửi lại được mã", {
+        description:
+          err instanceof Error ? err.message : "Vui lòng thử lại sau.",
       });
     }
   };
 
   return (
     <AuthLayout
-      title="Verify your code"
+      title="Xác minh mã OTP"
       subtitle={
         destination
-          ? `We sent a 6-digit code to ${destination}.`
-          : "Enter the 6-digit code we just sent you."
+          ? `Chúng tôi đã gửi mã 6 chữ số đến ${destination}.`
+          : "Nhập mã 6 chữ số vừa được gửi cho bạn."
       }
     >
       <div className="space-y-6" ref={wrapperRef}>
@@ -110,7 +111,7 @@ export function VerifyOtpView({ destination }: VerifyOtpViewProps) {
 
         {verify.error && (
           <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-center text-sm text-destructive">
-            That code didn&apos;t match. Try again.
+            Mã không đúng. Vui lòng thử lại.
           </div>
         )}
 
@@ -118,7 +119,7 @@ export function VerifyOtpView({ destination }: VerifyOtpViewProps) {
           {verify.isPending ? (
             <span className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Verifying…
+              Đang xác minh…
             </span>
           ) : (
             <Button
@@ -136,10 +137,10 @@ export function VerifyOtpView({ destination }: VerifyOtpViewProps) {
                 )}
               />
               {cooldown > 0
-                ? `Resend in ${cooldown}s`
+                ? `Gửi lại sau ${cooldown}s`
                 : resend.isPending
-                  ? "Sending…"
-                  : "Resend code"}
+                  ? "Đang gửi…"
+                  : "Gửi lại mã"}
             </Button>
           )}
         </div>
@@ -149,7 +150,7 @@ export function VerifyOtpView({ destination }: VerifyOtpViewProps) {
           className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to sign in
+          Quay lại đăng nhập
         </Link>
       </div>
     </AuthLayout>

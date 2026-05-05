@@ -1,3 +1,3 @@
 export { LandingView } from "./views/LandingView";
-export { FEATURES, STACK } from "./data/content";
-export type { Feature, StackItem } from "./data/content";
+export { FEATURES, MODULES } from "./data/content";
+export type { Feature, ModuleItem } from "./data/content";

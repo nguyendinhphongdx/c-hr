@@ -2,7 +2,7 @@ import { DepartmentCreateView } from "@/features/departments";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
-  title: "New department",
+  title: "Thêm phòng ban",
   path: "/departments/new",
   noIndex: true,
 });

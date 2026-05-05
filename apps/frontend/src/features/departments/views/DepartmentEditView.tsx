@@ -48,15 +48,15 @@ import {
 const NO_PARENT = "__none__";
 
 const schema = z.object({
-  name: z.string().min(1, "Required").max(100),
-  parentId: z.union([z.literal(NO_PARENT), z.string().uuid("Pick a valid parent")], {
-    message: "Pick a valid parent",
+  name: z.string().min(1, "Bắt buộc").max(100),
+  parentId: z.union([z.literal(NO_PARENT), z.string().uuid("Chọn phòng ban cha hợp lệ")], {
+    message: "Chọn phòng ban cha hợp lệ",
   }),
-  managerId: z.string().uuid("Pick a valid manager").nullable(),
+  managerId: z.string().uuid("Chọn quản lý hợp lệ").nullable(),
   code: z
     .string()
     .max(50)
-    .regex(/^[A-Za-z0-9-_]*$/, "Letters, digits, hyphens, underscores only")
+    .regex(/^[A-Za-z0-9-_]*$/, "Chỉ chữ cái, số, gạch ngang, gạch dưới")
     .optional(),
 });
 
@@ -98,7 +98,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
   if (dept.isLoading) {
     return (
       <div className="mx-auto flex max-w-2xl items-center justify-center gap-2 px-6 py-16 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        <Loader2 className="h-4 w-4 animate-spin" /> Đang tải…
       </div>
     );
   }
@@ -106,10 +106,10 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
   if (dept.error || !dept.data) {
     return (
       <div className="mx-auto max-w-2xl px-6 py-16">
-        <p className="text-sm text-destructive">Department not found.</p>
+        <p className="text-sm text-destructive">Không tìm thấy phòng ban.</p>
         <Button variant="ghost" asChild className="mt-4 gap-2">
           <Link href="/departments">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back
+            <ArrowLeft className="h-3.5 w-3.5" /> Quay lại
           </Link>
         </Button>
       </div>
@@ -127,14 +127,14 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
           code: values.code || undefined,
         },
       });
-      toast.success("Department updated");
+      toast.success("Đã cập nhật phòng ban");
       router.push("/departments");
     } catch (err) {
-      toast.error("Couldn't update department", {
+      toast.error("Không cập nhật được phòng ban", {
         description:
           err instanceof Error
             ? err.message
-            : "Code conflict, parent cycle, or invalid manager.",
+            : "Trùng mã, vòng lặp phòng ban cha, hoặc quản lý không hợp lệ.",
       });
     }
   };
@@ -142,18 +142,18 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
   const onDelete = async () => {
     if (
       !confirm(
-        `Soft-delete "${dept.data.name}"? The row stays in the DB for history but disappears from the tree.`,
+        `Soft-delete "${dept.data.name}"? Row vẫn được giữ trong DB cho history nhưng biến khỏi cây.`,
       )
     ) {
       return;
     }
     try {
       await remove.mutateAsync(id);
-      toast.success("Department deleted");
+      toast.success("Đã xoá phòng ban");
       router.push("/departments");
     } catch (err) {
-      toast.error("Couldn't delete", {
-        description: err instanceof Error ? err.message : "Try again later.",
+      toast.error("Không xoá được", {
+        description: err instanceof Error ? err.message : "Thử lại sau.",
       });
     }
   };
@@ -166,7 +166,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
     <div className="mx-auto w-full max-w-2xl space-y-6 px-6 py-8">
       <Button variant="ghost" asChild size="sm" className="gap-2">
         <Link href="/departments">
-          <ArrowLeft className="h-3.5 w-3.5" /> All departments
+          <ArrowLeft className="h-3.5 w-3.5" /> Tất cả phòng ban
         </Link>
       </Button>
 
@@ -174,7 +174,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <Card>
             <CardHeader>
-              <CardTitle>Edit department</CardTitle>
+              <CardTitle>Sửa phòng ban</CardTitle>
               <CardDescription>{dept.data.name}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -183,7 +183,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Tên</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -197,18 +197,18 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
                 name="parentId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Parent</FormLabel>
+                    <FormLabel>Phòng ban cha</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="(root)" />
+                          <SelectValue placeholder="(gốc)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={NO_PARENT}>(root)</SelectItem>
+                        <SelectItem value={NO_PARENT}>(gốc)</SelectItem>
                         {parentOptions.map((d) => (
                           <SelectItem key={d.id} value={d.id}>
                             {d.name}
@@ -218,7 +218,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Server rejects parents that would create a cycle.
+                      Server sẽ từ chối phòng ban cha tạo thành vòng lặp.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -230,7 +230,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Code</FormLabel>
+                    <FormLabel>Mã</FormLabel>
                     <FormControl>
                       <Input placeholder="ENG-01" {...field} />
                     </FormControl>
@@ -244,7 +244,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
                 name="managerId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Manager</FormLabel>
+                    <FormLabel>Quản lý</FormLabel>
                     <FormControl>
                       <EmployeePicker
                         value={field.value}
@@ -252,7 +252,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
                       />
                     </FormControl>
                     <FormDescription>
-                      Search by name, email, or code. Clear to detach.
+                      Tìm theo tên, email hoặc mã. Xoá để bỏ liên kết.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -272,11 +272,11 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
                 ) : (
                   <Trash2 className="h-3.5 w-3.5" />
                 )}
-                Delete
+                Xoá
               </Button>
               <div className="flex items-center gap-2">
                 <Button type="button" variant="ghost" asChild>
-                  <Link href="/departments">Cancel</Link>
+                  <Link href="/departments">Huỷ</Link>
                 </Button>
                 <Button
                   type="submit"
@@ -286,7 +286,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
                   {update.isPending && (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   )}
-                  Save changes
+                  Lưu
                 </Button>
               </div>
             </CardFooter>

@@ -3,7 +3,7 @@ import { ResetPasswordView } from "@/features/auth";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
-  title: "Reset password",
+  title: "Đặt lại mật khẩu",
   path: "/reset-password",
   noIndex: true,
 });

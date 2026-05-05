@@ -13,8 +13,8 @@ interface NavItem {
 }
 
 const ITEMS: NavItem[] = [
-  { href: "/settings/profile", label: "Profile", icon: User },
-  { href: "/settings/security", label: "Security", icon: KeyRound },
+  { href: "/settings/profile", label: "Hồ sơ", icon: User },
+  { href: "/settings/security", label: "Bảo mật", icon: KeyRound },
 ];
 
 export function SettingsNav() {

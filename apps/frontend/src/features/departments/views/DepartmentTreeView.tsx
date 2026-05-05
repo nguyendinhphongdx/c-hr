@@ -27,16 +27,16 @@ export function DepartmentTreeView() {
     <div className="mx-auto w-full max-w-5xl space-y-6 px-6 py-8">
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Departments</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Phòng ban</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Org structure — nested by parent. HRM admins can add / re-parent.
+            Cây tổ chức — lồng theo phòng ban cha. HRM admin có thể thêm / đổi cấp.
           </p>
         </div>
         {canManage && (
           <Button asChild>
             <Link href="/departments/new" className="gap-2">
               <Plus className="h-4 w-4" />
-              New department
+              Phòng ban mới
             </Link>
           </Button>
         )}
@@ -45,27 +45,27 @@ export function DepartmentTreeView() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <FolderTree className="h-4 w-4" /> Tree
+            <FolderTree className="h-4 w-4" /> Cây tổ chức
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang tải…
             </div>
           ) : error ? (
             <p className="py-6 text-sm text-destructive">
-              Couldn&apos;t load departments.
+              Không tải được phòng ban.
             </p>
           ) : tree.length === 0 ? (
             <p className="py-6 text-sm text-muted-foreground">
-              No departments yet.{" "}
+              Chưa có phòng ban.{" "}
               {canManage && (
                 <Link
                   href="/departments/new"
                   className="text-foreground underline hover:no-underline"
                 >
-                  Create the first one
+                  Tạo phòng ban đầu tiên
                 </Link>
               )}
               .
@@ -114,7 +114,7 @@ function TreeNode({
             type="button"
             onClick={() => setExpanded((s) => !s)}
             className="text-muted-foreground transition-colors hover:text-foreground"
-            aria-label={expanded ? "Collapse" : "Expand"}
+            aria-label={expanded ? "Thu gọn" : "Mở rộng"}
           >
             {expanded ? (
               <ChevronDown className="h-3.5 w-3.5" />
@@ -140,7 +140,7 @@ function TreeNode({
           <Link
             href={`/departments/${node.id}/edit`}
             className="ml-auto text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-            aria-label={`Edit ${node.name}`}
+            aria-label={`Sửa ${node.name}`}
           >
             <Pencil className="h-3.5 w-3.5" />
           </Link>

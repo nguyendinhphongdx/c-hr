@@ -16,19 +16,19 @@ function nameFromEmail(email: string): string {
 }
 
 function readGreeting(): string {
-  if (typeof window === "undefined") return "Welcome back";
+  if (typeof window === "undefined") return "Chào mừng trở lại";
   const remembered = localStorage.getItem(REMEMBER_ME_KEY) === "1";
-  if (!remembered) return "Welcome back";
+  if (!remembered) return "Chào mừng trở lại";
   const email = localStorage.getItem(LAST_EMAIL_KEY) ?? "";
   const name = nameFromEmail(email);
-  return name ? `Welcome back, ${name}` : "Welcome back";
+  return name ? `Chào mừng trở lại, ${name}` : "Chào mừng trở lại";
 }
 
 export function LoginView() {
   const [greeting] = useState(readGreeting);
 
   return (
-    <AuthLayout title={greeting} subtitle="Sign in to continue.">
+    <AuthLayout title={greeting} subtitle="Đăng nhập để tiếp tục vào C-HR.">
       <LoginForm />
     </AuthLayout>
   );

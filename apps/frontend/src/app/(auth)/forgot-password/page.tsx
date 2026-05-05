@@ -2,9 +2,9 @@ import { ForgotPasswordView } from "@/features/auth";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
-  title: "Forgot password",
+  title: "Quên mật khẩu",
   path: "/forgot-password",
-  description: "Reset your password by email.",
+  description: "Đặt lại mật khẩu qua email.",
 });
 
 export default function ForgotPasswordPage() {

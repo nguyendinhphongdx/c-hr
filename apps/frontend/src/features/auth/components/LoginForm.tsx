@@ -35,8 +35,8 @@ function readRemembered() {
 }
 
 const schema = z.object({
-  email: z.string().email("Invalid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Email không hợp lệ"),
+  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -81,11 +81,11 @@ export function LoginForm() {
     } catch (err) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
-      toast.error("Sign-in failed", {
+      toast.error("Đăng nhập thất bại", {
         description:
           err instanceof Error
             ? err.message
-            : "Check your credentials and try again.",
+            : "Kiểm tra lại email và mật khẩu rồi thử lại.",
       });
     }
   };
@@ -100,7 +100,7 @@ export function LoginForm() {
         </div>
         <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
           <span className="bg-background px-2 text-muted-foreground">
-            Or continue with email
+            Hoặc đăng nhập bằng email
           </span>
         </div>
       </div>
@@ -120,7 +120,7 @@ export function LoginForm() {
                 <FormControl>
                   <Input
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="ban@congty.vn"
                     autoComplete="email"
                     autoFocus
                     {...field}
@@ -137,19 +137,19 @@ export function LoginForm() {
             render={({ field }) => (
               <FormItem>
                 <div className="flex items-center justify-between">
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Mật khẩu</FormLabel>
                   <Link
                     href="/forgot-password"
                     className="text-xs text-muted-foreground transition-colors hover:text-foreground"
                   >
-                    Forgot password?
+                    Quên mật khẩu?
                   </Link>
                 </div>
                 <FormControl>
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder="Nhập mật khẩu"
                       autoComplete="current-password"
                       className="pr-10"
                       {...field}
@@ -158,7 +158,7 @@ export function LoginForm() {
                       type="button"
                       onClick={() => setShowPassword((s) => !s)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                       tabIndex={-1}
                     >
                       {showPassword ? (
@@ -182,13 +182,13 @@ export function LoginForm() {
               className="h-3.5 w-3.5 cursor-pointer rounded border-border text-primary focus:ring-primary/30"
             />
             <span className="text-xs text-muted-foreground">
-              Remember me on this device
+              Ghi nhớ trên thiết bị này
             </span>
           </label>
 
           {login.error && (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              Invalid email or password
+              Email hoặc mật khẩu không đúng
             </div>
           )}
 
@@ -200,15 +200,15 @@ export function LoginForm() {
             {login.isPending ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Signing in…
+                Đang đăng nhập…
               </>
             ) : (
-              "Sign in"
+              "Đăng nhập"
             )}
           </Button>
 
           <p className="text-center text-[10px] text-muted-foreground/70">
-            Press{" "}
+            Nhấn{" "}
             <kbd className="rounded border border-border bg-muted px-1 py-px font-mono text-[9px]">
               ⌘
             </kbd>{" "}
@@ -216,16 +216,16 @@ export function LoginForm() {
             <kbd className="rounded border border-border bg-muted px-1 py-px font-mono text-[9px]">
               Enter
             </kbd>{" "}
-            to sign in
+            để đăng nhập
           </p>
 
           <p className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
+            Chưa có tài khoản?{" "}
             <Link
               href="/register"
               className="font-medium text-foreground hover:underline"
             >
-              Sign up
+              Tạo Org mới
             </Link>
           </p>
         </form>

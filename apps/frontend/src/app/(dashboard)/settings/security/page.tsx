@@ -2,7 +2,7 @@ import { SecurityView } from "@/features/settings";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
-  title: "Security",
+  title: "Bảo mật",
   path: "/settings/security",
   noIndex: true,
 });

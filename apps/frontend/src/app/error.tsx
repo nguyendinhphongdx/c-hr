@@ -30,17 +30,17 @@ export default function GlobalError({
         <AlertTriangle className="h-6 w-6" />
       </div>
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold">Something went wrong</h2>
+        <h2 className="text-lg font-semibold">Đã có lỗi xảy ra</h2>
         <p className="max-w-md text-sm text-muted-foreground">
-          {error.message || "An unexpected error occurred."}
+          {error.message || "Có lỗi không mong muốn vừa xảy ra."}
         </p>
         {error.digest && (
           <p className="text-xs text-muted-foreground/70">
-            Error ID: <span className="font-mono">{error.digest}</span>
+            Mã lỗi: <span className="font-mono">{error.digest}</span>
           </p>
         )}
       </div>
-      <Button onClick={reset}>Try again</Button>
+      <Button onClick={reset}>Thử lại</Button>
     </div>
   );
 }

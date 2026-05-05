@@ -42,13 +42,13 @@ import { useEmployee, useUpdateEmployee } from "../hooks/useEmployees";
 const NO_DEPARTMENT = "__none__";
 
 const schema = z.object({
-  userId: z.string().uuid("Pick a user"),
+  userId: z.string().uuid("Chọn người dùng"),
   title: z.string().max(100).nullable(),
   hireDate: z.string().nullable(),
   terminationDate: z.string().nullable(),
   departmentId: z.union(
-    [z.literal(NO_DEPARTMENT), z.string().uuid("Pick a valid department")],
-    { message: "Pick a valid department" },
+    [z.literal(NO_DEPARTMENT), z.string().uuid("Chọn phòng ban hợp lệ")],
+    { message: "Chọn phòng ban hợp lệ" },
   ),
   status: z.enum(["ACTIVE", "ON_LEAVE", "TERMINATED"]),
 });
@@ -111,26 +111,26 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
           status: values.status,
         },
       });
-      toast.success("Employee updated");
+      toast.success("Đã cập nhật nhân viên");
       onClose();
     } catch (err) {
-      toast.error("Couldn't update employee", {
+      toast.error("Không cập nhật được nhân viên", {
         description:
           err instanceof Error
             ? err.message
-            : "User may already be linked, or the department isn't in this Org.",
+            : "Người dùng có thể đã liên kết, hoặc phòng ban không thuộc Org này.",
       });
     }
   };
 
   const linkedUser = employee.data?.user ?? null;
-  const headerName = linkedUser?.name ?? "(no name)";
+  const headerName = linkedUser?.name ?? "(không tên)";
 
   return (
     <Dialog open={!!id} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Edit employee</DialogTitle>
+          <DialogTitle>Sửa nhân viên</DialogTitle>
           <DialogDescription>
             <span className="font-mono text-xs">{employee.data?.code ?? "…"}</span>
             {" · "}
@@ -140,7 +140,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
 
         {employee.isLoading || !employee.data ? (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang tải…
           </div>
         ) : (
           <Form {...form}>
@@ -154,7 +154,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                 name="userId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>User</FormLabel>
+                    <FormLabel>Người dùng</FormLabel>
                     <FormControl>
                       <UserPicker
                         value={field.value || null}
@@ -169,7 +169,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                       />
                     </FormControl>
                     <FormDescription>
-                      Re-link to a different user — personal info follows.
+                      Liên kết lại với người dùng khác — thông tin cá nhân đi kèm.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -181,7 +181,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>Chức danh</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Senior Engineer"
@@ -202,7 +202,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                 name="departmentId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Department</FormLabel>
+                    <FormLabel>Phòng ban</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -210,7 +210,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={NO_DEPARTMENT}>(none)</SelectItem>
+                        <SelectItem value={NO_DEPARTMENT}>(không có)</SelectItem>
                         {departments.data?.map((d) => (
                           <SelectItem key={d.id} value={d.id}>
                             {d.name}
@@ -230,7 +230,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                   name="hireDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Hire date</FormLabel>
+                      <FormLabel>Ngày vào</FormLabel>
                       <FormControl>
                         <Input
                           type="date"
@@ -250,7 +250,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                   name="terminationDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Termination date</FormLabel>
+                      <FormLabel>Ngày nghỉ việc</FormLabel>
                       <FormControl>
                         <Input
                           type="date"
@@ -262,7 +262,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                         />
                       </FormControl>
                       <FormDescription className="text-xs">
-                        Pair with status TERMINATED.
+                        Kết hợp với trạng thái TERMINATED.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -275,7 +275,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status</FormLabel>
+                    <FormLabel>Trạng thái</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -283,9 +283,9 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="ACTIVE">Active</SelectItem>
-                        <SelectItem value="ON_LEAVE">On leave</SelectItem>
-                        <SelectItem value="TERMINATED">Terminated</SelectItem>
+                        <SelectItem value="ACTIVE">Đang làm</SelectItem>
+                        <SelectItem value="ON_LEAVE">Đang nghỉ</SelectItem>
+                        <SelectItem value="TERMINATED">Đã nghỉ việc</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -298,7 +298,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
 
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            Huỷ
           </Button>
           <Button
             type="submit"
@@ -309,7 +309,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
             className="gap-2"
           >
             {update.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Save changes
+            Lưu
           </Button>
         </DialogFooter>
       </DialogContent>

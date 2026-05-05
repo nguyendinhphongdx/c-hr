@@ -91,7 +91,7 @@ export function AttendanceDevicesView() {
   const onCopy = async (token: string) => {
     try {
       await navigator.clipboard.writeText(token);
-      toast.success("Token copied");
+      toast.success("Đã copy token");
     } catch {
       toast.error("Copy thất bại — copy thủ công.");
     }
@@ -100,7 +100,7 @@ export function AttendanceDevicesView() {
   const onCopyEndpoint = async () => {
     try {
       await navigator.clipboard.writeText(apiEndpoint);
-      toast.success("Endpoint copied");
+      toast.success("Đã copy endpoint");
     } catch {
       toast.error("Copy thất bại — copy thủ công.");
     }
@@ -109,7 +109,7 @@ export function AttendanceDevicesView() {
   if (!canManage) {
     return (
       <p className="text-sm text-muted-foreground">
-        Only HRM appadmins can manage attendance devices.
+        Chỉ HRM appadmin mới quản lý được máy chấm công.
       </p>
     );
   }
@@ -143,7 +143,7 @@ export function AttendanceDevicesView() {
       setTokenDialog({ deviceId: id, token, serial, mode: "view" });
     } catch (err) {
       toast.error("Không lấy được token", {
-        description: err instanceof Error ? err.message : "Try again later.",
+        description: err instanceof Error ? err.message : "Thử lại sau.",
       });
     }
   };
@@ -152,10 +152,10 @@ export function AttendanceDevicesView() {
     try {
       const { token } = await getToken.mutateAsync(id);
       await navigator.clipboard.writeText(token);
-      toast.success("Token copied vào clipboard");
+      toast.success("Đã copy token vào clipboard");
     } catch (err) {
       toast.error("Copy thất bại", {
-        description: err instanceof Error ? err.message : "Try again later.",
+        description: err instanceof Error ? err.message : "Thử lại sau.",
       });
     }
   };
@@ -178,7 +178,7 @@ export function AttendanceDevicesView() {
       });
     } catch (err) {
       toast.error("Regenerate thất bại", {
-        description: err instanceof Error ? err.message : "Try again later.",
+        description: err instanceof Error ? err.message : "Thử lại sau.",
       });
     }
   };
@@ -186,10 +186,10 @@ export function AttendanceDevicesView() {
   const onToggleActive = async (id: ID, next: boolean) => {
     try {
       await update.mutateAsync({ id, data: { isActive: next } });
-      toast.success(next ? "Device activated" : "Device disabled");
+      toast.success(next ? "Đã bật device" : "Đã tắt device");
     } catch (err) {
-      toast.error("Update thất bại", {
-        description: err instanceof Error ? err.message : "Try again later.",
+      toast.error("Cập nhật thất bại", {
+        description: err instanceof Error ? err.message : "Thử lại sau.",
       });
     }
   };
@@ -200,10 +200,10 @@ export function AttendanceDevicesView() {
     }
     try {
       await remove.mutateAsync(id);
-      toast.success("Device deleted");
+      toast.success("Đã xoá device");
     } catch (err) {
-      toast.error("Delete thất bại", {
-        description: err instanceof Error ? err.message : "Try again later.",
+      toast.error("Xoá thất bại", {
+        description: err instanceof Error ? err.message : "Thử lại sau.",
       });
     }
   };
@@ -212,14 +212,14 @@ export function AttendanceDevicesView() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Attendance devices</h2>
+          <h2 className="text-xl font-semibold">Máy chấm công</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Đầu đọc chấm công đã đăng ký với Org. Đăng ký mỗi device 1 lần để
             nhận token; ZK-Bridge ở văn phòng dùng token để push log về.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Add device
+          <Plus className="h-4 w-4" /> Thêm máy
         </Button>
       </div>
 
@@ -252,7 +252,7 @@ export function AttendanceDevicesView() {
 
           <ol className="list-decimal space-y-1 pl-5">
             <li>
-              Bấm <strong>Add device</strong> để đăng ký 1 đầu đọc — server
+              Bấm <strong>Thêm máy</strong> để đăng ký 1 đầu đọc — server
               sinh ra 1 token JWT đại diện cho device đó.
             </li>
             <li>
@@ -275,13 +275,13 @@ export function AttendanceDevicesView() {
       <div className="rounded-md border bg-background">
         {list.isLoading ? (
           <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+            <Loader2 className="h-4 w-4 animate-spin" /> Đang tải…
           </div>
         ) : list.error ? (
-          <p className="p-6 text-sm text-destructive">Couldn&apos;t load devices.</p>
+          <p className="p-6 text-sm text-destructive">Không tải được danh sách máy.</p>
         ) : !list.data?.length ? (
           <div className="p-12 text-center text-sm text-muted-foreground">
-            Chưa có device nào — nhấn &quot;Add device&quot; để tạo cái đầu tiên.
+            Chưa có máy nào — nhấn &quot;Thêm máy&quot; để tạo cái đầu tiên.
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -289,9 +289,9 @@ export function AttendanceDevicesView() {
               <tr>
                 <th className="px-4 py-3 font-medium">Tên</th>
                 <th className="px-4 py-3 font-medium">Serial</th>
-                <th className="px-4 py-3 font-medium">Brand</th>
-                <th className="px-4 py-3 font-medium">Last seen</th>
-                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Loại máy</th>
+                <th className="px-4 py-3 font-medium">Lần kết nối gần nhất</th>
+                <th className="px-4 py-3 font-medium">Trạng thái</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -308,7 +308,7 @@ export function AttendanceDevicesView() {
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={dev.isActive ? "default" : "outline"}>
-                      {dev.isActive ? "active" : "disabled"}
+                      {dev.isActive ? "đang bật" : "đã tắt"}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -318,7 +318,7 @@ export function AttendanceDevicesView() {
                           size="sm"
                           variant="ghost"
                           className="h-8 w-8 p-0"
-                          aria-label={`Actions for ${dev.serial}`}
+                          aria-label={`Thao tác cho ${dev.serial}`}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -332,13 +332,13 @@ export function AttendanceDevicesView() {
                           onClick={() => onViewToken(dev.id, dev.serial)}
                         >
                           <Eye className="mr-2 h-3.5 w-3.5" />
-                          View token
+                          Xem token
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => onRegenerate(dev.id, dev.serial)}
                         >
                           <RefreshCcw className="mr-2 h-3.5 w-3.5" />
-                          Regenerate token
+                          Tạo token mới
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -347,12 +347,12 @@ export function AttendanceDevicesView() {
                           {dev.isActive ? (
                             <>
                               <PowerOff className="mr-2 h-3.5 w-3.5" />
-                              Disable
+                              Tắt
                             </>
                           ) : (
                             <>
                               <Power className="mr-2 h-3.5 w-3.5" />
-                              Enable
+                              Bật
                             </>
                           )}
                         </DropdownMenuItem>
@@ -362,7 +362,7 @@ export function AttendanceDevicesView() {
                           onClick={() => onDelete(dev.id, dev.serial)}
                         >
                           <Trash2 className="mr-2 h-3.5 w-3.5" />
-                          Delete
+                          Xoá
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -429,7 +429,7 @@ function CreateDeviceDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add attendance device</DialogTitle>
+          <DialogTitle>Thêm máy chấm công</DialogTitle>
           <DialogDescription>
             Sau khi tạo, token sẽ hiện ngay để copy vào ZK-Bridge. Admin có
             thể quay lại xem / copy token bất cứ lúc nào qua menu ⋯.
@@ -456,7 +456,7 @@ function CreateDeviceDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="device-brand">Brand *</Label>
+            <Label htmlFor="device-brand">Loại máy *</Label>
             <Select value={brand} onValueChange={(v) => setBrand(v as DeviceBrand)}>
               <SelectTrigger id="device-brand">
                 <SelectValue placeholder="Chọn loại máy..." />
@@ -471,7 +471,7 @@ function CreateDeviceDialog({
             </Select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="device-ip">IP address (optional)</Label>
+            <Label htmlFor="device-ip">Địa chỉ IP (tuỳ chọn)</Label>
             <Input
               id="device-ip"
               placeholder="192.168.1.50"
@@ -483,7 +483,7 @@ function CreateDeviceDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            Huỷ
           </Button>
           <Button
             onClick={() => {
@@ -499,7 +499,7 @@ function CreateDeviceDialog({
             className="gap-2"
           >
             {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Create
+            Tạo
           </Button>
         </DialogFooter>
       </DialogContent>

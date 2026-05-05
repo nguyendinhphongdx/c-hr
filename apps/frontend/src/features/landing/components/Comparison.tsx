@@ -9,19 +9,19 @@ export function Comparison() {
     <Section
       id="compare"
       muted
-      eyebrow="What you skip"
-      title="vs. starting from `create-next-app`"
-      description="`create-next-app` is great. This template starts where it leaves off."
+      eyebrow="Bạn đỡ được gì"
+      title="So với Excel & quản lý thủ công"
+      description="Excel hữu ích cho 10 nhân viên đầu. Sau con số đó, mỗi kỳ lương là một lần đua nước rút. C-HR thay đúng phần đau đầu nhất."
     >
       <Reveal>
         <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
           <div className="grid grid-cols-1 border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid-cols-3">
-            <div className="px-6 py-4">Concern</div>
+            <div className="px-6 py-4">Vấn đề</div>
             <div className="border-t border-border px-6 py-4 text-emerald-600 md:border-t-0 md:border-l">
-              This template
+              Với C-HR
             </div>
             <div className="border-t border-border px-6 py-4 md:border-t-0 md:border-l">
-              Roll your own
+              Excel · Thủ công
             </div>
           </div>
 

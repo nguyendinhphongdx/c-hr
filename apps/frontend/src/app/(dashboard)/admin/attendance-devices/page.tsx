@@ -2,7 +2,7 @@ import { AttendanceDevicesView } from "@/features/attendance-devices";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
-  title: "Attendance devices",
+  title: "Máy chấm công",
   path: "/admin/attendance-devices",
   noIndex: true,
 });

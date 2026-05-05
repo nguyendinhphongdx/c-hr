@@ -2,7 +2,7 @@ import { HomeView } from "@/features/dashboard";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
-  title: "Home",
+  title: "Trang chủ",
   path: "/home",
   noIndex: true,
 });

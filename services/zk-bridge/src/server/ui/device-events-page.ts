@@ -118,9 +118,9 @@ export function renderDeviceEventsPage(opts: {
             dưới = đã push (pushed).
           </p>
         </div>
-        <a href="/devices/${device.id}/events?refresh=1"
+        <a href="/devices/${device.id}/events"
            class="text-xs px-3 py-1.5 border border-slate-300 rounded hover:bg-slate-100">
-          Refresh from device
+          Reload
         </a>
       </div>
       <table class="w-full">

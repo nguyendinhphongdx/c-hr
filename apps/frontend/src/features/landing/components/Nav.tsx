@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Menu, Sparkles, X } from "lucide-react";
 
-import { GithubIcon } from "@/components/icons";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS, SITE } from "@/lib/seo";
@@ -52,25 +51,16 @@ export function Nav() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <a
-            href={SITE.github}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted sm:inline-flex"
-          >
-            <GithubIcon className="h-3.5 w-3.5" />
-            <span>Star</span>
-          </a>
           <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
-            <Link href="/login">Sign in</Link>
+            <Link href="/login">Đăng nhập</Link>
           </Button>
           <Button asChild size="sm">
-            <Link href="/register">Get started</Link>
+            <Link href="/register">Dùng thử</Link>
           </Button>
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            aria-label="Toggle menu"
+            aria-label="Mở/đóng menu"
             aria-expanded={open}
             className="ml-1 inline-flex items-center justify-center rounded-lg border border-border bg-background p-2 md:hidden"
           >
@@ -97,7 +87,7 @@ export function Nav() {
               onClick={() => setOpen(false)}
               className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              Sign in
+              Đăng nhập
             </Link>
           </nav>
         </div>

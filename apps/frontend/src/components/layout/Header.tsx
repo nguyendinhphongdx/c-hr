@@ -42,7 +42,7 @@ export function Header({ sidebarCollapsed, onToggleSidebar }: HeaderProps) {
         variant="ghost"
         size="icon"
         onClick={onToggleSidebar}
-        aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={sidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
       >
         {sidebarCollapsed ? (
           <PanelLeft className="h-4 w-4" />
@@ -66,7 +66,7 @@ export function Header({ sidebarCollapsed, onToggleSidebar }: HeaderProps) {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="space-y-0.5">
             <p className="text-sm font-medium leading-none">
-              {user?.name ?? "Guest"}
+              {user?.name ?? "Khách"}
             </p>
             <p className="text-xs leading-none text-muted-foreground">
               {user?.email}
@@ -76,13 +76,13 @@ export function Header({ sidebarCollapsed, onToggleSidebar }: HeaderProps) {
           <DropdownMenuItem asChild>
             <Link href="/settings/profile">
               <User className="mr-2 h-4 w-4" />
-              Profile
+              Hồ sơ
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/settings">
               <Settings className="mr-2 h-4 w-4" />
-              Settings
+              Cài đặt
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -91,7 +91,7 @@ export function Header({ sidebarCollapsed, onToggleSidebar }: HeaderProps) {
             onClick={() => logout.mutate()}
           >
             <LogOut className="mr-2 h-4 w-4" />
-            Sign out
+            Đăng xuất
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

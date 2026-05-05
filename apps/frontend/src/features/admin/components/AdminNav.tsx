@@ -18,10 +18,10 @@ interface NavItem {
 }
 
 const ITEMS: NavItem[] = [
-  { href: "/admin/organization", label: "Organization", icon: Building2, adminOnly: true },
-  { href: "/admin/app-admins", label: "App admins", icon: Shield, adminOnly: true },
-  { href: "/admin/work-schedule", label: "Work schedule", icon: CalendarClock, hrmOnly: true },
-  { href: "/admin/attendance-devices", label: "Attendance devices", icon: Radio, hrmOnly: true },
+  { href: "/admin/organization", label: "Doanh nghiệp", icon: Building2, adminOnly: true },
+  { href: "/admin/app-admins", label: "Quản trị app", icon: Shield, adminOnly: true },
+  { href: "/admin/work-schedule", label: "Ca làm chuẩn", icon: CalendarClock, hrmOnly: true },
+  { href: "/admin/attendance-devices", label: "Máy chấm công", icon: Radio, hrmOnly: true },
 ];
 
 export function AdminNav() {

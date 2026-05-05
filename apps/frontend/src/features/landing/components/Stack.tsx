@@ -1,20 +1,20 @@
 import { Badge } from "@/components/ui/badge";
 
-import { STACK } from "../data/content";
+import { MODULES } from "../data/content";
 import { Reveal } from "./Reveal";
 import { Section } from "./Section";
 
 export function Stack() {
   return (
     <Section
-      id="stack"
-      eyebrow="The whole list"
-      title="Modern, current, vendor-neutral"
-      description="Latest stable versions across the board. No patched forks, no mystery monorepo."
+      id="modules"
+      eyebrow="Tất cả module"
+      title="Một nền tảng — đủ cho cả vòng đời nhân sự"
+      description="Mỗi module độc lập về quy trình nhưng chung một nguồn dữ liệu nhân viên. Bật module nào dùng module đó."
     >
       <Reveal>
         <div className="flex flex-wrap justify-center gap-2">
-          {STACK.map((item) => (
+          {MODULES.map((item) => (
             <Badge
               key={item.name}
               variant="outline"

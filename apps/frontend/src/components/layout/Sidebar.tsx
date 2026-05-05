@@ -40,23 +40,23 @@ interface NavSection {
 
 const NAV_SECTIONS: NavSection[] = [
   {
-    items: [{ href: "/home", label: "Home", icon: Home }],
+    items: [{ href: "/home", label: "Trang chủ", icon: Home }],
   },
   {
-    label: "HRM",
+    label: "Nhân sự",
     items: [
-      { href: "/employees", label: "Employees", icon: Users },
-      { href: "/departments", label: "Departments", icon: Building2 },
-      { href: "/orgchart", label: "OrgChart", icon: Network },
+      { href: "/employees", label: "Nhân viên", icon: Users },
+      { href: "/departments", label: "Phòng ban", icon: Building2 },
+      { href: "/orgchart", label: "Cây tổ chức", icon: Network },
     ],
   },
   {
-    label: "Attendance",
-    items: [{ href: "/timesheet", label: "Timesheet", icon: Calendar }],
+    label: "Chấm công",
+    items: [{ href: "/timesheet", label: "Bảng giờ làm", icon: Calendar }],
   },
   {
-    label: "Requests",
-    items: [{ href: "/requests", label: "Requests", icon: Inbox }],
+    label: "Đơn từ",
+    items: [{ href: "/requests", label: "Đơn từ", icon: Inbox }],
   },
 ];
 
@@ -119,13 +119,13 @@ export function Sidebar({ collapsed }: SidebarProps) {
       <div className="mt-auto space-y-1 border-t p-2">
         {showAdmin && (
           <NavLink
-            item={{ href: "/admin", label: "Admin", icon: Shield }}
+            item={{ href: "/admin", label: "Quản trị", icon: Shield }}
             collapsed={collapsed}
             active={pathname === "/admin" || pathname.startsWith("/admin/")}
           />
         )}
         <NavLink
-          item={{ href: "/settings", label: "Settings", icon: Settings }}
+          item={{ href: "/settings", label: "Cài đặt", icon: Settings }}
           collapsed={collapsed}
           active={pathname === "/settings" || pathname.startsWith("/settings/")}
         />
@@ -176,7 +176,7 @@ function NavLink({
     <Tooltip delayDuration={0}>
       <TooltipTrigger asChild>{node}</TooltipTrigger>
       <TooltipContent side="right">
-        {item.disabled ? `${item.label} — coming soon` : item.label}
+        {item.disabled ? `${item.label} — sắp có` : item.label}
       </TooltipContent>
     </Tooltip>
   );

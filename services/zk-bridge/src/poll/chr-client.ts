@@ -31,12 +31,9 @@ export async function pushEvents(
   };
   const url = `${cfg.baseUrl.replace(/\/$/, '')}/attendance-devices/push`;
   const start = Date.now();
-  console.log(`[chr-client] POST ${url} (events=${events.length})`);
   try {
-    const res = await axios.post(url, body, { timeout: cfg.timeoutMs ?? 30_000 });
-    console.log(
-      `[chr-client] ✓ ${url} HTTP ${res.status} (events=${events.length}, ${Date.now() - start}ms)`,
-    );
+    await axios.post(url, body, { timeout: cfg.timeoutMs ?? 30_000 });
+    // Success is silent — caller (poll cycle) logs the aggregate count.
   } catch (err) {
     if (err instanceof AxiosError) {
       const status = err.response?.status;
@@ -70,14 +67,12 @@ export interface PingResult {
 export async function pingConnection(cfg: PushClientConfig): Promise<PingResult> {
   const url = `${cfg.baseUrl.replace(/\/$/, '')}/attendance-devices/ping`;
   const start = Date.now();
-  console.log(`[chr-client] PING ${url}`);
   try {
     const res = await axios.post<{ data: PingResult } | PingResult>(
       url,
       { token: cfg.token },
       { timeout: cfg.timeoutMs ?? 10_000 },
     );
-    console.log(`[chr-client] ✓ PING ${url} HTTP ${res.status} (${Date.now() - start}ms)`);
     // BE wraps responses in { success, data, ... }; accept either shape.
     const body = res.data as PingResult | { data: PingResult };
     return 'data' in body && typeof body.data === 'object' ? body.data : (body as PingResult);

@@ -122,7 +122,7 @@ export function WorkScheduleSettingsView() {
   if (!canManage) {
     return (
       <p className="text-sm text-muted-foreground">
-        Only HRM appadmins can edit the work schedule.
+        Chỉ HRM appadmin mới sửa được ca làm chuẩn.
       </p>
     );
   }
@@ -203,7 +203,7 @@ export function WorkScheduleSettingsView() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Work schedule</h2>
+        <h2 className="text-xl font-semibold">Ca làm chuẩn</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Lịch chuẩn của Org. Mỗi ca gắn với 1 set ngày trong tuần — không
           trùng giữa các ca.
@@ -212,15 +212,15 @@ export function WorkScheduleSettingsView() {
 
       {list.isLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          <Loader2 className="h-4 w-4 animate-spin" /> Đang tải…
         </div>
       ) : (
         <>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Schedule</CardTitle>
+              <CardTitle className="text-base">Lịch làm</CardTitle>
               <CardDescription>
-                {current ? "Updating the default schedule." : "Creating the default schedule."}
+                {current ? "Đang cập nhật lịch mặc định." : "Đang tạo lịch mặc định."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -252,7 +252,7 @@ export function WorkScheduleSettingsView() {
                     size="sm"
                     className="text-destructive hover:text-destructive"
                     onClick={() => removeShift(shift.key)}
-                    aria-label="Remove shift"
+                    aria-label="Xoá ca"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

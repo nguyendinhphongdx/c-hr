@@ -76,15 +76,16 @@ export function renderDevicesPage(opts: {
               // most likely means the device is busy (single-connection limit)
               // rather than "not a ZKTeco". Different label for that case.
               const isCanonicalZkPort = c.port === 4370;
+              // node-zklib 1.3 only exposes getInfo() for stats — no
+              // serial / model / firmware fields on the wire.
               const tagBits: string[] = [];
               if (reachable) {
-                if (i?.name) tagBits.push(escapeHtml(i.name));
-                if (i?.version) tagBits.push(`fw ${escapeHtml(i.version)}`);
-                if (i?.serial) tagBits.push(`SN ${escapeHtml(i.serial)}`);
                 if (typeof i?.userCount === 'number')
                   tagBits.push(`${i.userCount} users`);
                 if (typeof i?.attendanceCount === 'number')
                   tagBits.push(`${i.attendanceCount} logs`);
+                if (typeof i?.logCapacity === 'number')
+                  tagBits.push(`cap ${i.logCapacity}`);
               }
               const tags = tagBits.length
                 ? `<div class="text-xs text-slate-500 mt-0.5">${tagBits.join(' · ')}</div>`
@@ -110,7 +111,7 @@ export function renderDevicesPage(opts: {
                   <button type="button" class="zkb-add-from-scan shrink-0 text-xs px-2 py-1 bg-slate-900 text-white rounded hover:bg-slate-800"
                     data-host="${escapeHtml(c.host)}"
                     data-port="${c.port}"
-                    data-name="${escapeHtml(i?.name ?? '')}">+ Add as device</button>
+                    data-name="">+ Add as device</button>
                 </li>`;
             })
             .join('')}

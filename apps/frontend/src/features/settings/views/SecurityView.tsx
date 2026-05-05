@@ -27,13 +27,13 @@ import { useChangePassword } from "@/features/auth";
 
 const schema = z
   .object({
-    current_password: z.string().min(1, "Required"),
-    new_password: z.string().min(8, "Use at least 8 characters"),
+    current_password: z.string().min(1, "Bắt buộc"),
+    new_password: z.string().min(8, "Ít nhất 8 ký tự"),
     confirm_password: z.string(),
   })
   .refine((d) => d.new_password === d.confirm_password, {
     path: ["confirm_password"],
-    message: "Passwords don't match",
+    message: "Mật khẩu nhập lại không khớp",
   });
 
 type FormValues = z.infer<typeof schema>;
@@ -56,14 +56,14 @@ export function SecurityView() {
         currentPassword: values.current_password,
         newPassword: values.new_password,
       });
-      toast.success("Password updated");
+      toast.success("Đã đổi mật khẩu");
       form.reset();
     } catch (err) {
-      toast.error("Couldn't update password", {
+      toast.error("Không đổi được mật khẩu", {
         description:
           err instanceof Error
             ? err.message
-            : "Check your current password and try again.",
+            : "Kiểm tra lại mật khẩu hiện tại rồi thử lại.",
       });
     }
   };
@@ -71,10 +71,10 @@ export function SecurityView() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Change password</CardTitle>
+        <CardTitle>Đổi mật khẩu</CardTitle>
         <CardDescription>
-          We&apos;ll sign you out of other devices when you change your
-          password.
+          Khi đổi mật khẩu, các thiết bị khác đang đăng nhập tài khoản của bạn
+          sẽ tự động bị đăng xuất.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -85,7 +85,7 @@ export function SecurityView() {
               name="current_password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Current password</FormLabel>
+                  <FormLabel>Mật khẩu hiện tại</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
@@ -102,7 +102,7 @@ export function SecurityView() {
               name="new_password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New password</FormLabel>
+                  <FormLabel>Mật khẩu mới</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
@@ -119,7 +119,7 @@ export function SecurityView() {
               name="confirm_password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm new password</FormLabel>
+                  <FormLabel>Nhập lại mật khẩu mới</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
@@ -139,7 +139,7 @@ export function SecurityView() {
               {changePassword.isPending && (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               )}
-              Update password
+              Đổi mật khẩu
             </Button>
           </form>
         </Form>

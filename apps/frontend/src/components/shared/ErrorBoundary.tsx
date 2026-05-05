@@ -41,12 +41,12 @@ export class ErrorBoundary extends Component<Props, State> {
           <AlertTriangle className="h-6 w-6" />
         </div>
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Something went wrong</h2>
+          <h2 className="text-lg font-semibold">Đã có lỗi xảy ra</h2>
           <p className="text-sm text-muted-foreground max-w-md">
-            {this.state.error.message || "An unexpected error occurred."}
+            {this.state.error.message || "Có lỗi không mong muốn vừa xảy ra."}
           </p>
         </div>
-        <Button onClick={this.reset}>Try again</Button>
+        <Button onClick={this.reset}>Thử lại</Button>
       </div>
     );
   }

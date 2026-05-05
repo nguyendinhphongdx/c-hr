@@ -45,19 +45,19 @@ import {
 const NO_PARENT = "__none__";
 
 const schema = z.object({
-  name: z.string().min(1, "Required").max(100),
-  parentId: z.union([z.literal(NO_PARENT), z.string().uuid("Pick a valid parent")], {
-    message: "Pick a valid parent",
+  name: z.string().min(1, "Bắt buộc").max(100),
+  parentId: z.union([z.literal(NO_PARENT), z.string().uuid("Chọn phòng ban cha hợp lệ")], {
+    message: "Chọn phòng ban cha hợp lệ",
   }),
   managerId: z
     .string()
-    .uuid("Pick a valid manager")
+    .uuid("Chọn quản lý hợp lệ")
     .or(z.literal(""))
     .optional(),
   code: z
     .string()
     .max(50)
-    .regex(/^[A-Za-z0-9-_]*$/, "Letters, digits, hyphens, underscores only")
+    .regex(/^[A-Za-z0-9-_]*$/, "Chỉ chữ cái, số, gạch ngang, gạch dưới")
     .optional(),
 });
 
@@ -87,14 +87,14 @@ export function DepartmentCreateView() {
         managerId: values.managerId || undefined,
         code: values.code || undefined,
       });
-      toast.success("Department created");
+      toast.success("Đã tạo phòng ban");
       router.push(`/departments?focus=${dept.id}`);
     } catch (err) {
-      toast.error("Couldn't create department", {
+      toast.error("Không tạo được phòng ban", {
         description:
           err instanceof Error
             ? err.message
-            : "Code may already be in use, or parent / manager invalid.",
+            : "Mã có thể đã được dùng, hoặc phòng ban cha / quản lý không hợp lệ.",
       });
     }
   };
@@ -103,7 +103,7 @@ export function DepartmentCreateView() {
     <div className="mx-auto w-full max-w-2xl space-y-6 px-6 py-8">
       <Button variant="ghost" asChild size="sm" className="gap-2">
         <Link href="/departments">
-          <ArrowLeft className="h-3.5 w-3.5" /> All departments
+          <ArrowLeft className="h-3.5 w-3.5" /> Tất cả phòng ban
         </Link>
       </Button>
 
@@ -111,10 +111,10 @@ export function DepartmentCreateView() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <Card>
             <CardHeader>
-              <CardTitle>New department</CardTitle>
+              <CardTitle>Phòng ban mới</CardTitle>
               <CardDescription>
-                Pick a parent (or leave as root). Manager can be assigned later
-                from the detail page.
+                Chọn phòng ban cha (hoặc để là gốc). Quản lý có thể gán sau từ
+                trang chi tiết.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -123,7 +123,7 @@ export function DepartmentCreateView() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Tên</FormLabel>
                     <FormControl>
                       <Input placeholder="Engineering" autoFocus {...field} />
                     </FormControl>
@@ -137,18 +137,18 @@ export function DepartmentCreateView() {
                 name="parentId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Parent</FormLabel>
+                    <FormLabel>Phòng ban cha</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="(root)" />
+                          <SelectValue placeholder="(gốc)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={NO_PARENT}>(root)</SelectItem>
+                        <SelectItem value={NO_PARENT}>(gốc)</SelectItem>
                         {list.data?.map((d) => (
                           <SelectItem key={d.id} value={d.id}>
                             {d.name}
@@ -167,13 +167,13 @@ export function DepartmentCreateView() {
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Code</FormLabel>
+                    <FormLabel>Mã</FormLabel>
                     <FormControl>
                       <Input placeholder="ENG-01" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Optional. Letters, digits, hyphens, underscores. Unique
-                      within Org.
+                      Tuỳ chọn. Chỉ chữ cái, số, gạch ngang, gạch dưới. Unique
+                      trong Org.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -185,7 +185,7 @@ export function DepartmentCreateView() {
                 name="managerId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Manager</FormLabel>
+                    <FormLabel>Quản lý</FormLabel>
                     <FormControl>
                       <EmployeePicker
                         value={field.value || null}
@@ -193,7 +193,7 @@ export function DepartmentCreateView() {
                       />
                     </FormControl>
                     <FormDescription>
-                      Optional. Search by name, email, or code.
+                      Tuỳ chọn. Tìm theo tên, email hoặc mã.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -202,7 +202,7 @@ export function DepartmentCreateView() {
             </CardContent>
             <CardFooter className="justify-end gap-2">
               <Button type="button" variant="ghost" asChild>
-                <Link href="/departments">Cancel</Link>
+                <Link href="/departments">Huỷ</Link>
               </Button>
               <Button
                 type="submit"
@@ -212,7 +212,7 @@ export function DepartmentCreateView() {
                 {create.isPending && (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 )}
-                Create department
+                Tạo phòng ban
               </Button>
             </CardFooter>
           </Card>

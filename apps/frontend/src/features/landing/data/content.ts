@@ -1,10 +1,10 @@
 import {
-  Boxes,
-  Code2,
-  Layers,
-  PaintBucket,
+  ClipboardCheck,
+  Clock,
+  Network,
   ShieldCheck,
-  Zap,
+  Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -15,7 +15,7 @@ export interface Feature {
   description: string;
 }
 
-export interface StackItem {
+export interface ModuleItem {
   name: string;
   tag: string;
 }
@@ -38,117 +38,120 @@ export interface ComparisonRow {
 }
 
 export const HERO_STATS: Stat[] = [
-  { value: "0 → ship", label: "in one command" },
-  { value: "<1m", label: "to first run" },
-  { value: "100%", label: "in your repo" },
-  { value: "MIT", label: "open source" },
+  { value: "All-in-1", label: "HRM + Chấm công + Lương" },
+  { value: "Realtime", label: "Đồng bộ máy chấm công" },
+  { value: "Multi-Org", label: "Tách dữ liệu tuyệt đối" },
+  { value: "Cloud", label: "Mọi nơi, mọi thiết bị" },
 ];
 
 export const FEATURES: Feature[] = [
   {
-    id: "stack",
-    icon: Layers,
-    title: "Modern stack",
+    id: "employees",
+    icon: Users,
+    title: "Hồ sơ nhân viên",
     description:
-      "Next.js 16 (App Router), React 19, Tailwind 4, and TypeScript 5 on current defaults.",
+      "Tập trung thông tin cá nhân, hợp đồng, chức danh, lịch sử công tác — tìm theo phòng ban, vị trí, trạng thái.",
   },
   {
-    id: "ui",
-    icon: PaintBucket,
-    title: "shadcn/ui (Radix Nova)",
+    id: "departments",
+    icon: Network,
+    title: "Phòng ban & Cây tổ chức",
     description:
-      "Every component is in your repo, themeable via CSS variables, and accessible by default.",
+      "Cây phòng ban lồng nhau, chỉ định manager. OrgChart tự sinh từ Department tree — luôn đồng bộ với thực tế.",
   },
   {
-    id: "data",
-    icon: Boxes,
-    title: "Server + client state",
+    id: "attendance",
+    icon: Clock,
+    title: "Chấm công thời gian thực",
     description:
-      "TanStack Query for server cache and Zustand for client state without Context boilerplate.",
+      "Tích hợp máy ZKTeco / Hikvision qua bridge cục bộ. Bảng giờ làm theo tháng tự đối chiếu với ca làm chuẩn.",
   },
   {
-    id: "auth",
+    id: "requests",
+    icon: ClipboardCheck,
+    title: "Đơn từ thống nhất",
+    description:
+      "Xin nghỉ, quên chấm vào / ra — cùng một engine. Phê duyệt theo phòng ban, có audit trail đầy đủ.",
+  },
+  {
+    id: "payroll",
+    icon: Wallet,
+    title: "Bảng lương đa kỳ",
+    description:
+      "Tính lương từ chấm công + công thức cấu hình theo Org. Tiền tệ và timezone tuân theo cấu hình doanh nghiệp.",
+  },
+  {
+    id: "rbac",
     icon: ShieldCheck,
-    title: "Auth flow ready",
+    title: "Phân quyền theo vai trò",
     description:
-      "Login, register, forgot/reset password, OTP, and verify email wired to a typed axios client.",
-  },
-  {
-    id: "perf",
-    icon: Zap,
-    title: "Edge-ready",
-    description:
-      "Middleware-based auth gate. RSC-first layouts. No client-flicker on protected routes.",
-  },
-  {
-    id: "dx",
-    icon: Code2,
-    title: "Type-first",
-    description:
-      "Strict TS, conventions for shared, feature, and API types, plus runtime validation with zod.",
+      "Org Admin, HR, Manager, Employee — mỗi vai trò chỉ thấy phần dữ liệu của mình. Không lo lộ lương chéo.",
   },
 ];
 
 export const HOW_IT_WORKS: Step[] = [
   {
     number: "01",
-    title: "Use the template",
+    title: "Tạo Org cho doanh nghiệp",
     description:
-      "One click on GitHub, or `npx degit <owner>/<repo> my-app`. No forks, no shared history.",
+      "Đăng ký tài khoản, nhập thông tin doanh nghiệp, chọn timezone và đơn vị tiền tệ. Mất chưa đầy 2 phút.",
   },
   {
     number: "02",
-    title: "Run init",
+    title: "Nhập nhân viên & phòng ban",
     description:
-      "`pnpm install && pnpm run init:project` renames the package, writes `.env`, and either reuses or creates a fresh git repo.",
+      "Nhập danh sách nhân viên, dựng cây phòng ban, chỉ định manager. Có thể vừa làm vừa chạy — không cần migrate một lần.",
   },
   {
     number: "03",
-    title: "Add your features",
+    title: "Vận hành ngay",
     description:
-      "Drop a folder under `src/features/`. The Auth feature is a fully working reference — copy its shape and ship.",
+      "Kết nối máy chấm công, mở quy trình đơn từ, chạy bảng lương kỳ đầu tiên. Tuần đầu đã có dữ liệu sống.",
   },
 ];
 
 export const COMPARISON_ROWS: ComparisonRow[] = [
   {
-    label: "Auth flow",
-    ours: "Login, register, forgot/reset, OTP, verify-email — typed",
-    diy: "Wire it yourself, hope you got CSRF right",
+    label: "Hồ sơ nhân viên",
+    ours: "Một nguồn duy nhất, có lịch sử thay đổi, tìm kiếm đa tiêu chí",
+    diy: "Mỗi phòng giữ một file, dễ lệch và mất dấu",
   },
   {
-    label: "Server state",
-    ours: "TanStack Query with refresh-token interceptor",
-    diy: "Roll your own fetch hooks",
+    label: "Chấm công",
+    ours: "Pull tự động từ máy ZKTeco / Hikvision, đối chiếu real-time",
+    diy: "In bảng giấy, cuối tháng nhập tay vào Excel",
   },
   {
-    label: "Theming",
-    ours: "Light/dark with `next-themes`, no FOUC",
-    diy: "Mostly works, until SSR",
+    label: "Đơn từ",
+    ours: "Quy trình duyệt rõ ràng, audit trail đầy đủ, thông báo đến đúng người",
+    diy: "Email rời, chat trôi, không ai biết đơn đang ở đâu",
   },
   {
-    label: "App Router conventions",
-    ours: "`error.tsx`, `loading.tsx`, `not-found.tsx`, middleware all wired",
-    diy: "Add as you remember they exist",
+    label: "Bảng lương",
+    ours: "Tính từ chấm công và công thức cấu hình, xuất file một click",
+    diy: "Công thức Excel cộng dồn mỗi kỳ, sai số phát hiện sau khi đã chuyển khoản",
   },
   {
-    label: "AI-agent docs",
-    ours: "`CLAUDE.md` + MCP server expose docs to Claude Code et al.",
-    diy: "Hope the agent guesses your conventions",
+    label: "Phân quyền",
+    ours: "Manager chỉ thấy team, HR thấy toàn Org, Employee chỉ thấy mình",
+    diy: "File Excel chia sẻ — mở ra là thấy lương cả công ty",
+  },
+  {
+    label: "Tổ chức thay đổi",
+    ours: "Đổi parent department, đổi manager — OrgChart cập nhật tức thì",
+    diy: "Vẽ lại sơ đồ tổ chức trên PowerPoint mỗi quý",
   },
 ];
 
-export const STACK: StackItem[] = [
-  { name: "Next.js", tag: "16" },
-  { name: "React", tag: "19" },
-  { name: "Tailwind CSS", tag: "4" },
-  { name: "shadcn/ui", tag: "Radix Nova" },
-  { name: "TanStack Query", tag: "5" },
-  { name: "Zustand", tag: "5" },
-  { name: "react-hook-form", tag: "7" },
-  { name: "zod", tag: "4" },
-  { name: "axios", tag: "1" },
-  { name: "next-themes", tag: "0.4" },
-  { name: "sonner", tag: "2" },
-  { name: "lucide-react", tag: "icons" },
+export const MODULES: ModuleItem[] = [
+  { name: "Nhân viên", tag: "Hồ sơ" },
+  { name: "Phòng ban", tag: "OrgChart" },
+  { name: "Vị trí", tag: "Position" },
+  { name: "Chấm công", tag: "ZKTeco · Hikvision" },
+  { name: "Bảng giờ làm", tag: "Timesheet" },
+  { name: "Đơn từ", tag: "Approval flow" },
+  { name: "Bảng lương", tag: "Đa kỳ" },
+  { name: "Phân quyền", tag: "RBAC" },
+  { name: "Audit log", tag: "Truy vết" },
+  { name: "Cấu hình Org", tag: "Timezone · Currency" },
 ];

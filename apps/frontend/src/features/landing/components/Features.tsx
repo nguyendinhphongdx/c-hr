@@ -13,9 +13,9 @@ export function Features() {
     <Section
       id="features"
       muted
-      eyebrow="Batteries included"
-      title="Everything wired, nothing magic"
-      description="Each piece is a small, replaceable file in your repo. Read it, edit it, throw it out. No framework lock-in, no hidden runtime."
+      eyebrow="Đầy đủ tính năng"
+      title="Mọi thứ HR cần, trên cùng một hệ thống"
+      description="Sáu module cốt lõi nói chung một ngôn ngữ dữ liệu — đổi cây phòng ban một lần, OrgChart, đơn từ và bảng lương đều thấy. Không vá tay giữa các sheet."
     >
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((f, i) => (

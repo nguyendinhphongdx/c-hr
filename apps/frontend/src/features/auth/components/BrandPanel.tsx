@@ -3,10 +3,10 @@ import { Sparkles } from "lucide-react";
 import { SITE } from "@/lib/seo";
 
 const BULLETS = [
-  "Auth flow ready out of the box",
-  "Type-first with strict TS + zod",
-  "Light/dark mode without FOUC",
-  "AI-agent docs included",
+  "Hồ sơ nhân viên & cây phòng ban",
+  "Chấm công đồng bộ máy ZKTeco / Hikvision",
+  "Đơn từ — duyệt theo phòng ban",
+  "Bảng lương đa kỳ, xuất file một click",
 ];
 
 export function BrandPanel() {
@@ -82,7 +82,7 @@ export function BrandPanel() {
       >
         <span className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Open source · MIT
+          Multi-tenant · Bảo mật theo Org
         </span>
         <span>·</span>
         <span>

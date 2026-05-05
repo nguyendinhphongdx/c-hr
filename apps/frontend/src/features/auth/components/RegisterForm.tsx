@@ -36,15 +36,15 @@ function slugify(input: string): string {
 }
 
 const schema = z.object({
-  organizationName: z.string().min(2, "At least 2 characters").max(100),
+  organizationName: z.string().min(2, "Tối thiểu 2 ký tự").max(100),
   slug: z
     .string()
-    .min(3, "At least 3 characters")
-    .max(50, "Max 50 characters")
-    .regex(/^[a-z0-9-]+$/, "Lowercase letters, digits, hyphens only"),
-  adminName: z.string().min(1, "Required").max(100),
-  adminEmail: z.string().email("Invalid email"),
-  adminPassword: z.string().min(8, "Use at least 8 characters"),
+    .min(3, "Tối thiểu 3 ký tự")
+    .max(50, "Tối đa 50 ký tự")
+    .regex(/^[a-z0-9-]+$/, "Chỉ dùng chữ thường, số và dấu gạch ngang"),
+  adminName: z.string().min(1, "Bắt buộc").max(100),
+  adminEmail: z.string().email("Email không hợp lệ"),
+  adminPassword: z.string().min(8, "Ít nhất 8 ký tự"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -85,11 +85,11 @@ export function RegisterForm() {
     } catch (err) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
-      toast.error("Couldn't create organization", {
+      toast.error("Không tạo được Org", {
         description:
           err instanceof Error
             ? err.message
-            : "Slug or email may already be taken.",
+            : "Slug hoặc email có thể đã được dùng.",
       });
     }
   };
@@ -105,9 +105,9 @@ export function RegisterForm() {
           name="organizationName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Organization name</FormLabel>
+              <FormLabel>Tên doanh nghiệp</FormLabel>
               <FormControl>
-                <Input placeholder="Acme Inc." autoFocus {...field} />
+                <Input placeholder="Công ty TNHH ABC" autoFocus {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -119,10 +119,10 @@ export function RegisterForm() {
           name="slug"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Slug</FormLabel>
+              <FormLabel>Mã định danh (slug)</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="acme"
+                  placeholder="cong-ty-abc"
                   autoComplete="off"
                   {...field}
                   onChange={(e) => {
@@ -132,7 +132,7 @@ export function RegisterForm() {
                 />
               </FormControl>
               <FormDescription>
-                Used in URLs. Lowercase letters, digits, hyphens.
+                Dùng trong URL. Chỉ chữ thường, số và dấu gạch ngang.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -144,10 +144,10 @@ export function RegisterForm() {
           name="adminName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Your name</FormLabel>
+              <FormLabel>Họ và tên</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="Ada Lovelace"
+                  placeholder="Nguyễn Văn A"
                   autoComplete="name"
                   {...field}
                 />
@@ -162,11 +162,11 @@ export function RegisterForm() {
           name="adminEmail"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>Email công ty</FormLabel>
               <FormControl>
                 <Input
                   type="email"
-                  placeholder="you@acme.com"
+                  placeholder="ban@congty.vn"
                   autoComplete="email"
                   {...field}
                 />
@@ -181,12 +181,12 @@ export function RegisterForm() {
           name="adminPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Mật khẩu</FormLabel>
               <FormControl>
                 <div className="relative">
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="At least 8 characters"
+                    placeholder="Ít nhất 8 ký tự"
                     autoComplete="new-password"
                     className="pr-10"
                     {...field}
@@ -195,7 +195,7 @@ export function RegisterForm() {
                     type="button"
                     onClick={() => setShowPassword((s) => !s)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                     tabIndex={-1}
                   >
                     {showPassword ? (
@@ -213,7 +213,7 @@ export function RegisterForm() {
 
         {signup.error && (
           <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            Couldn&apos;t create organization. Slug or email may already be in use.
+            Không tạo được Org. Slug hoặc email có thể đã được dùng.
           </div>
         )}
 
@@ -221,20 +221,20 @@ export function RegisterForm() {
           {signup.isPending ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Creating organization…
+              Đang tạo Org…
             </>
           ) : (
-            "Create organization"
+            "Tạo Org"
           )}
         </Button>
 
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
+          Đã có tài khoản?{" "}
           <Link
             href="/login"
             className="font-medium text-foreground hover:underline"
           >
-            Sign in
+            Đăng nhập
           </Link>
         </p>
       </form>

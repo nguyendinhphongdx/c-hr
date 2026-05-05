@@ -41,7 +41,7 @@ import {
 const APPS = [{ value: "HRM", label: "HRM" }] as const;
 
 const grantSchema = z.object({
-  userId: z.string().uuid("Must be a UUID"),
+  userId: z.string().uuid("Phải là UUID"),
   appCode: z.enum(["HRM"]),
 });
 type GrantValues = z.infer<typeof grantSchema>;
@@ -61,9 +61,9 @@ export function AppAdminsSettingsView() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>App admins</CardTitle>
+          <CardTitle>Quản trị app</CardTitle>
           <CardDescription>
-            Only Org admin can view or manage per-app admin grants.
+            Chỉ Org admin mới xem và quản lý được quyền quản trị từng app.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -73,26 +73,26 @@ export function AppAdminsSettingsView() {
   const onGrant = async (values: GrantValues) => {
     try {
       await grant.mutateAsync(values);
-      toast.success("App admin granted");
+      toast.success("Đã cấp quyền quản trị app");
       form.reset({ userId: "", appCode: values.appCode });
     } catch (err) {
-      toast.error("Couldn't grant app admin", {
+      toast.error("Không cấp được quyền", {
         description:
           err instanceof Error
             ? err.message
-            : "Make sure the user belongs to this Org and has role=user.",
+            : "Đảm bảo người dùng thuộc Org này và có role=user.",
       });
     }
   };
 
   const onRevoke = async (id: string, label: string) => {
-    if (!confirm(`Revoke app admin grant for ${label}?`)) return;
+    if (!confirm(`Thu hồi quyền quản trị app của ${label}?`)) return;
     try {
       await revoke.mutateAsync(id);
-      toast.success("App admin revoked");
+      toast.success("Đã thu hồi quyền");
     } catch (err) {
-      toast.error("Couldn't revoke", {
-        description: err instanceof Error ? err.message : "Try again later.",
+      toast.error("Không thu hồi được", {
+        description: err instanceof Error ? err.message : "Thử lại sau.",
       });
     }
   };
@@ -102,11 +102,11 @@ export function AppAdminsSettingsView() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Shield className="h-4 w-4" /> Grant app admin
+            <Shield className="h-4 w-4" /> Cấp quyền quản trị app
           </CardTitle>
           <CardDescription>
-            Give a user (with role=user) admin powers for a specific app in
-            this Org. Org admins inherit appadmin and don&apos;t need a grant.
+            Cấp cho một người dùng (role=user) quyền quản trị một app cụ thể
+            trong Org này. Org admin mặc định kế thừa appadmin nên không cần cấp.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -120,13 +120,13 @@ export function AppAdminsSettingsView() {
                 name="userId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>User</FormLabel>
+                    <FormLabel>Người dùng</FormLabel>
                     <FormControl>
                       <UserPicker
                         value={field.value || null}
                         onChange={(u) => field.onChange(u?.id ?? "")}
                         availableForLink={false}
-                        placeholder="Pick a user in this Org…"
+                        placeholder="Chọn người dùng trong Org này…"
                       />
                     </FormControl>
                     <FormMessage />
@@ -165,7 +165,7 @@ export function AppAdminsSettingsView() {
                   {grant.isPending && (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   )}
-                  Grant
+                  Cấp quyền
                 </Button>
               </div>
             </form>
@@ -175,24 +175,24 @@ export function AppAdminsSettingsView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Current grants</CardTitle>
+          <CardTitle>Danh sách hiện tại</CardTitle>
           <CardDescription>
-            Listed users have appadmin access in this Org. Org admins are
-            implicit and not shown here.
+            Những người dùng dưới đây có quyền appadmin trong Org này. Org admin
+            mặc định kế thừa nên không hiển thị ở đây.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {list.isLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang tải…
             </div>
           ) : list.error ? (
             <p className="text-sm text-destructive">
-              Couldn&apos;t load grants.
+              Không tải được danh sách.
             </p>
           ) : !list.data?.length ? (
             <p className="text-sm text-muted-foreground">
-              No grants yet. Use the form above to add the first one.
+              Chưa có ai. Dùng form bên trên để cấp quyền đầu tiên.
             </p>
           ) : (
             <ul className="divide-y divide-border">
@@ -217,7 +217,7 @@ export function AppAdminsSettingsView() {
                       onRevoke(row.id, row.user.name ?? row.user.email)
                     }
                     disabled={revoke.isPending}
-                    aria-label="Revoke"
+                    aria-label="Thu hồi"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

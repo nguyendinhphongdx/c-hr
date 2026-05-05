@@ -1,33 +1,32 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
-import { GithubIcon } from "@/components/icons";
 import { SITE } from "@/lib/seo";
 
 const COLUMNS = [
   {
-    title: "Product",
+    title: "Sản phẩm",
     links: [
-      { label: "Features", href: "#features" },
-      { label: "How it works", href: "#how" },
-      { label: "Compare", href: "#compare" },
-      { label: "Stack", href: "#stack" },
+      { label: "Tính năng", href: "#features" },
+      { label: "Triển khai", href: "#how" },
+      { label: "So sánh", href: "#compare" },
+      { label: "Module", href: "#modules" },
     ],
   },
   {
-    title: "Account",
+    title: "Tài khoản",
     links: [
-      { label: "Sign in", href: "/login" },
-      { label: "Sign up", href: "/register" },
-      { label: "Forgot password", href: "/forgot-password" },
+      { label: "Đăng nhập", href: "/login" },
+      { label: "Đăng ký", href: "/register" },
+      { label: "Quên mật khẩu", href: "/forgot-password" },
     ],
   },
   {
-    title: "Resources",
+    title: "Hỗ trợ",
     links: [
-      { label: "GitHub", href: SITE.github, external: true },
-      { label: "Docs", href: "/docs" },
-      { label: "Changelog", href: "/changelog" },
+      { label: "Liên hệ", href: `mailto:${SITE.email}`, external: true },
+      { label: "Tài liệu", href: "/docs" },
+      { label: "Cập nhật", href: "/changelog" },
     ],
   },
 ];
@@ -50,13 +49,10 @@ export function Footer() {
               {SITE.description}
             </p>
             <a
-              href={SITE.github}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`mailto:${SITE.email}`}
               className="mt-5 inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
             >
-              <GithubIcon className="h-3.5 w-3.5" />
-              Star on GitHub
+              {SITE.email}
             </a>
           </div>
 
@@ -72,8 +68,6 @@ export function Footer() {
                       {"external" in l && l.external ? (
                         <a
                           href={l.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
                           className="text-sm text-foreground/80 transition-colors hover:text-foreground"
                         >
                           {l.label}
@@ -96,16 +90,9 @@ export function Footer() {
 
         <div className="flex flex-col items-start justify-between gap-3 border-t border-border py-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
           <p>
-            © {new Date().getFullYear()} {SITE.name}. Open source, MIT licensed.
+            © {new Date().getFullYear()} {SITE.name}. Mọi quyền được bảo lưu.
           </p>
-          <p className="flex items-center gap-1.5">
-            <span>Built with</span>
-            <span className="font-medium text-foreground">Next.js</span>
-            <span>·</span>
-            <span className="font-medium text-foreground">Tailwind</span>
-            <span>·</span>
-            <span className="font-medium text-foreground">shadcn/ui</span>
-          </p>
+          <p>{SITE.tagline}</p>
         </div>
       </div>
     </footer>

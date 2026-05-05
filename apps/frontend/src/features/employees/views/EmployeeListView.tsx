@@ -37,9 +37,9 @@ import type { EmployeeStatus } from "../types";
 const PAGE_SIZE = 20;
 
 const STATUSES: { value: EmployeeStatus; label: string }[] = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "ON_LEAVE", label: "On leave" },
-  { value: "TERMINATED", label: "Terminated" },
+  { value: "ACTIVE", label: "Đang làm" },
+  { value: "ON_LEAVE", label: "Đang nghỉ" },
+  { value: "TERMINATED", label: "Đã nghỉ việc" },
 ];
 
 const statusVariant: Record<EmployeeStatus, "default" | "secondary" | "outline"> = {
@@ -88,15 +88,15 @@ export function EmployeeListView() {
     <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Employees</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Nhân viên</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            HR records — search, filter, and (HRM admin) manage.
+            Hồ sơ nhân viên — tìm kiếm, lọc và quản lý (HRM admin).
           </p>
         </div>
         {canManage && (
           <Button onClick={() => setCreating(true)} className="gap-2">
             <Plus className="h-4 w-4" />
-            New employee
+            Thêm nhân viên
           </Button>
         )}
       </header>
@@ -105,7 +105,7 @@ export function EmployeeListView() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by name, email, or code"
+            placeholder="Tìm theo tên, email hoặc mã"
             value={q}
             onChange={(e) => {
               setQ(e.target.value);
@@ -122,10 +122,10 @@ export function EmployeeListView() {
           }}
         >
           <SelectTrigger className="md:w-[180px]">
-            <SelectValue placeholder="All statuses" />
+            <SelectValue placeholder="Tất cả trạng thái" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="all">Tất cả trạng thái</SelectItem>
             {STATUSES.map((s) => (
               <SelectItem key={s.value} value={s.value}>
                 {s.label}
@@ -139,25 +139,25 @@ export function EmployeeListView() {
         {list.isLoading ? (
           <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Loading employees…
+            Đang tải nhân viên…
           </div>
         ) : list.error ? (
           <p className="p-6 text-sm text-destructive">
-            Couldn&apos;t load employees.
+            Không tải được nhân viên.
           </p>
         ) : !list.data?.data.length ? (
           <div className="p-12 text-center text-sm text-muted-foreground">
-            No employees match the current filters.
+            Không có nhân viên phù hợp với bộ lọc.
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-4 py-3 font-medium">Code</th>
-                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Mã</th>
+                <th className="px-4 py-3 font-medium">Họ tên</th>
                 <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Title</th>
-                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Chức danh</th>
+                <th className="px-4 py-3 font-medium">Trạng thái</th>
                 <th className="w-12 px-4 py-3" />
               </tr>
             </thead>
@@ -210,8 +210,8 @@ export function EmployeeListView() {
       {list.data && list.data.total > PAGE_SIZE && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            Showing {(page - 1) * PAGE_SIZE + 1}–
-            {Math.min(page * PAGE_SIZE, list.data.total)} of {list.data.total}
+            Hiển thị {(page - 1) * PAGE_SIZE + 1}–
+            {Math.min(page * PAGE_SIZE, list.data.total)} / {list.data.total}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -220,7 +220,7 @@ export function EmployeeListView() {
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
             >
-              Previous
+              Trước
             </Button>
             <span>
               {page} / {totalPages}
@@ -231,7 +231,7 @@ export function EmployeeListView() {
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
-              Next
+              Sau
             </Button>
           </div>
         </div>
@@ -268,7 +268,7 @@ export function EmployeeListView() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={remove.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={remove.isPending}>Huỷ</AlertDialogCancel>
             <AlertDialogAction
               onClick={onConfirmDelete}
               disabled={remove.isPending}

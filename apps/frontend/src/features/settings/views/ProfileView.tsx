@@ -38,11 +38,11 @@ import { useAuth, useUpdateProfile } from "@/features/auth";
 const NO_GENDER = "__none__";
 
 const schema = z.object({
-  name: z.string().min(1, "Required").max(100),
+  name: z.string().min(1, "Bắt buộc").max(100),
   title: z.string().max(100).nullable(),
   avatar: z
     .string()
-    .url("Must be a URL")
+    .url("Phải là một URL hợp lệ")
     .max(500)
     .or(z.literal(""))
     .nullable(),
@@ -92,11 +92,11 @@ export function ProfileView() {
         gender: values.gender === NO_GENDER ? null : values.gender,
         phone: values.phone || null,
       });
-      toast.success("Profile updated");
+      toast.success("Đã cập nhật hồ sơ");
     } catch (err) {
-      toast.error("Couldn't update profile", {
+      toast.error("Không cập nhật được hồ sơ", {
         description:
-          err instanceof Error ? err.message : "Try again in a moment.",
+          err instanceof Error ? err.message : "Vui lòng thử lại sau giây lát.",
       });
     }
   };
@@ -106,11 +106,11 @@ export function ProfileView() {
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <Card>
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
+            <CardTitle>Hồ sơ cá nhân</CardTitle>
             <CardDescription>
-              Thông tin cá nhân của bạn — name, contact, avatar. Org-level
-              fields (chức danh HR, phòng ban, ngày vào) do HR đặt riêng trong
-              Employee record.
+              Thông tin cá nhân của bạn — tên, liên hệ, ảnh đại diện. Các trường
+              cấp Org (chức danh chính thức, phòng ban, ngày vào) do HR đặt
+              trong hồ sơ nhân viên.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -119,9 +119,9 @@ export function ProfileView() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full name</FormLabel>
+                  <FormLabel>Họ và tên</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ada Lovelace" {...field} />
+                    <Input placeholder="Nguyễn Văn A" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -133,10 +133,10 @@ export function ProfileView() {
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title (personal)</FormLabel>
+                  <FormLabel>Chức danh hiển thị</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Senior Engineer"
+                      placeholder="VD: Senior Engineer"
                       value={field.value ?? ""}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
@@ -145,8 +145,8 @@ export function ProfileView() {
                     />
                   </FormControl>
                   <FormDescription>
-                    Title bạn tự đặt. HR set chức danh chính thức (Employee.title)
-                    riêng trong hồ sơ HR.
+                    Chức danh bạn tự đặt, hiển thị cho đồng nghiệp. HR sẽ đặt
+                    chức danh chính thức trong hồ sơ HR riêng.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -158,7 +158,7 @@ export function ProfileView() {
               name="avatar"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Avatar URL</FormLabel>
+                  <FormLabel>Đường dẫn ảnh đại diện</FormLabel>
                   <FormControl>
                     <Input
                       type="url"
@@ -171,8 +171,8 @@ export function ProfileView() {
                     />
                   </FormControl>
                   <FormDescription>
-                    Link ảnh đại diện. (Upload trực tiếp sẽ làm sau khi có
-                    storage feature.)
+                    Dán đường dẫn ảnh. Tải ảnh trực tiếp sẽ được hỗ trợ khi có
+                    module lưu trữ.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -185,7 +185,7 @@ export function ProfileView() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>Số điện thoại</FormLabel>
                     <FormControl>
                       <Input
                         type="tel"
@@ -206,7 +206,7 @@ export function ProfileView() {
                 name="gender"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Gender</FormLabel>
+                    <FormLabel>Giới tính</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
@@ -218,9 +218,9 @@ export function ProfileView() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value={NO_GENDER}>—</SelectItem>
-                        <SelectItem value="MALE">Male</SelectItem>
-                        <SelectItem value="FEMALE">Female</SelectItem>
-                        <SelectItem value="OTHER">Other</SelectItem>
+                        <SelectItem value="MALE">Nam</SelectItem>
+                        <SelectItem value="FEMALE">Nữ</SelectItem>
+                        <SelectItem value="OTHER">Khác</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -234,7 +234,7 @@ export function ProfileView() {
               name="dob"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date of birth</FormLabel>
+                  <FormLabel>Ngày sinh</FormLabel>
                   <FormControl>
                     <Input
                       type="date"
@@ -255,7 +255,7 @@ export function ProfileView() {
               <FormLabel>Email</FormLabel>
               <Input value={user?.email ?? ""} disabled />
               <p className="text-xs text-muted-foreground">
-                Contact support to change your email.
+                Liên hệ bộ phận hỗ trợ nếu bạn cần đổi email.
               </p>
             </div>
           </CardContent>
@@ -266,7 +266,7 @@ export function ProfileView() {
               onClick={() => form.reset(buildDefaults(user))}
               disabled={!form.formState.isDirty || update.isPending}
             >
-              Cancel
+              Huỷ
             </Button>
             <Button
               type="submit"
@@ -276,7 +276,7 @@ export function ProfileView() {
               {update.isPending && (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               )}
-              Save changes
+              Lưu thay đổi
             </Button>
           </CardFooter>
         </Card>

@@ -30,6 +30,10 @@ pnpm --filter @c-hr/zk-bridge poll:once
 
 # OR: reset the local admin user when the password is lost.
 pnpm --filter @c-hr/zk-bridge reset-user
+
+# OR: peek at the last N events on a device — útil khi sanity-check tích
+# hợp device mà chưa muốn push lên C-HR.
+pnpm --filter @c-hr/zk-bridge recent-events --device "Cửa chính" -n 30
 ```
 
 Open <http://127.0.0.1:7000> — first time hits `/setup` to create the local
@@ -52,20 +56,46 @@ edit values via the UI.
 
 ## Customer install (LAN admin)
 
-1. On C-HR cloud: `/settings/attendance-devices` → register device → copy
-   `deviceId` UUID + plaintext token.
+Choose one of two paths:
+
+### Option A — Native installer (recommended)
+
+Best for non-tech admins on a fresh mini-PC. Installer cài Node + clone repo +
+build + start. Auto-start on boot is then enabled via the UI toggle (uses
+systemd / Windows Scheduled Task / launchd).
+
+1. On C-HR cloud: register the device → copy the JWT token.
 2. On the LAN box (mini-PC / VM):
    - Linux: `curl -sSL https://<release>/install-linux.sh | bash`
    - Windows (PowerShell): `iwr -useb https://<release>/install-windows.ps1 | iex`
    - macOS: `curl -sSL https://<release>/install-macos.sh | bash`
-3. Open `http://127.0.0.1:7000` → setup form → fill `/config/chr` + `/config/zk`
-   → toggle `Auto-start on boot`. From this point the bridge is unattended.
+3. Open `http://127.0.0.1:7000` → setup form → fill `/config/chr` + add devices
+   → toggle `Auto-start on boot`.
+
+### Option B — Docker Compose
+
+Best when the LAN host already runs Docker (small homelab, NAS, k8s edge).
+
+```bash
+git clone <repo> c-hr
+cd c-hr/services/zk-bridge
+docker compose up -d --build
+open http://<host-ip>:7000
+```
+
+`./data/` next to the compose file persists SQLite + admin credentials —
+container recreate / image upgrade keeps state. Default networking is bridge
+mode (port 7000 exposed). For Linux production, switch to `network_mode: host`
+in [docker-compose.yml](docker-compose.yml) so LAN scan probes the office
+subnet correctly instead of the docker bridge subnet.
 
 ## Layout
 
 ```text
 services/zk-bridge/
-├── installer/              # platform install scripts run by customer admin
+├── Dockerfile              # multi-stage build (node:22-bookworm-slim base)
+├── docker-compose.yml      # standalone deploy on customer LAN
+├── installer/              # native install scripts run by customer admin
 ├── src/
 │   ├── boot/               # auto-start install (linux/windows/macos)
 │   ├── cli/reset-user.ts   # CLI subcommand to wipe the local admin

@@ -8,17 +8,17 @@ export default function NotFound() {
         <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
           404
         </p>
-        <h1 className="text-3xl font-bold tracking-tight">Page not found</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Không tìm thấy trang</h1>
         <p className="max-w-md text-sm text-muted-foreground">
-          The page you&apos;re looking for doesn&apos;t exist or has been moved.
+          Trang bạn tìm không tồn tại hoặc đã được dời đi.
         </p>
       </div>
       <div className="flex gap-2">
         <Button asChild>
-          <Link href="/">Back home</Link>
+          <Link href="/">Về trang chủ</Link>
         </Button>
         <Button asChild variant="outline">
-          <Link href="/login">Sign in</Link>
+          <Link href="/login">Đăng nhập</Link>
         </Button>
       </div>
     </div>

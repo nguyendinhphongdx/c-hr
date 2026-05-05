@@ -36,12 +36,12 @@ export function OrgChartView() {
       <header>
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Network className="h-5 w-5" />
-          Reporting line
+          Cấp báo cáo
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Pick an employee to walk the manager chain. Source of truth is the
-          Department tree (Department.parentId + Department.managerId) — see
-          ADR 0004. Department structure is browsable at{" "}
+          Chọn một nhân viên để xem chuỗi quản lý. Nguồn dữ liệu là cây phòng
+          ban (Department.parentId + Department.managerId) — xem ADR 0004. Cấu
+          trúc phòng ban xem ở{" "}
           <Link href="/departments" className="underline hover:no-underline">
             /departments
           </Link>
@@ -51,9 +51,9 @@ export function OrgChartView() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Pick employee</CardTitle>
+          <CardTitle className="text-base">Chọn nhân viên</CardTitle>
           <CardDescription>
-            Lists active employees only — capped at 100 in this MVP picker.
+            Chỉ liệt kê nhân viên đang làm — giới hạn 100 trong picker MVP này.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -62,12 +62,12 @@ export function OrgChartView() {
             onValueChange={(v) => setEmployeeId(v || null)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Choose…" />
+              <SelectValue placeholder="Chọn…" />
             </SelectTrigger>
             <SelectContent>
               {employees.data?.data.map((e) => (
                 <SelectItem key={e.id} value={e.id}>
-                  {e.user?.name ?? "(no name)"} · {e.user?.email ?? "—"}
+                  {e.user?.name ?? "(không tên)"} · {e.user?.email ?? "—"}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -79,31 +79,31 @@ export function OrgChartView() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Chain for {focused.user?.name ?? "(no name)"}
+              Chuỗi quản lý của {focused.user?.name ?? "(không tên)"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {reporting.isLoading ? (
               <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Resolving…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang tải…
               </div>
             ) : reporting.error ? (
               <p className="py-6 text-sm text-destructive">
-                Couldn&apos;t resolve reporting line.
+                Không tải được cấp báo cáo.
               </p>
             ) : !reporting.data?.length ? (
               <p className="py-6 text-sm text-muted-foreground">
-                No managers in chain — this employee&apos;s department has no
-                manager set, or they sit at the top of the tree.
+                Không có quản lý trong chuỗi — phòng ban của nhân viên này chưa
+                gán quản lý, hoặc họ đứng ở đỉnh cây.
               </p>
             ) : (
               <div className="space-y-2">
-                <PersonCard label="You" employee={focused} highlight />
+                <PersonCard label="Bạn" employee={focused} highlight />
                 {reporting.data.map((m, i) => (
                   <Step
                     key={m.id}
                     employee={m}
-                    label={i === 0 ? "Direct manager" : `+${i} up`}
+                    label={i === 0 ? "Quản lý trực tiếp" : `+${i} cấp trên`}
                   />
                 ))}
               </div>
@@ -113,8 +113,8 @@ export function OrgChartView() {
       )}
 
       <p className="text-xs text-muted-foreground">
-        Visualization upgrade (interactive React Flow with zoom + drag) is
-        deferred — this MVP renders the chain as a vertical list.
+        Bản nâng cấp trực quan (React Flow tương tác có zoom + kéo) đang được
+        hoãn — MVP này render chuỗi dạng danh sách dọc.
       </p>
     </div>
   );
@@ -158,7 +158,7 @@ function PersonCard({
       </div>
       <div className="mt-1 flex items-baseline justify-between gap-3">
         <span className="text-sm font-medium">
-          {employee.user?.name ?? "(no name)"}
+          {employee.user?.name ?? "(không tên)"}
         </span>
         <span className="text-xs text-muted-foreground">
           {employee.user?.email ?? "—"}

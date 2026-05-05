@@ -77,20 +77,6 @@ function parseDeviceForm(form: Record<string, unknown>): DeviceInput | string {
 let lastScanResults: ScanCandidate[] = [];
 let lastScanRan = false;
 
-interface DeviceEventsCache {
-  fetchedAt: number;
-  events: Array<{
-    eventLogId: string;
-    employeeCode: string;
-    timestampIso: string;
-    type: 'IN' | 'OUT';
-    userSn: number;
-  }>;
-  totalRecords: number;
-  fetchMs: number;
-}
-const eventsCache = new Map<number, DeviceEventsCache>();
-const EVENTS_CACHE_TTL_MS = 60_000;
 const EVENTS_PAGE_SIZE = 50;
 
 export function createServer(): Hono<SessionVars> {
@@ -284,50 +270,61 @@ export function createServer(): Hono<SessionVars> {
 
     const pageRaw = Number(c.req.query('page') ?? '1');
     const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
-    const forceRefresh = c.req.query('refresh') === '1';
 
-    let cache = eventsCache.get(id);
+    // No cache — fetch fresh on every request. ZK device pulls take
+    // seconds for large logs but the trade-off (always-current data, no
+    // stale-cache mismatch with fresh fetch errors) is worth it.
     let flash: { kind: 'ok' | 'err'; message: string } | null = null;
-    const now = Date.now();
-    const stale = !cache || now - cache.fetchedAt > EVENTS_CACHE_TTL_MS;
+    let events: Array<{
+      eventLogId: string;
+      employeeCode: string;
+      timestampIso: string;
+      type: 'IN' | 'OUT';
+      userSn: number;
+    }> = [];
+    let fetchMs = 0;
 
-    if (stale || forceRefresh) {
-      const fetchStart = Date.now();
-      try {
-        const records = await fetchAttendances(device.host, device.port);
-        const sorted = records
-          .filter((r) => r.deviceUserId && r.deviceUserId !== '0')
-          .map((r) => {
-            const e = translateZkRecord(r);
-            return {
-              eventLogId: e.eventLogId,
-              employeeCode: e.employeeCode,
-              timestampIso: e.timestamp,
-              type: (e.type ?? 'IN') as 'IN' | 'OUT',
-              userSn: Number(r.userSn),
-            };
-          })
-          // Sort by eventLogId desc — pending (id > cursor) tops the list,
-          // pushed (id ≤ cursor) below. UI renders cursor divider at boundary.
-          .sort((a, b) => b.userSn - a.userSn);
-        cache = {
-          fetchedAt: Date.now(),
-          events: sorted,
-          totalRecords: records.length,
-          fetchMs: Date.now() - fetchStart,
-        };
-        eventsCache.set(id, cache);
-      } catch (err) {
+    const fetchStart = Date.now();
+    try {
+      const fetched = await fetchAttendances(device.host, device.port);
+      events = fetched.data
+        .filter((r) => r.deviceUserId && r.deviceUserId !== '0')
+        .map((r) => {
+          const e = translateZkRecord(r);
+          return {
+            eventLogId: e.eventLogId,
+            employeeCode: e.employeeCode,
+            timestampIso: e.timestamp,
+            type: (e.type ?? 'IN') as 'IN' | 'OUT',
+            userSn: Number(r.userSn),
+          };
+        })
+        // Sort by userSn desc; tiebreak on timestamp desc so colliding
+        // userSn (rare ZK firmware bug) stay deterministic across refresh.
+        .sort((a, b) => {
+          if (b.userSn !== a.userSn) return b.userSn - a.userSn;
+          return new Date(b.timestampIso).getTime() - new Date(a.timestampIso).getTime();
+        });
+      fetchMs = Date.now() - fetchStart;
+
+      if (fetched.err) {
         flash = {
           kind: 'err',
-          message: `Không lấy được events từ device: ${err instanceof Error ? err.message : String(err)}`,
+          message: `Stream bị cắt giữa chừng — pull được ${fetched.data.length} record. ZK lib báo: ${fetched.err}. Reload lại.`,
         };
       }
+    } catch (err) {
+      fetchMs = Date.now() - fetchStart;
+      flash = {
+        kind: 'err',
+        message: `Không lấy được events từ device: ${err instanceof Error ? err.message : String(err)}`,
+      };
     }
 
-    const events = cache?.events ?? [];
-    const totalRecords = cache?.totalRecords ?? 0;
-    const offset = (page - 1) * EVENTS_PAGE_SIZE;
+    const totalRecords = events.length;
+    const totalPages = Math.max(1, Math.ceil(totalRecords / EVENTS_PAGE_SIZE));
+    const safePage = Math.min(page, totalPages);
+    const offset = (safePage - 1) * EVENTS_PAGE_SIZE;
     const sliceRaw = events.slice(offset, offset + EVENTS_PAGE_SIZE);
     const slice: DeviceEventRow[] = sliceRaw.map((e) => ({
       eventLogId: e.eventLogId,
@@ -336,8 +333,6 @@ export function createServer(): Hono<SessionVars> {
       type: e.type,
       pending: e.userSn > device.lastEventLogId,
     }));
-    // Cursor visible on this page iff its SN sits between the slice's max
-    // and min (inclusive). Slice is sorted by userSn desc.
     const cursor = device.lastEventLogId;
     const cursorOnPage =
       sliceRaw.length > 0 &&
@@ -349,11 +344,11 @@ export function createServer(): Hono<SessionVars> {
         device,
         events: slice,
         totalRecords,
-        page,
+        page: safePage,
         pageSize: EVENTS_PAGE_SIZE,
         cursorOnPage,
-        cachedAt: cache ? new Date(cache.fetchedAt) : null,
-        fetchMs: cache?.fetchMs ?? 0,
+        cachedAt: null,
+        fetchMs,
         flash,
       }),
     );
