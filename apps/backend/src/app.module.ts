@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 import { configs } from './config';
@@ -30,6 +31,7 @@ import { RequestsModule } from './apps/requests/requests.module';
     }),
 
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
 
     ThrottlerModule.forRoot([
       {
