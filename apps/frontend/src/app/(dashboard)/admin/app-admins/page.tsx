@@ -3,7 +3,7 @@ import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
   title: "App admins",
-  path: "/settings/app-admins",
+  path: "/admin/app-admins",
   noIndex: true,
 });
 

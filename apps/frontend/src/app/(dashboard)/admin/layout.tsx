@@ -1,19 +1,19 @@
 import type { ReactNode } from "react";
-import { SettingsNav } from "@/features/settings";
 
-export default function SettingsLayout({ children }: { children: ReactNode }) {
+import { AdminNav } from "@/features/admin";
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Administration</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Your personal profile and security. Org-level configuration lives
-          under <span className="font-medium">Admin</span>.
+          Org-level configuration. Visible only to admin Org and HRM appadmins.
         </p>
       </div>
       <div className="grid gap-8 md:grid-cols-[200px_1fr]">
         <aside>
-          <SettingsNav />
+          <AdminNav />
         </aside>
         <div>{children}</div>
       </div>

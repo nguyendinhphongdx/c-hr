@@ -3,7 +3,7 @@ import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
   title: "Attendance devices",
-  path: "/settings/attendance-devices",
+  path: "/admin/attendance-devices",
   noIndex: true,
 });
 

@@ -3,7 +3,7 @@ import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
   title: "Work schedule",
-  path: "/settings/work-schedule",
+  path: "/admin/work-schedule",
   noIndex: true,
 });
 

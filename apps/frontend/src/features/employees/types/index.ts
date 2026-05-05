@@ -45,9 +45,16 @@ export interface EmployeesListResponse {
   limit: number;
 }
 
+/**
+ * Atomic "Add staff" — creating an Employee always provisions a fresh
+ * User row. Email + name + password are required (User fields); the rest
+ * is HR-side metadata. To link an *existing* User instead, use the edit
+ * form's user re-link flow.
+ */
 export interface CreateEmployeeInput {
-  /** Required — link to a User in the same Org. Personal info comes from User. */
-  userId: ID;
+  email: string;
+  name: string;
+  password: string;
   code: string;
   departmentId?: ID;
   title?: string;

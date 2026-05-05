@@ -96,8 +96,11 @@ export interface ChangePasswordInput {
 
 export interface UpdateProfileInput {
   name?: string;
-  title?: string;
+  title?: Nullable<string>;
   avatar?: Nullable<string>;
+  dob?: Nullable<string>;
+  gender?: Nullable<Gender>;
+  phone?: Nullable<string>;
 }
 
 // ──────────────────────────────────────────────────────────────────────

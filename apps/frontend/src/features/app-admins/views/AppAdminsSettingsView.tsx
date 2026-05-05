@@ -22,7 +22,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -31,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useIsAdmin } from "@/features/auth";
+import { UserPicker } from "@/features/users";
 
 import {
   useAppAdmins,
@@ -120,11 +120,13 @@ export function AppAdminsSettingsView() {
                 name="userId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>User ID</FormLabel>
+                    <FormLabel>User</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="UUID of an existing user in this Org"
-                        {...field}
+                      <UserPicker
+                        value={field.value || null}
+                        onChange={(u) => field.onChange(u?.id ?? "")}
+                        availableForLink={false}
+                        placeholder="Pick a user in this Org…"
                       />
                     </FormControl>
                     <FormMessage />

@@ -1,9 +1,19 @@
 "use client";
 
 import { Loader2, Plus, Search } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +25,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useIsAppAdmin } from "@/features/auth";
+import type { ID } from "@/lib/types";
 
-import { useEmployees } from "../hooks/useEmployees";
+import { EmployeeCreateDialog } from "../components/EmployeeCreateDialog";
+import { EmployeeDetailSheet } from "../components/EmployeeDetailSheet";
+import { EmployeeEditDialog } from "../components/EmployeeEditDialog";
+import { EmployeeRowActions } from "../components/EmployeeRowActions";
+import { useDeleteEmployee, useEmployees } from "../hooks/useEmployees";
 import type { EmployeeStatus } from "../types";
 
 const PAGE_SIZE = 20;
@@ -39,14 +54,35 @@ export function EmployeeListView() {
   const [status, setStatus] = useState<EmployeeStatus | "all">("all");
   const [page, setPage] = useState(1);
 
+  const [viewingId, setViewingId] = useState<ID | null>(null);
+  const [editingId, setEditingId] = useState<ID | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: ID; name: string } | null>(
+    null,
+  );
+
   const list = useEmployees({
     q: q.trim() || undefined,
     status: status === "all" ? undefined : status,
     page,
     limit: PAGE_SIZE,
   });
+  const remove = useDeleteEmployee();
 
   const totalPages = list.data ? Math.max(1, Math.ceil(list.data.total / PAGE_SIZE)) : 1;
+
+  const onConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await remove.mutateAsync(deleteTarget.id);
+      toast.success(`Đã xoá ${deleteTarget.name}`);
+      setDeleteTarget(null);
+    } catch (err) {
+      toast.error("Không xoá được", {
+        description: err instanceof Error ? err.message : "Thử lại sau.",
+      });
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
@@ -58,11 +94,9 @@ export function EmployeeListView() {
           </p>
         </div>
         {canManage && (
-          <Button asChild>
-            <Link href="/employees/new" className="gap-2">
-              <Plus className="h-4 w-4" />
-              New employee
-            </Link>
+          <Button onClick={() => setCreating(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New employee
           </Button>
         )}
       </header>
@@ -124,6 +158,7 @@ export function EmployeeListView() {
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Title</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="w-12 px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -131,22 +166,11 @@ export function EmployeeListView() {
                 <tr
                   key={emp.id}
                   className="cursor-pointer transition-colors hover:bg-accent/30"
+                  onClick={() => setViewingId(emp.id)}
                 >
-                  <td className="px-4 py-3 font-mono text-xs">
-                    <Link
-                      href={`/employees/${emp.id}`}
-                      className="block w-full"
-                    >
-                      {emp.code}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/employees/${emp.id}`}
-                      className="block w-full font-medium"
-                    >
-                      {emp.user?.name ?? "—"}
-                    </Link>
+                  <td className="px-4 py-3 font-mono text-xs">{emp.code}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {emp.user?.name ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {emp.user?.email ?? "—"}
@@ -158,6 +182,23 @@ export function EmployeeListView() {
                     <Badge variant={statusVariant[emp.status]}>
                       {emp.status.replace("_", " ").toLowerCase()}
                     </Badge>
+                  </td>
+                  <td
+                    className="px-2 py-2 text-right"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <EmployeeRowActions
+                      id={emp.id}
+                      canManage={canManage}
+                      onView={(id) => setViewingId(id)}
+                      onEdit={(id) => setEditingId(id)}
+                      onDelete={(id) =>
+                        setDeleteTarget({
+                          id,
+                          name: emp.user?.name ?? emp.code,
+                        })
+                      }
+                    />
                   </td>
                 </tr>
               ))}
@@ -195,6 +236,48 @@ export function EmployeeListView() {
           </div>
         </div>
       )}
+
+      <EmployeeDetailSheet
+        id={viewingId}
+        onClose={() => setViewingId(null)}
+      />
+      <EmployeeEditDialog
+        id={editingId}
+        onClose={() => setEditingId(null)}
+      />
+      <EmployeeCreateDialog
+        open={creating}
+        onClose={() => setCreating(false)}
+      />
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(v) => !v && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xoá nhân viên?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && (
+                <>
+                  Soft-delete &quot;{deleteTarget.name}&quot;? Họ sẽ không xuất
+                  hiện trong danh sách nữa nhưng row vẫn được giữ trong DB cho
+                  history (audit log + reports).
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={remove.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onConfirmDelete}
+              disabled={remove.isPending}
+            >
+              {remove.isPending ? "Đang xoá…" : "Xoá"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

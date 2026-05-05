@@ -1,9 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -11,13 +9,13 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -39,11 +37,7 @@ import { useDepartments } from "@/features/departments";
 import { UserPicker } from "@/features/users";
 import type { ID } from "@/lib/types";
 
-import {
-  useDeleteEmployee,
-  useEmployee,
-  useUpdateEmployee,
-} from "../hooks/useEmployees";
+import { useEmployee, useUpdateEmployee } from "../hooks/useEmployees";
 
 const NO_DEPARTMENT = "__none__";
 
@@ -61,21 +55,20 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-interface EmployeeEditViewProps {
-  id: ID;
+interface EmployeeEditDialogProps {
+  id: ID | null;
+  onClose: () => void;
 }
 
-function toInputDate(value: string | null): string {
+function toInputDate(value: string | null | undefined): string {
   if (!value) return "";
   return value.slice(0, 10);
 }
 
-export function EmployeeEditView({ id }: EmployeeEditViewProps) {
-  const router = useRouter();
+export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
   const employee = useEmployee(id);
   const departments = useDepartments();
   const update = useUpdateEmployee();
-  const remove = useDeleteEmployee();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -103,28 +96,8 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
     }
   }, [employee.data, form]);
 
-  if (employee.isLoading) {
-    return (
-      <div className="mx-auto flex max-w-2xl items-center justify-center gap-2 px-6 py-16 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-      </div>
-    );
-  }
-
-  if (employee.error || !employee.data) {
-    return (
-      <div className="mx-auto max-w-2xl px-6 py-16">
-        <p className="text-sm text-destructive">Employee not found.</p>
-        <Button variant="ghost" asChild className="mt-4 gap-2">
-          <Link href="/employees">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back
-          </Link>
-        </Button>
-      </div>
-    );
-  }
-
   const onSubmit = async (values: FormValues) => {
+    if (!id) return;
     try {
       await update.mutateAsync({
         id,
@@ -139,7 +112,7 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
         },
       });
       toast.success("Employee updated");
-      router.push(`/employees/${id}`);
+      onClose();
     } catch (err) {
       toast.error("Couldn't update employee", {
         description:
@@ -150,47 +123,32 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
     }
   };
 
-  const linkedUser = employee.data.user;
-  const fullName = linkedUser?.name ?? "(no name)";
-
-  const onDelete = async () => {
-    if (
-      !confirm(
-        `Soft-delete "${fullName}"? They'll disappear from listings but the row stays in the DB for history.`,
-      )
-    ) {
-      return;
-    }
-    try {
-      await remove.mutateAsync(id);
-      toast.success("Employee deleted");
-      router.push("/employees");
-    } catch (err) {
-      toast.error("Couldn't delete", {
-        description: err instanceof Error ? err.message : "Try again later.",
-      });
-    }
-  };
+  const linkedUser = employee.data?.user ?? null;
+  const headerName = linkedUser?.name ?? "(no name)";
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6 px-6 py-8">
-      <Button variant="ghost" asChild size="sm" className="gap-2">
-        <Link href={`/employees/${id}`}>
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to {fullName}
-        </Link>
-      </Button>
+    <Dialog open={!!id} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Edit employee</DialogTitle>
+          <DialogDescription>
+            <span className="font-mono text-xs">{employee.data?.code ?? "…"}</span>
+            {" · "}
+            {headerName}
+          </DialogDescription>
+        </DialogHeader>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <Card>
-            <CardHeader>
-              <CardTitle>Edit employee</CardTitle>
-              <CardDescription>
-                <span className="font-mono text-xs">{employee.data.code}</span>{" "}
-                · {fullName}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        {employee.isLoading || !employee.data ? (
+          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+          </div>
+        ) : (
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4"
+              id="edit-employee-form"
+            >
               <FormField
                 control={form.control}
                 name="userId"
@@ -202,7 +160,7 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
                         value={field.value || null}
                         onChange={(u) => field.onChange(u?.id ?? "")}
                         availableForLink
-                        includeLinkedTo={id}
+                        includeLinkedTo={id ?? undefined}
                         fallback={
                           linkedUser
                             ? { name: linkedUser.name, email: linkedUser.email }
@@ -211,7 +169,7 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
                       />
                     </FormControl>
                     <FormDescription>
-                      Re-link to a different user — personal info will follow.
+                      Re-link to a different user — personal info follows.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -252,7 +210,7 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={NO_DEPARTMENT}>(no department)</SelectItem>
+                        <SelectItem value={NO_DEPARTMENT}>(none)</SelectItem>
                         {departments.data?.map((d) => (
                           <SelectItem key={d.id} value={d.id}>
                             {d.name}
@@ -334,41 +292,27 @@ export function EmployeeEditView({ id }: EmployeeEditViewProps) {
                   </FormItem>
                 )}
               />
-            </CardContent>
-            <CardFooter className="flex items-center justify-between gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                className="gap-2 text-destructive hover:text-destructive"
-                onClick={onDelete}
-                disabled={remove.isPending}
-              >
-                {remove.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}
-                Delete
-              </Button>
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="ghost" asChild>
-                  <Link href={`/employees/${id}`}>Cancel</Link>
-                </Button>
-                <Button
-                  type="submit"
-                  className="gap-2"
-                  disabled={update.isPending || !form.formState.isDirty}
-                >
-                  {update.isPending && (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  )}
-                  Save changes
-                </Button>
-              </div>
-            </CardFooter>
-          </Card>
-        </form>
-      </Form>
-    </div>
+            </form>
+          </Form>
+        )}
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="edit-employee-form"
+            disabled={
+              update.isPending || !employee.data || !form.formState.isDirty
+            }
+            className="gap-2"
+          >
+            {update.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Save changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

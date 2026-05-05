@@ -3,7 +3,7 @@ import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
   title: "Organization",
-  path: "/settings/organization",
+  path: "/admin/organization",
   noIndex: true,
 });
 

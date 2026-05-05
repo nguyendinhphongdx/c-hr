@@ -3,10 +3,11 @@
 import {
   Building2,
   Calendar,
-  Inbox,
   Home,
+  Inbox,
   Network,
   Settings,
+  Shield,
   Sparkles,
   Users,
   type LucideIcon,
@@ -19,6 +20,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useIsAdmin, useIsAppAdmin } from "@/features/auth";
 import { SITE } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
@@ -31,17 +33,14 @@ interface NavItem {
 }
 
 interface NavSection {
-  /** Optional section heading; omit for the top group (Home / Settings). */
+  /** Optional section heading; omit for the top group. */
   label?: string;
   items: NavItem[];
 }
 
 const NAV_SECTIONS: NavSection[] = [
   {
-    items: [
-      { href: "/home", label: "Home", icon: Home },
-      { href: "/settings", label: "Settings", icon: Settings },
-    ],
+    items: [{ href: "/home", label: "Home", icon: Home }],
   },
   {
     label: "HRM",
@@ -53,15 +52,11 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: "Attendance",
-    items: [
-      { href: "/timesheet", label: "Timesheet", icon: Calendar },
-    ],
+    items: [{ href: "/timesheet", label: "Timesheet", icon: Calendar }],
   },
   {
     label: "Requests",
-    items: [
-      { href: "/requests", label: "Requests", icon: Inbox },
-    ],
+    items: [{ href: "/requests", label: "Requests", icon: Inbox }],
   },
 ];
 
@@ -71,6 +66,9 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed }: SidebarProps) {
   const pathname = usePathname();
+  const isAdmin = useIsAdmin();
+  const isHrmAdmin = useIsAppAdmin("HRM");
+  const showAdmin = isAdmin || isHrmAdmin;
 
   return (
     <aside
@@ -117,6 +115,21 @@ export function Sidebar({ collapsed }: SidebarProps) {
           </div>
         ))}
       </nav>
+
+      <div className="mt-auto space-y-1 border-t p-2">
+        {showAdmin && (
+          <NavLink
+            item={{ href: "/admin", label: "Admin", icon: Shield }}
+            collapsed={collapsed}
+            active={pathname === "/admin" || pathname.startsWith("/admin/")}
+          />
+        )}
+        <NavLink
+          item={{ href: "/settings", label: "Settings", icon: Settings }}
+          collapsed={collapsed}
+          active={pathname === "/settings" || pathname.startsWith("/settings/")}
+        />
+      </div>
     </aside>
   );
 }
