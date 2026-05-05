@@ -1,29 +1,82 @@
-# services/zk-bridge — placeholder
+# services/zk-bridge
 
-> **Trạng thái**: chưa implement. Spec đầy đủ ở [docs/plans/zk-bridge.md](../../docs/plans/zk-bridge.md).
+Pull-side adapter that polls a ZKTeco device over TCP (`node-zklib`) and pushes
+attendance events to C-HR over HTTPS. Runs at the customer's LAN, **not** with
+the C-HR backend cloud. Spec: [docs/plans/zk-bridge.md](../../docs/plans/zk-bridge.md).
 
-Service này sẽ là **bridge** poll device ZKTeco qua TCP (`node-zklib`) và đẩy event sang C-HR backend qua HTTPS — chạy ở LAN văn phòng khách hàng, **không** chạy chung với backend cloud.
+## Implementation status
 
-## Tóm tắt scope (xem spec để chi tiết)
+| Slice | Status | What it covers |
+| --- | --- | --- |
+| 1 — skeleton + poll | done | env-driven one-shot poll → push, contract verified |
+| 2 — SQLite + scheduler | done | sequelize models, state cursor, offline queue, cycle log, node-cron |
+| 3 — local UI + auth | done | Hono server, single-user bcrypt + signed cookie session, dashboard + config + logs pages |
+| 4 — scan + autostart + installer + CLI | done | LAN /24 probe, systemd / Windows Scheduled Task / launchd, install scripts, `reset-user` CLI |
 
-- Local web UI ở `http://localhost:7000` để admin nhập config (CHR API + token + ZK device IP) — không cần sửa file env tay
-- Single-user auth: tạo admin local lần đầu start, không có signup sau
-- SQLite local cho config + offline event queue + cycle audit
-- LAN device scan: auto-discover IP ZKTeco trong subnet
-- Auto-start on boot: 1 toggle UI install systemd / Windows Service / launchd
+## Quick start (dev)
 
-## Vì sao folder này tồn tại trước khi code
+```bash
+pnpm install --filter @c-hr/zk-bridge
+pnpm --filter @c-hr/zk-bridge build
 
-Giữ slot trong monorepo để khi cần bắt tay làm:
+# Optional: pre-seed config from .env so the UI is usable without typing.
+cp services/zk-bridge/.env.example services/zk-bridge/.env
 
-1. Workspace structure đã có chỗ — không tranh luận đặt ở đâu.
-2. Doc `docs/plans/zk-bridge.md` đã chốt scope, contract, pre-req, layout.
-3. Khi clone repo và `ls services/`, dev thấy ngay slot này tồn tại nhưng chưa code → biết là post-MVP.
+# Start the bridge — UI + scheduler both run.
+pnpm --filter @c-hr/zk-bridge start
 
-## Khi nào bắt đầu
+# OR: run a single poll cycle and exit (useful for smoke-testing a device).
+pnpm --filter @c-hr/zk-bridge poll:once
 
-Theo trigger trong [docs/plans/zk-bridge.md § "Khi nào bắt đầu"](../../docs/plans/zk-bridge.md#khi-nào-bắt-đầu): F1–F5 đóng + có khách hàng thật cần tích hợp device. Trước đó **không** code.
+# OR: reset the local admin user when the password is lost.
+pnpm --filter @c-hr/zk-bridge reset-user
+```
 
-## Deploy tách rời
+Open <http://127.0.0.1:7000> — first time hits `/setup` to create the local
+admin. Subsequent starts hit `/login`.
 
-Khi implement, service này có installer + (optional) docker-compose.yml riêng. Root `docker-compose.yml` của C-HR backend **không** include service này — bridge cài trên máy của khách hàng, không trên hạ tầng cloud của C-HR.
+## Environment
+
+The bridge expects almost everything to be entered through the UI. Only path /
+listen-binding settings come from env:
+
+| Env | Default | Purpose |
+| --- | --- | --- |
+| `DATA_DIR` | `./data` | Where `zk-bridge.db` (SQLite) lives |
+| `PORT` | `7000` | UI HTTP port |
+| `BIND_HOST` | `127.0.0.1` | Bind address. Set `0.0.0.0` to allow LAN access |
+
+`CHR_*` and `ZK_*` env vars (see `.env.example`) are seeded **once**, on the
+very first start, into the SQLite `config` table. After that they are ignored —
+edit values via the UI.
+
+## Customer install (LAN admin)
+
+1. On C-HR cloud: `/settings/attendance-devices` → register device → copy
+   `deviceId` UUID + plaintext token.
+2. On the LAN box (mini-PC / VM):
+   - Linux: `curl -sSL https://<release>/install-linux.sh | bash`
+   - Windows (PowerShell): `iwr -useb https://<release>/install-windows.ps1 | iex`
+   - macOS: `curl -sSL https://<release>/install-macos.sh | bash`
+3. Open `http://127.0.0.1:7000` → setup form → fill `/config/chr` + `/config/zk`
+   → toggle `Auto-start on boot`. From this point the bridge is unattended.
+
+## Layout
+
+```text
+services/zk-bridge/
+├── installer/              # platform install scripts run by customer admin
+├── src/
+│   ├── boot/               # auto-start install (linux/windows/macos)
+│   ├── cli/reset-user.ts   # CLI subcommand to wipe the local admin
+│   ├── config/             # env reader + DB-backed runtime config
+│   ├── db/                 # sequelize models + repo
+│   ├── poll/               # cycle runner, ZK client, C-HR client, scheduler
+│   ├── scan/lan-scan.ts    # /24 TCP probe for ZKTeco devices
+│   └── server/             # Hono HTTP UI + session middleware + page renderers
+├── package.json
+└── tsconfig.json
+```
+
+Token / event idempotency lives at C-HR side via `(deviceId, eventLogId)` —
+the bridge keeps SQLite only as a local cache so it can run offline-tolerant.

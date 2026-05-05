@@ -1,8 +1,12 @@
 packages:
   - 'apps/*'
   - 'mcp/*'
+  - 'services/zk-bridge'
 
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
   - bcrypt
+
+onlyBuiltDependencies:
+  - sqlite3
