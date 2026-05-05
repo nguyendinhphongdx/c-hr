@@ -21,7 +21,7 @@ export async function scanSubnetFor(
   port = 4370,
   tcpTimeoutMs = 500,
   tcpConcurrency = 64,
-  zkTimeoutMs = 3_000,
+  zkTimeoutMs = 8_000,
 ): Promise<ScanCandidate[]> {
   const subnets = listIPv4Subnets();
   const candidates = subnets.flatMap(expand24);
@@ -40,30 +40,22 @@ export async function scanSubnetFor(
   );
   open.sort(compareIp);
 
-  // ZK protocol probe — limited concurrency so we don't open many sockets at
-  // once on a busy LAN. Each probe takes 1-3s.
+  // ZK protocol probe — must be sequential. ZKTeco firmware only accepts a
+  // single active connection per device, and parallel probes against the
+  // same host (or even adjacent ones on a small LAN) frequently time out.
   const results: ScanCandidate[] = [];
-  let zkCursor = 0;
-  const zkConcurrency = 4;
-  async function zkWorker(): Promise<void> {
-    while (zkCursor < open.length) {
-      const idx = zkCursor++;
-      const host = open[idx];
-      try {
-        const info = await probeZkDevice(host, port, zkTimeoutMs);
-        results.push({ host, port, info });
-      } catch (err) {
-        results.push({
-          host,
-          port,
-          info: { reachable: false, error: err instanceof Error ? err.message : String(err) },
-        });
-      }
+  for (const host of open) {
+    try {
+      const info = await probeZkDevice(host, port, zkTimeoutMs);
+      results.push({ host, port, info });
+    } catch (err) {
+      results.push({
+        host,
+        port,
+        info: { reachable: false, error: err instanceof Error ? err.message : String(err) },
+      });
     }
   }
-  await Promise.all(
-    Array.from({ length: Math.min(zkConcurrency, open.length) }, zkWorker),
-  );
   results.sort((a, b) => compareIp(a.host, b.host));
   return results;
 }

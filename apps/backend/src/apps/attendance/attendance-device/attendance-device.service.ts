@@ -16,6 +16,7 @@ import { PrismaService } from '@libs/database/prisma.service';
 import {
   AttendanceEventDto,
   CreateAttendanceDeviceDto,
+  PingDeviceDto,
   PushAttendanceDto,
   UpdateAttendanceDeviceDto,
 } from './dto';
@@ -133,6 +134,17 @@ export class AttendanceDeviceService {
   // ──────────────────────────────────────────────────────────────────
   // Public push endpoint — auth via JWT in body
   // ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Connectivity check — the bridge calls this when the admin clicks
+   * "Connect" on a device row. Verifies the JWT and bumps `lastSeenAt` so
+   * the dashboard reflects "kết nối thành công" immediately.
+   */
+  async ping(dto: PingDeviceDto): Promise<{ deviceId: string; lastSeenAt: Date }> {
+    const device = await this.verifyToken(dto.token);
+    const updated = await this.repo.update(device.id, { lastSeenAt: new Date() });
+    return { deviceId: device.id, lastSeenAt: updated.lastSeenAt ?? new Date() };
+  }
 
   /**
    * Verify token, resolve employees by code within the device's Org, and

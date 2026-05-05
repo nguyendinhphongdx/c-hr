@@ -13,7 +13,7 @@ import {
   type DeviceView,
 } from '../db/repo';
 
-import { pushEvents } from './chr-client';
+import { pushEventsBatched } from './chr-client';
 import { translateZkRecord } from './translate';
 import type { AttendanceEvent } from './types';
 import { fetchAttendances } from './zk-client';
@@ -67,29 +67,35 @@ async function runDeviceCycle(
   apiUrl: string,
   device: DeviceView,
 ): Promise<DeviceCycleResult> {
+  console.log(
+    `[poll] device "${device.name}" (id=${device.id}) — cursor=${device.lastEventLogId}, host=${device.host}:${device.port}`,
+  );
   const cycleId = await startCycle(device.id, device.name);
   let pulled = 0;
   let pushed = 0;
   let queuedNow = 0;
 
-  // 1. Drain offline queue first.
+  // 1. Drain offline queue first (chunked — large drains can exceed BE body limit).
   const queued = await listQueuedEvents(device.id, 500);
   if (queued.length > 0) {
+    console.log(`[poll] device "${device.name}" — draining ${queued.length} queued event(s)`);
     const events = queued.map((q) => JSON.parse(q.payloadJson) as AttendanceEvent);
-    try {
-      await pushEvents({ baseUrl: apiUrl, token: device.chrDeviceToken }, events);
-      await deleteQueuedEvents(queued.map((q) => q.id));
-      pushed += events.length;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      await markQueuedFailure(
-        queued.map((q) => q.id),
-        msg,
-      );
+    const drainResult = await pushEventsBatched(
+      { baseUrl: apiUrl, token: device.chrDeviceToken },
+      events,
+    );
+    const successIds = queued.slice(0, drainResult.success).map((q) => q.id);
+    const failedIds = queued.slice(drainResult.success).map((q) => q.id);
+    await deleteQueuedEvents(successIds);
+    pushed += drainResult.success;
+
+    if (drainResult.error) {
+      const msg = drainResult.error.message;
+      await markQueuedFailure(failedIds, msg);
       await finishCycle(cycleId, {
         eventsPolled: 0,
         eventsPushed: pushed,
-        eventsQueued: queued.length,
+        eventsQueued: failedIds.length,
         status: 'chr_error',
         errorMessage: msg,
       });
@@ -100,16 +106,20 @@ async function runDeviceCycle(
         status: 'chr_error',
         pulled: 0,
         pushed,
-        queued: queued.length,
+        queued: failedIds.length,
         message: msg,
       };
     }
   }
 
   // 2. Poll device for new records.
+  const zkStart = Date.now();
   let records;
   try {
     records = await fetchAttendances(device.host, device.port);
+    console.log(
+      `[poll] device "${device.name}" — fetched ${records.length} record(s) from ZK in ${Date.now() - zkStart}ms`,
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await finishCycle(cycleId, {
@@ -136,6 +146,9 @@ async function runDeviceCycle(
     .filter((r) => r.deviceUserId && r.deviceUserId !== '0')
     .filter((r) => Number(r.userSn) > device.lastEventLogId)
     .map(translateZkRecord);
+  console.log(
+    `[poll] device "${device.name}" — ${fresh.length} fresh event(s) after dedupe (cursor=${device.lastEventLogId})`,
+  );
 
   if (fresh.length === 0) {
     await finishCycle(cycleId, {
@@ -159,12 +172,17 @@ async function runDeviceCycle(
     };
   }
 
-  // 3. Push fresh events. On failure, enqueue and advance cursor anyway —
-  //    C-HR dedupes by (deviceId, eventLogId) so a rare double-send is safe.
-  try {
-    await pushEvents({ baseUrl: apiUrl, token: device.chrDeviceToken }, fresh);
-    pushed += fresh.length;
-    const maxSn = Math.max(...fresh.map((e) => Number(e.eventLogId)));
+  // 3. Push fresh events (chunked). On partial failure, enqueue the tail and
+  //    still advance cursor — C-HR dedupes by (deviceId, eventLogId) so a
+  //    rare double-send is safe; the queue will retry on the next cycle.
+  const pushResult = await pushEventsBatched(
+    { baseUrl: apiUrl, token: device.chrDeviceToken },
+    fresh,
+  );
+  pushed += pushResult.success;
+  const maxSn = Math.max(...fresh.map((e) => Number(e.eventLogId)));
+
+  if (!pushResult.error) {
     await finishCycle(cycleId, {
       eventsPolled: pulled,
       eventsPushed: pushed,
@@ -185,14 +203,17 @@ async function runDeviceCycle(
       pushed,
       queued: 0,
     };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+  }
+
+  // Partial / full push failure → enqueue the tail.
+  {
+    const msg = pushResult.error.message;
+    const failed = fresh.slice(pushResult.success);
     await enqueueEvents(
       device.id,
-      fresh.map((e) => JSON.stringify(e)),
+      failed.map((e) => JSON.stringify(e)),
     );
-    queuedNow = fresh.length;
-    const maxSn = Math.max(...fresh.map((e) => Number(e.eventLogId)));
+    queuedNow = failed.length;
     const status = pushed > 0 ? 'partial' : 'chr_error';
     await finishCycle(cycleId, {
       eventsPolled: pulled,

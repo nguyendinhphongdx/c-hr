@@ -19,12 +19,16 @@ async function safeRun(): Promise<void> {
     return;
   }
   running = true;
+  const tickAt = new Date().toISOString();
+  const start = Date.now();
+  console.log(`[scheduler] tick ${tickAt} — running cycle`);
   try {
     const summary = await runCycle();
+    const ms = Date.now() - start;
     if (summary.apiUrlMissing) {
-      console.log('[scheduler] cycle skipped — C-HR API URL not set');
+      console.log(`[scheduler] cycle skipped (${ms}ms) — C-HR API URL not set`);
     } else if (summary.noDevices) {
-      console.log('[scheduler] cycle skipped — no enabled devices');
+      console.log(`[scheduler] cycle skipped (${ms}ms) — no enabled devices`);
     } else {
       for (const r of summary.results) {
         console.log(
@@ -32,9 +36,13 @@ async function safeRun(): Promise<void> {
             (r.message ? ` — ${r.message}` : ''),
         );
       }
+      console.log(`[scheduler] cycle finished in ${ms}ms (devices=${summary.results.length})`);
     }
   } catch (err) {
-    console.error('[scheduler] cycle threw:', err instanceof Error ? err.message : err);
+    console.error(
+      `[scheduler] cycle threw after ${Date.now() - start}ms:`,
+      err instanceof Error ? err.message : err,
+    );
   } finally {
     running = false;
   }

@@ -33,10 +33,14 @@ function deviceRow(d: DeviceView): string {
       <td class="py-2 pr-2 text-sm">${formatDate(d.lastSyncAt)}</td>
       <td class="py-2 pr-2 text-sm text-rose-700">${escapeHtml(d.lastError ?? '')}</td>
       <td class="py-2 pr-2 text-right whitespace-nowrap">
+        <a href="/devices/${d.id}/events"
+           class="inline-block text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-100">Events</a>
+        <a href="/logs?deviceId=${d.id}"
+           class="inline-block text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-100">Cycles</a>
         <button type="button" class="zkb-edit text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-100"
           data-device='${escapeHtml(JSON.stringify(d))}'>Edit</button>
-        <form method="post" action="/devices/${d.id}/test" class="inline">
-          <button class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-100">Test</button>
+        <form method="post" action="/devices/${d.id}/connect" class="inline">
+          <button class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-100">Connect</button>
         </form>
         <form method="post" action="/devices/${d.id}/delete" class="inline"
               onsubmit="return confirm('Delete ${escapeHtml(d.name)}?')">
@@ -68,6 +72,10 @@ export function renderDevicesPage(opts: {
             .map((c) => {
               const i = c.info;
               const reachable = i?.reachable ?? false;
+              // Port 4370 is the canonical ZKTeco port — port-open + probe-fail
+              // most likely means the device is busy (single-connection limit)
+              // rather than "not a ZKTeco". Different label for that case.
+              const isCanonicalZkPort = c.port === 4370;
               const tagBits: string[] = [];
               if (reachable) {
                 if (i?.name) tagBits.push(escapeHtml(i.name));
@@ -80,12 +88,16 @@ export function renderDevicesPage(opts: {
               }
               const tags = tagBits.length
                 ? `<div class="text-xs text-slate-500 mt-0.5">${tagBits.join(' · ')}</div>`
-                : !reachable
-                  ? `<div class="text-xs text-amber-700 mt-0.5">port open but ZK protocol unreachable — may not be a ZKTeco device</div>`
-                  : `<div class="text-xs text-slate-400 mt-0.5">no metadata</div>`;
+                : reachable
+                  ? `<div class="text-xs text-slate-400 mt-0.5">no metadata</div>`
+                  : isCanonicalZkPort
+                    ? `<div class="text-xs text-amber-700 mt-0.5">port mở nhưng ZK probe fail — device có thể đang busy (1 connection / lúc). Vẫn add được rồi test sau.</div>`
+                    : `<div class="text-xs text-amber-700 mt-0.5">port mở nhưng ZK protocol unreachable — có thể không phải ZKTeco</div>`;
               const badge = reachable
                 ? `<span class="text-[10px] uppercase font-semibold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">ZKTeco</span>`
-                : `<span class="text-[10px] uppercase font-semibold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">unknown</span>`;
+                : isCanonicalZkPort
+                  ? `<span class="text-[10px] uppercase font-semibold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded" title="port 4370 — likely ZKTeco but probe failed">ZKTeco?</span>`
+                  : `<span class="text-[10px] uppercase font-semibold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">unknown</span>`;
               return `
                 <li class="flex items-start justify-between gap-3 bg-slate-50 border border-slate-200 px-3 py-2 rounded">
                   <div class="min-w-0">

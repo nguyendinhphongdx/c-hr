@@ -17,7 +17,9 @@ import {
   type DeviceInput,
 } from '../db/repo';
 import { User } from '../db/models';
-import { pushEvents } from '../poll/chr-client';
+import { pingConnection } from '../poll/chr-client';
+import { translateZkRecord } from '../poll/translate';
+import { fetchAttendances } from '../poll/zk-client';
 import { restartScheduler, runOnce } from '../poll/scheduler';
 import { totalQueuedAcrossDevices } from '../poll/poll';
 import { scanSubnetFor, type ScanCandidate } from '../scan/lan-scan';
@@ -32,6 +34,7 @@ import {
 import { renderLoginPage, renderSetupPage } from './ui/auth-pages';
 import { renderChrConfigPage, renderSystemConfigPage } from './ui/config-pages';
 import { renderDashboard } from './ui/dashboard-page';
+import { renderDeviceEventsPage, type DeviceEventRow } from './ui/device-events-page';
 import { renderDevicesPage } from './ui/devices-page';
 import { renderLogsPage } from './ui/logs-page';
 
@@ -73,6 +76,22 @@ function parseDeviceForm(form: Record<string, unknown>): DeviceInput | string {
 
 let lastScanResults: ScanCandidate[] = [];
 let lastScanRan = false;
+
+interface DeviceEventsCache {
+  fetchedAt: number;
+  events: Array<{
+    eventLogId: string;
+    employeeCode: string;
+    timestampIso: string;
+    type: 'IN' | 'OUT';
+    userSn: number;
+  }>;
+  totalRecords: number;
+  fetchMs: number;
+}
+const eventsCache = new Map<number, DeviceEventsCache>();
+const EVENTS_CACHE_TTL_MS = 60_000;
+const EVENTS_PAGE_SIZE = 50;
 
 export function createServer(): Hono<SessionVars> {
   const app = new Hono<SessionVars>();
@@ -258,7 +277,89 @@ export function createServer(): Hono<SessionVars> {
     return c.redirect('/devices');
   });
 
-  app.post('/devices/:id/test', async (c) => {
+  app.get('/devices/:id/events', async (c) => {
+    const id = Number(c.req.param('id'));
+    const device = Number.isFinite(id) ? await getDevice(id) : null;
+    if (!device) return c.redirect('/devices');
+
+    const pageRaw = Number(c.req.query('page') ?? '1');
+    const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
+    const forceRefresh = c.req.query('refresh') === '1';
+
+    let cache = eventsCache.get(id);
+    let flash: { kind: 'ok' | 'err'; message: string } | null = null;
+    const now = Date.now();
+    const stale = !cache || now - cache.fetchedAt > EVENTS_CACHE_TTL_MS;
+
+    if (stale || forceRefresh) {
+      const fetchStart = Date.now();
+      try {
+        const records = await fetchAttendances(device.host, device.port);
+        const sorted = records
+          .filter((r) => r.deviceUserId && r.deviceUserId !== '0')
+          .map((r) => {
+            const e = translateZkRecord(r);
+            return {
+              eventLogId: e.eventLogId,
+              employeeCode: e.employeeCode,
+              timestampIso: e.timestamp,
+              type: (e.type ?? 'IN') as 'IN' | 'OUT',
+              userSn: Number(r.userSn),
+            };
+          })
+          // Sort by eventLogId desc — pending (id > cursor) tops the list,
+          // pushed (id ≤ cursor) below. UI renders cursor divider at boundary.
+          .sort((a, b) => b.userSn - a.userSn);
+        cache = {
+          fetchedAt: Date.now(),
+          events: sorted,
+          totalRecords: records.length,
+          fetchMs: Date.now() - fetchStart,
+        };
+        eventsCache.set(id, cache);
+      } catch (err) {
+        flash = {
+          kind: 'err',
+          message: `Không lấy được events từ device: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    }
+
+    const events = cache?.events ?? [];
+    const totalRecords = cache?.totalRecords ?? 0;
+    const offset = (page - 1) * EVENTS_PAGE_SIZE;
+    const sliceRaw = events.slice(offset, offset + EVENTS_PAGE_SIZE);
+    const slice: DeviceEventRow[] = sliceRaw.map((e) => ({
+      eventLogId: e.eventLogId,
+      employeeCode: e.employeeCode,
+      timestampIso: e.timestampIso,
+      type: e.type,
+      pending: e.userSn > device.lastEventLogId,
+    }));
+    // Cursor visible on this page iff its SN sits between the slice's max
+    // and min (inclusive). Slice is sorted by userSn desc.
+    const cursor = device.lastEventLogId;
+    const cursorOnPage =
+      sliceRaw.length > 0 &&
+      sliceRaw[0].userSn >= cursor &&
+      sliceRaw[sliceRaw.length - 1].userSn <= cursor;
+
+    return c.html(
+      renderDeviceEventsPage({
+        device,
+        events: slice,
+        totalRecords,
+        page,
+        pageSize: EVENTS_PAGE_SIZE,
+        cursorOnPage,
+        cachedAt: cache ? new Date(cache.fetchedAt) : null,
+        fetchMs: cache?.fetchMs ?? 0,
+        flash,
+      }),
+    );
+  });
+
+  app.post('/devices/:id/connect', async (c) => {
     const id = Number(c.req.param('id'));
     const device = Number.isFinite(id) ? await getDevice(id) : null;
     const shared = await readSharedConfig();
@@ -267,24 +368,17 @@ export function createServer(): Hono<SessionVars> {
       flash = { kind: 'err', message: 'Device not found, or C-HR API URL is missing.' };
     } else {
       try {
-        await pushEvents(
-          { baseUrl: shared.chrApiUrl, token: device.chrDeviceToken },
-          [],
-        );
+        const result = await pingConnection({
+          baseUrl: shared.chrApiUrl,
+          token: device.chrDeviceToken,
+        });
         flash = {
           kind: 'ok',
-          message: `${device.name}: reached C-HR. Token accepted.`,
+          message: `${device.name}: connected. Backend lastSeenAt updated (deviceId=${result.deviceId}).`,
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (/HTTP 400/.test(msg) && /events/i.test(msg)) {
-          flash = {
-            kind: 'ok',
-            message: `${device.name}: reached C-HR. Token accepted.`,
-          };
-        } else {
-          flash = { kind: 'err', message: `${device.name}: ${msg}` };
-        }
+        flash = { kind: 'err', message: `${device.name}: ${msg}` };
       }
     }
     const devices = await listDevices();

@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { apiClient } from "@/lib/api/client";
 import {
   Dialog,
   DialogContent,
@@ -85,10 +86,21 @@ export function AttendanceDevicesView() {
   const [createOpen, setCreateOpen] = useState(false);
   const [tokenDialog, setTokenDialog] = useState<TokenDialogState | null>(null);
 
+  const apiEndpoint = String(apiClient.defaults.baseURL ?? "");
+
   const onCopy = async (token: string) => {
     try {
       await navigator.clipboard.writeText(token);
       toast.success("Token copied");
+    } catch {
+      toast.error("Copy thất bại — copy thủ công.");
+    }
+  };
+
+  const onCopyEndpoint = async () => {
+    try {
+      await navigator.clipboard.writeText(apiEndpoint);
+      toast.success("Endpoint copied");
     } catch {
       toast.error("Copy thất bại — copy thủ công.");
     }
@@ -214,7 +226,30 @@ export function AttendanceDevicesView() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertTitle>Cách dùng token</AlertTitle>
-        <AlertDescription className="space-y-2 text-sm">
+        <AlertDescription className="space-y-3 text-sm">
+          <div className="space-y-1.5">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              C-HR API endpoint
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 rounded-md bg-muted px-3 py-2 font-mono text-xs break-all">
+                {apiEndpoint}
+              </code>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={onCopyEndpoint}
+              >
+                <Copy className="h-3.5 w-3.5" /> Copy
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Paste vào field <strong>API base URL</strong> ở trang{" "}
+              <code>/config/chr</code> của ZK-Bridge.
+            </p>
+          </div>
+
           <ol className="list-decimal space-y-1 pl-5">
             <li>
               Bấm <strong>Add device</strong> để đăng ký 1 đầu đọc — server
@@ -222,8 +257,8 @@ export function AttendanceDevicesView() {
             </li>
             <li>
               Mở <strong>menu ⋯</strong> ở mỗi dòng → <strong>Copy token</strong>
-              {" "}để lấy token vào clipboard, paste vào ZK-Bridge ở văn phòng
-              (trang <code>/devices</code> của bridge).
+              {" "}để lấy token vào clipboard, paste vào ZK-Bridge (trang{" "}
+              <code>/devices</code> của bridge).
             </li>
             <li>
               Token có thể xem lại / copy lại bất cứ lúc nào — không còn giới

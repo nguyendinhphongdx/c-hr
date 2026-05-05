@@ -17,7 +17,12 @@ import { Public } from '@/common/decorators/public.decorator';
 import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
 
-import { CreateAttendanceDeviceDto, PushAttendanceDto, UpdateAttendanceDeviceDto } from './dto';
+import {
+  CreateAttendanceDeviceDto,
+  PingDeviceDto,
+  PushAttendanceDto,
+  UpdateAttendanceDeviceDto,
+} from './dto';
 import { AttendanceDeviceService } from './attendance-device.service';
 
 @ApiTags('attendance-devices')
@@ -72,6 +77,18 @@ export class AttendanceDeviceController {
   @Auditable({ action: 'ATTENDANCE_DEVICE_DELETE', entity: 'AttendanceDevice' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
+  }
+
+  /**
+   * Public connectivity check. Bridge calls this when admin clicks "Connect"
+   * on a device row — verifies the JWT and bumps lastSeenAt so the dashboard
+   * shows the connection succeeded.
+   */
+  @Public()
+  @Post('ping')
+  @HttpCode(HttpStatus.OK)
+  ping(@Body() dto: PingDeviceDto) {
+    return this.service.ping(dto);
   }
 
   /**
