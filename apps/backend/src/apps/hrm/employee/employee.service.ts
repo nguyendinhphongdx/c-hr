@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 
 import { requireAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
@@ -11,6 +12,8 @@ import { PrismaService } from '@libs/database/prisma.service';
 
 import { CreateEmployeeDto, ListEmployeesDto, UpdateEmployeeDto } from './dto';
 import { EmployeeRepository } from './employee.repository';
+
+const PASSWORD_BCRYPT_ROUNDS = 10;
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -56,7 +59,18 @@ export class EmployeeService {
     await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     if (dto.departmentId) await this.assertDepartmentInOrg(orgId, dto.departmentId);
-    await this.assertUserAvailableForLink(orgId, dto.userId);
+
+    // User.email is globally unique. Catching here gives a clearer 409 than
+    // letting the Prisma constraint blow up.
+    const emailTaken = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { id: true },
+    });
+    if (emailTaken) {
+      throw new ConflictException('Email already in use');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, PASSWORD_BCRYPT_ROUNDS);
 
     return this.prisma.$transaction(async (tx) => {
       const employee = await tx.employee.create({
@@ -68,9 +82,15 @@ export class EmployeeService {
           hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
         },
       });
-      await tx.user.update({
-        where: { id: dto.userId },
-        data: { employeeId: employee.id },
+      await tx.user.create({
+        data: {
+          email: dto.email,
+          name: dto.name,
+          password: passwordHash,
+          role: 'user',
+          organizationId: orgId,
+          employeeId: employee.id,
+        },
       });
       return employee;
     });

@@ -2,15 +2,12 @@ import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/com
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
-import { RequestContextService } from '../context';
+
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-  constructor(
-    private readonly contextService: RequestContextService,
-    private readonly reflector: Reflector,
-  ) {
+  constructor(private readonly reflector: Reflector) {
     super();
   }
 
@@ -27,11 +24,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     if (err || !user) {
       throw err || new UnauthorizedException('Invalid or expired token');
     }
-    this.contextService.set({
-      userId: user.id,
-      sessionId: user.sessionId,
-      organizationId: user.organizationId,
-    });
+    // RequestContext (userId, sessionId, role, organizationId, employeeId)
+    // is populated upstream by JwtStrategy.validate per ADR 0007 — no need
+    // to re-set a subset here.
     return user;
   }
 }
