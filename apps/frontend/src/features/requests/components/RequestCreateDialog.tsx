@@ -205,7 +205,7 @@ export function RequestCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
             {step === "fill-form" && !cloneFromId && (
