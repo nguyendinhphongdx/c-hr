@@ -16,6 +16,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { useAuth, useIsAppAdmin } from "@/features/auth";
 import { EmployeePicker, useEmployee } from "@/features/employees";
 import type { ID } from "@/lib/types";
@@ -166,14 +167,16 @@ export function TimesheetView() {
 
   if (!selectedEmployeeId) {
     return (
-      <div className="mx-auto max-w-4xl px-6 py-16 text-sm text-muted-foreground">
-        Tài khoản chưa được link với hồ sơ Employee — liên hệ HRM admin.
-      </div>
+      <PageContainer>
+        <p className="text-sm text-muted-foreground">
+          Tài khoản chưa được link với hồ sơ Employee — liên hệ HRM admin.
+        </p>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
+    <PageContainer>
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Bảng giờ làm</h1>
@@ -225,7 +228,7 @@ export function TimesheetView() {
           ) : null}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   );
 }
 
@@ -235,14 +238,32 @@ function CalendarGrid({ days }: { days: TimesheetDay[] }) {
 
   // Pad the front so day 1 lands on the right ISO weekday column.
   const first = new Date(days[0].date + "T00:00:00Z");
+  const last = new Date(days[days.length - 1].date + "T00:00:00Z");
   const isoFirst = first.getUTCDay() === 0 ? 7 : first.getUTCDay();
   const padFront = isoFirst - 1;
 
-  const cells: (TimesheetDay | null)[] = [
-    ...Array(padFront).fill(null),
-    ...days,
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
+  type Cell =
+    | { kind: "day"; day: TimesheetDay }
+    | { kind: "outside"; key: string; dayNum: number };
+
+  const cells: Cell[] = [];
+  for (let i = padFront; i > 0; i--) {
+    const d = new Date(first);
+    d.setUTCDate(d.getUTCDate() - i);
+    cells.push({ kind: "outside", key: `pre_${i}`, dayNum: d.getUTCDate() });
+  }
+  for (const day of days) cells.push({ kind: "day", day });
+  let postOffset = 1;
+  while (cells.length % 7 !== 0) {
+    const d = new Date(last);
+    d.setUTCDate(d.getUTCDate() + postOffset);
+    cells.push({
+      kind: "outside",
+      key: `post_${postOffset}`,
+      dayNum: d.getUTCDate(),
+    });
+    postOffset++;
+  }
 
   return (
     <div className="space-y-2">
@@ -252,11 +273,22 @@ function CalendarGrid({ days }: { days: TimesheetDay[] }) {
         ))}
       </div>
       <div className="grid grid-cols-7 gap-2">
-        {cells.map((cell, i) =>
-          cell ? (
-            <DayCell key={cell.date} day={cell} isToday={cell.date === today} />
+        {cells.map((cell) =>
+          cell.kind === "day" ? (
+            <DayCell
+              key={cell.day.date}
+              day={cell.day}
+              isToday={cell.day.date === today}
+            />
           ) : (
-            <div key={`pad_${i}`} className="rounded-md border border-transparent" />
+            <div
+              key={cell.key}
+              className="min-h-28 rounded-md border border-border/40 bg-muted/20 p-2 text-xs"
+            >
+              <span className="inline-flex h-6 w-6 items-center justify-center text-xs font-medium text-muted-foreground/40">
+                {cell.dayNum}
+              </span>
+            </div>
           ),
         )}
       </div>
