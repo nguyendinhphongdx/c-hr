@@ -164,11 +164,6 @@ export class ZkClient {
     reject: (err: Error) => void;
     timer: NodeJS.Timeout;
   } | null = null;
-  /** Packets that arrived before anyone was waiting. ZK firmwares
-   *  sometimes send `PREPARE_DATA` + `DATA` in one TCP frame, so the
-   *  second packet would land before the awaiter set up its next
-   *  `waitForPacket` — we buffer it instead of dropping. */
-  private packetQueue: Buffer[] = [];
   /** Inbound buffer — TCP can split/merge packets. We accumulate until a
    *  full ZK packet (length from header) is available, then flush. */
   private rxBuffer = Buffer.alloc(0);
@@ -224,7 +219,6 @@ export class ZkClient {
 
   private onSocketClose(): void {
     this.socket = null;
-    this.packetQueue = [];
     if (this.waiter) {
       this.waiter.reject(new Error('Socket closed unexpectedly'));
       clearTimeout(this.waiter.timer);
@@ -251,28 +245,29 @@ export class ZkClient {
   }
 
   private deliverPacket(packet: Buffer): void {
-    if (this.waiter) {
-      const w = this.waiter;
-      this.waiter = null;
-      clearTimeout(w.timer);
-      w.resolve(packet);
-      return;
-    }
-    this.packetQueue.push(packet);
+    if (!this.waiter) return; // unsolicited / late — drop
+    const w = this.waiter;
+    this.waiter = null;
+    clearTimeout(w.timer);
+    w.resolve(packet);
   }
 
   private waitForPacket(timeoutMs: number): Promise<Buffer> {
     if (this.waiter) {
       return Promise.reject(new Error('A waiter is already pending'));
     }
-    const queued = this.packetQueue.shift();
-    if (queued) return Promise.resolve(queued);
     return new Promise<Buffer>((resolve, reject) => {
+      // Closure-capture the waiter ref so a stale timer (whose
+      // `clearTimeout` was called but already queued for execution)
+      // can't clobber a newer waiter. Only act if we're still active.
+      let self: NonNullable<ZkClient['waiter']>;
       const timer = setTimeout(() => {
+        if (this.waiter !== self) return;
         this.waiter = null;
         reject(new Error(`Timeout waiting for ZK reply (${timeoutMs}ms)`));
       }, timeoutMs);
-      this.waiter = { resolve, reject, timer };
+      self = { resolve, reject, timer };
+      this.waiter = self;
     });
   }
 
