@@ -15,6 +15,7 @@ import { MailModule } from './libs/mail/mail.module';
 import { StorageModule } from './libs/storage';
 
 import { AttendanceModule } from './apps/attendance/attendance.module';
+import { CollaborationModule } from './apps/collaboration/collaboration.module';
 import { CoreModule } from './apps/core/core.module';
 import { HrmModule } from './apps/hrm/hrm.module';
 import { RequestsModule } from './apps/requests/requests.module';
@@ -52,6 +53,7 @@ import { RequestsModule } from './apps/requests/requests.module';
     HrmModule,
     AttendanceModule,
     RequestsModule,
+    CollaborationModule,
   ],
 })
 export class AppModule {}

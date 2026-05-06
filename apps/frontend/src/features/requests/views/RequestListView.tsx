@@ -15,12 +15,16 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsAppAdmin } from "@/features/auth";
+import { ApprovalFlow } from "@/features/collaboration";
 import { cn } from "@/lib/utils";
 
 import { RequestPreview } from "../components/RequestPreview";
-import { StatusBadge } from "../components/StatusBadge";
 import { useRequestGroups, useRequests } from "../hooks/useRequests";
-import type { RequestListScope, RequestRow } from "../types";
+import type {
+  RequestListScope,
+  RequestParticipant,
+  RequestRow,
+} from "../types";
 
 const ALL = "all";
 
@@ -100,18 +104,22 @@ export function RequestListView() {
                     type="button"
                     onClick={() => setSelectedId(r.id)}
                     className={cn(
-                      "flex w-full flex-col gap-1 px-4 py-3 text-left text-sm hover:bg-accent/40",
+                      "flex w-full flex-col gap-1.5 px-4 py-3 text-left text-sm hover:bg-accent/40",
                       selectedId === r.id && "bg-accent/60",
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{r.group.name}</span>
-                      <StatusBadge status={r.status} />
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(r.createdAt), "dd/MM HH:mm")}
+                      </span>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {r.requester.user?.name ?? r.requester.code} •{" "}
-                      {format(new Date(r.createdAt), "dd/MM HH:mm")}
-                    </div>
+                    <ApprovalFlow
+                      size="sm"
+                      requester={mapPartyRow(r.requester)}
+                      approver={r.approver ? mapPartyRow(r.approver) : null}
+                      status={r.status}
+                    />
                   </button>
                 </li>
               ))}
@@ -124,4 +132,11 @@ export function RequestListView() {
       </div>
     </div>
   );
+}
+
+function mapPartyRow(p: RequestParticipant): { name: string; avatar: null } {
+  return {
+    name: p.user?.name ?? p.user?.email ?? p.code,
+    avatar: null,
+  };
 }

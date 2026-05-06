@@ -8,6 +8,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 
 import { RequestContextService } from '@/common/context';
+import { ActivityService } from '@/apps/collaboration/activity/activity.service';
 import { OrgChartService } from '@/apps/hrm/orgchart/orgchart.service';
 import { PrismaService } from '@libs/database/prisma.service';
 
@@ -29,6 +30,7 @@ export class RequestService {
     private readonly groups: RequestGroupService,
     private readonly orgChart: OrgChartService,
     private readonly events: EventEmitter2,
+    private readonly activities: ActivityService,
   ) {}
 
   async list(query: ListRequestsDto) {
@@ -109,6 +111,16 @@ export class RequestService {
       status: 'PENDING',
     });
 
+    this.activities.log({
+      organizationId: orgId,
+      objectType: 'Request',
+      objectId: created.id,
+      action: 'request.created',
+      userId: this.ctx.userId,
+      objectLabel: buildRequestLabel(created),
+      metadata: { groupCode: group.code, approverId: dto.approverId },
+    });
+
     this.events.emit(`request.${group.code}.created`, {
       id: created.id,
       organizationId: orgId,
@@ -143,6 +155,15 @@ export class RequestService {
     const updated = await this.repo.update(id, {
       status: 'CANCELLED',
       decidedAt: new Date(),
+    });
+    this.activities.log({
+      organizationId: orgId,
+      objectType: 'Request',
+      objectId: id,
+      action: 'request.cancelled',
+      userId: this.ctx.userId,
+      objectLabel: buildRequestLabel(updated),
+      metadata: {},
     });
     this.events.emit(`request.${r.group.code}.cancelled`, {
       id,
@@ -211,10 +232,66 @@ export class RequestService {
       });
     });
 
+    const userId = this.ctx.userId;
+    const objectLabel = buildRequestLabel(updated);
+    this.activities.log({
+      organizationId: orgId,
+      objectType: 'Request',
+      objectId: id,
+      action: next === 'APPROVED' ? 'request.approved' : 'request.rejected',
+      userId,
+      objectLabel,
+      metadata: { decisionNote: decisionNote ?? null },
+    });
+
+    if (handler && next === 'APPROVED') {
+      const data = (updated.data ?? {}) as Record<string, unknown>;
+      if (r.group.code === 'checkin') {
+        this.activities.log({
+          organizationId: orgId,
+          objectType: 'Request',
+          objectId: id,
+          action: 'request.side_effect.checkin_corrected',
+          userId,
+          objectLabel,
+          metadata: {
+            employeeId: r.requesterId,
+            date: data.date,
+            checkInAt: data.requestedCheckInAt,
+          },
+        });
+      } else if (r.group.code === 'checkout') {
+        this.activities.log({
+          organizationId: orgId,
+          objectType: 'Request',
+          objectId: id,
+          action: 'request.side_effect.checkout_corrected',
+          userId,
+          objectLabel,
+          metadata: {
+            employeeId: r.requesterId,
+            date: data.date,
+            checkOutAt: data.requestedCheckOutAt,
+          },
+        });
+      }
+    }
+
     this.events.emit(`request.${r.group.code}.${next.toLowerCase()}`, {
       id,
       organizationId: orgId,
     });
     return updated;
   }
+}
+
+type RequestForLabel = {
+  group?: { name?: string | null; code: string } | null;
+  requester?: { user?: { name?: string | null } | null } | null;
+};
+
+function buildRequestLabel(r: RequestForLabel): string {
+  const groupPart = r.group?.name ?? r.group?.code ?? 'Request';
+  const requesterName = r.requester?.user?.name;
+  return requesterName ? `${groupPart} — ${requesterName}` : groupPart;
 }

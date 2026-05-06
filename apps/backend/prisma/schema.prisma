@@ -89,6 +89,8 @@ model User {
   organization Organization? @relation(fields: [organizationId], references: [id])
   employee     Employee?     @relation(fields: [employeeId], references: [id])
   appAdmins    AppAdmin[]
+  comments     Comment[]
+  activities   Activity[]
 
   @@map("users")
 }
@@ -343,4 +345,69 @@ model Request {
   @@index([organizationId, approverId, status])
   @@index([organizationId, groupId, status])
   @@map("requests")
+}
+
+// Generic comment — gắn vào bất kỳ object nào (Request, Employee, ...).
+// objectType + objectId là pointer thuần (không FK) để giữ generic. Bảng
+// tách khỏi `activities` vì comment mutable + body lớn (HTML), activity
+// append-only + payload nhẹ. ADR/plan: F6 trong docs/plans/features.md.
+model Comment {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+
+  /// Pascal-case Prisma model name: "Request", "Employee", ...
+  objectType     String    @map("object_type")
+  objectId       String    @map("object_id")
+
+  userId         String    @map("user_id")
+  bodyHtml       String    @map("body_html")
+  bodyText       String    @map("body_text")
+  mentions       Json?
+
+  parentId       String?   @map("parent_id")
+  parent         Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        Comment[] @relation("CommentReplies")
+
+  isInternal     Boolean   @default(false) @map("is_internal")
+
+  editedAt       DateTime? @map("edited_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt      @map("updated_at")
+
+  user           User      @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, objectType, objectId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+// Generic activity — append-only event log per object. Naming:
+// "<object>.<verb>" (e.g. "request.commented", "request.approved").
+// Side-effects nest under "<object>.side_effect.<name>". Distinct from
+// `audit_logs` (admin compliance) — activities is for user-facing UX.
+model Activity {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+
+  objectType     String   @map("object_type")
+  objectId       String   @map("object_id")
+  /// Snapshot label for the feed (e.g. request title) — survives target rename.
+  objectLabel    String?  @map("object_label")
+
+  action         String
+
+  /// Null when the action is system-driven (cron, webhook, side-effect).
+  userId         String?  @map("user_id")
+  metadata       Json?
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, objectType, objectId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@index([action])
+  @@map("activities")
 }

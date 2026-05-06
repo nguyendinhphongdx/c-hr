@@ -9,6 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth";
+import {
+  ApprovalFlow,
+  CommentEditor,
+  UnifiedTimeline,
+  useCreateComment,
+  useDeleteComment,
+  useUpdateComment,
+} from "@/features/collaboration";
+import { encodeObjectRef } from "@/lib/object-ref";
 import type { ID } from "@/lib/types";
 
 import {
@@ -16,7 +25,7 @@ import {
   useCancelRequest,
   useRejectRequest,
 } from "../hooks/useRequests";
-import type { RequestRow } from "../types";
+import type { RequestParticipant, RequestRow } from "../types";
 
 import { DynamicDataView } from "./DynamicDataView";
 import { StatusBadge } from "./StatusBadge";
@@ -37,6 +46,13 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
 
   const [rejectNote, setRejectNote] = useState("");
   const [showReject, setShowReject] = useState(false);
+
+  const objectRef = request
+    ? encodeObjectRef({ objectType: "Request", objectId: request.id })
+    : "";
+  const createComment = useCreateComment(objectRef);
+  const updateComment = useUpdateComment(objectRef);
+  const deleteComment = useDeleteComment(objectRef);
 
   if (!request) {
     return (
@@ -106,23 +122,32 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
         <StatusBadge status={request.status} />
       </div>
 
-      <div className="grid gap-3 border-y py-3">
-        <Field
-          label="Người gửi"
-          value={request.requester.user?.name ?? request.requester.user?.email ?? request.requester.code}
-        />
-        <Field
-          label="Người duyệt"
-          value={
-            request.approver?.user?.name ??
-            request.approver?.user?.email ??
-            request.approver?.code ??
-            "—"
-          }
+      <div className="border-y py-3">
+        <ApprovalFlow
+          requester={mapParty(request.requester)}
+          approver={request.approver ? mapParty(request.approver) : null}
+          status={request.status}
+          size="md"
         />
       </div>
 
       <DynamicDataView schema={request.group.fieldsSchema} data={request.data} />
+
+      <div className="border-t pt-3">
+        <h4 className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">
+          Hoạt động & bình luận
+        </h4>
+        <UnifiedTimeline
+          objectRef={objectRef}
+          currentUserId={user?.id}
+          onUpdateComment={(id, data) =>
+            updateComment.mutateAsync({ id, data }).then(() => undefined)
+          }
+          onDeleteComment={(id) =>
+            deleteComment.mutateAsync(id).then(() => undefined)
+          }
+        />
+      </div>
 
       {(request.decisionNote || request.decidedAt) && (
         <div className="grid gap-3 border-t pt-3">
@@ -188,8 +213,25 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
           )}
         </div>
       )}
+
+      <div className="border-t pt-3">
+        <CommentEditor
+          onSubmit={async (bodyHtml, isInternal) => {
+            await createComment.mutateAsync({ bodyHtml, isInternal });
+          }}
+          isInternalToggle
+          placeholder="Viết bình luận…"
+        />
+      </div>
     </div>
   );
+}
+
+function mapParty(p: RequestParticipant): { name: string; avatar: null } {
+  return {
+    name: p.user?.name ?? p.user?.email ?? p.code,
+    avatar: null,
+  };
 }
 
 function RejectForm({

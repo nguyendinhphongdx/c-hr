@@ -54,6 +54,7 @@
     "redis": "^4.7.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sanitize-html": "^2.17.3",
     "uuid": "^11.0.3"
   },
   "optionalDependencies": {
@@ -73,6 +74,7 @@
     "@types/node": "^22.10.5",
     "@types/nodemailer": "^6.4.17",
     "@types/passport-jwt": "^4.0.1",
+    "@types/sanitize-html": "^2.16.1",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
