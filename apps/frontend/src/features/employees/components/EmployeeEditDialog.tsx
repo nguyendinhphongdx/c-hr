@@ -42,6 +42,11 @@ import { useEmployee, useUpdateEmployee } from "../hooks/useEmployees";
 const NO_DEPARTMENT = "__none__";
 
 const schema = z.object({
+  code: z
+    .string()
+    .min(1, "Bắt buộc")
+    .max(50)
+    .regex(/^[A-Za-z0-9-_]+$/, "Chỉ chữ cái, số, gạch ngang, gạch dưới"),
   userId: z.string().uuid("Chọn người dùng"),
   title: z.string().max(100).nullable(),
   hireDate: z.string().nullable(),
@@ -73,6 +78,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      code: "",
       userId: "",
       title: "",
       hireDate: "",
@@ -86,6 +92,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
     if (employee.data) {
       const e = employee.data;
       form.reset({
+        code: e.code,
         userId: e.user?.id ?? "",
         title: e.title ?? "",
         hireDate: toInputDate(e.hireDate),
@@ -102,6 +109,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
       await update.mutateAsync({
         id,
         data: {
+          code: values.code,
           userId: values.userId,
           title: values.title || null,
           hireDate: values.hireDate || null,
@@ -118,7 +126,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
         description:
           err instanceof Error
             ? err.message
-            : "Người dùng có thể đã liên kết, hoặc phòng ban không thuộc Org này.",
+            : "Mã nhân viên hoặc người dùng có thể đã được dùng.",
       });
     }
   };
@@ -149,6 +157,24 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
               className="space-y-4"
               id="edit-employee-form"
             >
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mã nhân viên</FormLabel>
+                    <FormControl>
+                      <Input placeholder="EMP-0001" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Unique trong Org. Đổi mã sẽ kéo theo các bản ghi liên kết
+                      (chấm công, push từ thiết bị) — cẩn trọng.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="userId"

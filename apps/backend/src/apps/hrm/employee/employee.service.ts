@@ -146,10 +146,28 @@ export class EmployeeService {
       await this.assertUserAvailableForLink(orgId, dto.userId, id);
     }
 
+    // Code uniqueness within Org. The schema has @@unique([orgId, code])
+    // so the DB will throw too — this gives a clearer 409 message.
+    if (dto.code !== undefined && dto.code !== existing.code) {
+      const codeTaken = await this.prisma.employee.findFirst({
+        where: {
+          organizationId: orgId,
+          code: dto.code,
+          deletedAt: null,
+          NOT: { id },
+        },
+        select: { id: true },
+      });
+      if (codeTaken) {
+        throw new ConflictException('Employee code already in use');
+      }
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const employee = await tx.employee.update({
         where: { id },
         data: {
+          code: dto.code,
           departmentId: dto.departmentId,
           title: dto.title,
           hireDate:

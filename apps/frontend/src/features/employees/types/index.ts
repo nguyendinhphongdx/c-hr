@@ -66,6 +66,7 @@ export interface CreateEmployeeInput {
 }
 
 export interface UpdateEmployeeInput {
+  code?: string;
   userId?: ID;
   departmentId?: Nullable<ID>;
   title?: Nullable<string>;
