@@ -7,11 +7,13 @@ import {
   CircleX,
   Clock,
   Coffee,
+  Hourglass,
   Loader2,
   LogOut,
   type LucideIcon,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,6 +101,147 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+interface MonthStats {
+  present: number;
+  late: number;
+  earlyLeave: number;
+  absent: number;
+  weekend: number;
+  workdays: number;
+  workedMinutes: number;
+}
+
+function computeStats(days: TimesheetDay[]): MonthStats {
+  const stats: MonthStats = {
+    present: 0,
+    late: 0,
+    earlyLeave: 0,
+    absent: 0,
+    weekend: 0,
+    workdays: 0,
+    workedMinutes: 0,
+  };
+  for (const d of days) {
+    const status = deriveDisplayStatus(d);
+    if (status !== "WEEKEND") stats.workdays += 1;
+    switch (status) {
+      case "PRESENT":
+        stats.present += 1;
+        break;
+      case "LATE":
+        stats.late += 1;
+        break;
+      case "EARLY_LEAVE":
+        stats.earlyLeave += 1;
+        break;
+      case "ABSENT":
+        stats.absent += 1;
+        break;
+      case "WEEKEND":
+        stats.weekend += 1;
+        break;
+    }
+    if (d.checkInAt && d.checkOutAt) {
+      const ms =
+        new Date(d.checkOutAt).getTime() - new Date(d.checkInAt).getTime();
+      if (ms > 0) stats.workedMinutes += Math.floor(ms / 60_000);
+    }
+  }
+  return stats;
+}
+
+function formatHours(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return m === 0 ? `${h}h` : `${h}h ${String(m).padStart(2, "0")}m`;
+}
+
+interface StatTile {
+  key: string;
+  label: string;
+  value: string | number;
+  hint?: string;
+  icon: LucideIcon;
+  className: string;
+}
+
+function StatsRow({ stats, loading }: { stats: MonthStats; loading: boolean }) {
+  const tiles: StatTile[] = [
+    {
+      key: "present",
+      label: "Đúng giờ",
+      value: stats.present,
+      hint: `/ ${stats.workdays} ngày làm việc`,
+      icon: CircleCheck,
+      className:
+        "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300",
+    },
+    {
+      key: "late",
+      label: "Trễ",
+      value: stats.late,
+      icon: Clock,
+      className:
+        "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300",
+    },
+    {
+      key: "early",
+      label: "Về sớm",
+      value: stats.earlyLeave,
+      icon: LogOut,
+      className:
+        "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800/60 dark:bg-orange-950/40 dark:text-orange-300",
+    },
+    {
+      key: "absent",
+      label: "Vắng",
+      value: stats.absent,
+      icon: CircleX,
+      className:
+        "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-300",
+    },
+    {
+      key: "hours",
+      label: "Tổng giờ làm",
+      value: formatHours(stats.workedMinutes),
+      hint:
+        stats.workdays > 0
+          ? `TB ${formatHours(Math.floor(stats.workedMinutes / stats.workdays))}/ngày`
+          : undefined,
+      icon: Hourglass,
+      className:
+        "border-border bg-muted/30 text-foreground",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      {tiles.map((t) => (
+        <div
+          key={t.key}
+          className={cn(
+            "flex items-center gap-3 rounded-lg border px-3 py-2.5",
+            t.className,
+          )}
+        >
+          <t.icon className="h-5 w-5 shrink-0 opacity-70" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] uppercase tracking-wide opacity-80">
+              {t.label}
+            </div>
+            <div className="text-lg font-semibold tabular-nums">
+              {loading ? "—" : t.value}
+            </div>
+            {t.hint && !loading && (
+              <div className="truncate text-[10px] opacity-70">{t.hint}</div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Parse `?ym=YYYY-MM` → { year, month }. Falls back to current month
  *  when missing or malformed so the URL is the single source of truth
  *  but we never crash on garbage input. */
@@ -138,6 +281,8 @@ export function TimesheetView() {
 
   const employee = useEmployee(selectedEmployeeId);
   const sheet = useTimesheet(selectedEmployeeId, year, month);
+
+  const stats = useMemo(() => computeStats(sheet.data?.days ?? []), [sheet.data?.days]);
 
   const updateParams = (mutate: (p: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -208,6 +353,8 @@ export function TimesheetView() {
           </Button>
         </div>
       </header>
+
+      <StatsRow stats={stats} loading={sheet.isLoading} />
 
       <Card>
         <CardHeader>
