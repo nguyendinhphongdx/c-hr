@@ -54,11 +54,18 @@ export class TimesheetService {
     const orgId = this.ctx.requireOrg();
     await this.requireSelfOrHrmAppAdmin(orgId, query.employeeId);
 
-    const employee = await this.prisma.employee.findFirst({
-      where: { id: query.employeeId, organizationId: orgId, deletedAt: null },
-      select: { id: true },
-    });
+    const [employee, organization] = await Promise.all([
+      this.prisma.employee.findFirst({
+        where: { id: query.employeeId, organizationId: orgId, deletedAt: null },
+        select: { id: true },
+      }),
+      this.prisma.organization.findUnique({
+        where: { id: orgId },
+        select: { timezone: true },
+      }),
+    ]);
     if (!employee) throw new NotFoundException('Employee not found in organization');
+    const tz = organization?.timezone ?? 'Asia/Ho_Chi_Minh';
 
     const schedule = await this.schedules.findDefaultByOrg(orgId);
     const { from, to, dates } = monthRange(query.year, query.month);
@@ -81,7 +88,7 @@ export class TimesheetService {
           : null,
         checkInAt: log?.checkInAt?.toISOString() ?? null,
         checkOutAt: log?.checkOutAt?.toISOString() ?? null,
-        status: deriveStatus(shift, log),
+        status: deriveStatus(shift, log, tz),
       };
     });
 
@@ -168,21 +175,37 @@ function hhmmToMinutes(hhmm: string): number {
   return h * 60 + m;
 }
 
-function utcMinutes(d: Date): number {
-  return d.getUTCHours() * 60 + d.getUTCMinutes();
+/**
+ * Wall-clock minutes-since-midnight in the org's timezone. Shift times
+ * (e.g. "08:00") are stored as plain strings representing local time, so
+ * we must compare against check-in's local hours/minutes — not UTC.
+ * en-GB locale gives a stable 00–23 hour format.
+ */
+function localMinutes(d: Date, tz: string): number {
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: tz,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(d);
+  const h = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
+  const m = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
+  return h * 60 + m;
 }
 
 function deriveStatus(
   shift: ShiftLike | null,
   log: { checkInAt: Date | null; checkOutAt: Date | null } | null,
+  tz: string,
 ): DayStatus {
   if (!shift) return 'WEEKEND';
   if (!log || !log.checkInAt) return 'ABSENT';
 
   const startM = hhmmToMinutes(shift.startTime);
   const endM = hhmmToMinutes(shift.endTime);
-  const inM = utcMinutes(log.checkInAt);
-  const outM = log.checkOutAt ? utcMinutes(log.checkOutAt) : null;
+  const inM = localMinutes(log.checkInAt, tz);
+  const outM = log.checkOutAt ? localMinutes(log.checkOutAt, tz) : null;
 
   if (inM > startM + shift.lateGraceMinutes) return 'LATE';
   if (outM !== null && outM < endM) return 'EARLY_LEAVE';
