@@ -20,4 +20,5 @@
  */
 export { GithubIcon } from "./github-icon";
 export { GoogleIcon } from "./google-icon";
+export { MicrosoftIcon } from "./microsoft-icon";
 export type { IconProps } from "./types";

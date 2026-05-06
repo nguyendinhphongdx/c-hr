@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
+import { EventAcl } from '@/apps/calendar/event/event.acl';
 import { DepartmentAcl } from '@/apps/hrm/department/department.acl';
 import { EmployeeAcl } from '@/apps/hrm/employee/employee.acl';
 import { RequestAcl } from '@/apps/requests/request/request.acl';
@@ -7,7 +8,7 @@ import { BaseAcl } from '@/common/acl';
 import { PrismaService } from '@libs/database/prisma.service';
 
 interface RegistryEntry<T extends { id: string; organizationId: string }> {
-  model: 'request' | 'employee' | 'department';
+  model: 'request' | 'employee' | 'department' | 'event';
   Acl?: new (obj: T) => BaseAcl<T, any>;
   softDelete: boolean;
 }
@@ -24,6 +25,7 @@ export class ObjectLoaderRegistry {
     Request: { model: 'request', Acl: RequestAcl, softDelete: false },
     Employee: { model: 'employee', Acl: EmployeeAcl, softDelete: true },
     Department: { model: 'department', Acl: DepartmentAcl, softDelete: true },
+    Event: { model: 'event', Acl: EventAcl, softDelete: true },
   };
 
   constructor(private readonly prisma: PrismaService) {}

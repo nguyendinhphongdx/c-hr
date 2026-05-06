@@ -92,6 +92,10 @@ model User {
   comments     Comment[]
   activities   Activity[]
 
+  eventsOwned      Event[]         @relation("EventOwner")
+  eventsCreated    Event[]         @relation("EventCreatedBy")
+  eventAttendances EventAttendee[] @relation("EventAttendee")
+
   @@map("users")
 }
 
@@ -315,7 +319,7 @@ model RequestGroup {
   fieldsSchema Json     @map("fields_schema")
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt      @map("updated_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   requests Request[]
 
@@ -336,7 +340,7 @@ model Request {
   decisionNote   String?       @map("decision_note")
   decidedAt      DateTime?     @map("decided_at")
   createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt      @map("updated_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
   group     RequestGroup @relation(fields: [groupId], references: [id])
   requester Employee     @relation("RequestRequester", fields: [requesterId], references: [id])
@@ -353,30 +357,30 @@ model Request {
 // tách khỏi `activities` vì comment mutable + body lớn (HTML), activity
 // append-only + payload nhẹ. ADR/plan: F6 trong docs/plans/features.md.
 model Comment {
-  id             String    @id @default(uuid())
-  organizationId String    @map("organization_id")
+  id             String @id @default(uuid())
+  organizationId String @map("organization_id")
 
   /// Pascal-case Prisma model name: "Request", "Employee", ...
-  objectType     String    @map("object_type")
-  objectId       String    @map("object_id")
+  objectType String @map("object_type")
+  objectId   String @map("object_id")
 
-  userId         String    @map("user_id")
-  bodyHtml       String    @map("body_html")
-  bodyText       String    @map("body_text")
-  mentions       Json?
+  userId   String @map("user_id")
+  bodyHtml String @map("body_html")
+  bodyText String @map("body_text")
+  mentions Json?
 
-  parentId       String?   @map("parent_id")
-  parent         Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies        Comment[] @relation("CommentReplies")
+  parentId String?   @map("parent_id")
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
 
-  isInternal     Boolean   @default(false) @map("is_internal")
+  isInternal Boolean @default(false) @map("is_internal")
 
-  editedAt       DateTime? @map("edited_at")
-  deletedAt      DateTime? @map("deleted_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt      @map("updated_at")
+  editedAt  DateTime? @map("edited_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  user           User      @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([organizationId, objectType, objectId, createdAt(sort: Desc)])
   @@index([userId])
@@ -389,26 +393,141 @@ model Comment {
 // Side-effects nest under "<object>.side_effect.<name>". Distinct from
 // `audit_logs` (admin compliance) — activities is for user-facing UX.
 model Activity {
-  id             String   @id @default(uuid())
-  organizationId String   @map("organization_id")
+  id             String @id @default(uuid())
+  organizationId String @map("organization_id")
 
-  objectType     String   @map("object_type")
-  objectId       String   @map("object_id")
+  objectType  String  @map("object_type")
+  objectId    String  @map("object_id")
   /// Snapshot label for the feed (e.g. request title) — survives target rename.
-  objectLabel    String?  @map("object_label")
+  objectLabel String? @map("object_label")
 
-  action         String
+  action String
 
   /// Null when the action is system-driven (cron, webhook, side-effect).
-  userId         String?  @map("user_id")
-  metadata       Json?
+  userId   String? @map("user_id")
+  metadata Json?
 
-  createdAt      DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, objectType, objectId, createdAt(sort: Desc)])
   @@index([userId])
   @@index([action])
   @@map("activities")
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Calendar (Feature 7) — MVP Phase 7.1
+//
+// Calendar là unified render layer. Sở hữu Event (cuộc họp + booking
+// trong tương lai). MVP: single events only — không recurrence, không
+// resource, không external sync, không follow. Các phần đó tách PR sau.
+// ──────────────────────────────────────────────────────────────────────
+
+enum EventStatus {
+  CONFIRMED
+  TENTATIVE
+  CANCELLED
+}
+
+enum EventVisibility {
+  DEFAULT
+  PUBLIC
+  PRIVATE
+}
+
+enum AttendeeResponse {
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+enum EventProvider {
+  LOCAL
+  GOOGLE
+  MICROSOFT
+}
+
+model Event {
+  id             String @id @default(uuid())
+  organizationId String @map("organization_id")
+
+  /// Owner = User sở hữu event (khác createdBy nếu admin tạo thay).
+  /// Dùng User thay Employee — calendar đi theo người, không theo
+  /// employment record (Employee có thể bị terminate/soft-delete;
+  /// sysowner cũng không có Employee).
+  ownerId     String @map("owner_id")
+  createdById String @map("created_by_id")
+
+  title         String  @db.VarChar(511)
+  description   String? @db.Text
+  location      String? @db.VarChar(1023)
+  /// Conference URL (Google Meet / Zoom / Teams). Local v1: free-text.
+  conferenceUrl String? @map("conference_url") @db.VarChar(1023)
+
+  isAllDay Boolean  @default(false) @map("is_all_day")
+  startAt  DateTime @map("start_at")
+  /// Exclusive end ([start, end) — Google convention).
+  endAt    DateTime @map("end_at")
+
+  status     EventStatus     @default(CONFIRMED)
+  visibility EventVisibility @default(DEFAULT)
+  /// Override visibility: nobody but owner+attendees sees detail.
+  isPrivate  Boolean         @default(false) @map("is_private")
+  color      String?         @db.VarChar(7)
+
+  /// LOCAL = tạo trong C-HR. GOOGLE/MICROSOFT = pull từ external (Phase 7.4).
+  provider     EventProvider @default(LOCAL)
+  /// Provider-side event id — set khi sync về.
+  externalId   String?       @map("external_id") @db.VarChar(255)
+  /// Optimistic concurrency token (etag) — sync correctness.
+  externalEtag String?       @map("external_etag") @db.VarChar(127)
+  /// RFC 5545 universal id — cross-provider dedupe.
+  icalUid      String?       @map("ical_uid") @db.VarChar(511)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  owner     User @relation("EventOwner", fields: [ownerId], references: [id])
+  createdBy User @relation("EventCreatedBy", fields: [createdById], references: [id])
+
+  attendees EventAttendee[]
+
+  @@index([organizationId, startAt, endAt])
+  @@index([ownerId, startAt])
+  @@index([provider, externalId])
+  @@index([icalUid])
+  @@map("events")
+}
+
+// Internal (User trong cùng Org) hoặc external (email) attendee.
+// Một trong 2 phải set — enforce ở service layer (DB cho phép cả 2 null
+// vì Prisma không có CHECK constraint cho XOR).
+model EventAttendee {
+  id      String @id @default(uuid())
+  eventId String @map("event_id")
+
+  userId      String? @map("user_id")
+  email       String? @db.VarChar(127)
+  /// Snapshot tên — cho external attendee không có User record.
+  displayName String? @map("display_name") @db.VarChar(127)
+
+  response    AttendeeResponse @default(PENDING)
+  isOptional  Boolean          @default(false) @map("is_optional")
+  isOrganizer Boolean          @default(false) @map("is_organizer")
+  respondedAt DateTime?        @map("responded_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User? @relation("EventAttendee", fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@unique([eventId, email])
+  @@index([userId, response])
+  @@map("event_attendees")
 }

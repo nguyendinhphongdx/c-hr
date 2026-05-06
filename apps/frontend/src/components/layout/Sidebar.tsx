@@ -60,8 +60,8 @@ const NAV_SECTIONS: NavSection[] = [
     items: [{ href: "/requests", label: "Đơn từ", icon: Inbox }],
   },
   {
-    label: "Đặt lịch",
-    items: [{ href: "/bookings", label: "Đặt lịch", icon: CalendarClock }],
+    label: "Lịch",
+    items: [{ href: "/bookings", label: "Lịch", icon: CalendarClock }],
   },
 ];
 

@@ -31,6 +31,7 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 4 | Requests (per-type) | ⛔ superseded | F4 đã build LeaveRequest + AttendanceCorrection riêng — refactor sang F5 universal engine vì cần mở rộng (out-of-office, OT, …). Tables drop trong migration `f5_universal_requests`. |
 | 5 | Requests (universal engine) | ✅ done | RequestGroup + Request polymorphic, `data: Json` validated theo `group.fieldsSchema`. 3 group seed: `leave`, `checkin`, `checkout`. Side-effect registry dispatch theo group code (checkin/checkout upsert AttendanceLog, leave no-op MVP). FE: master-detail UI + DynamicForm render theo schema. ADR 0006. |
 | 6 | Collaboration: Comments + Activities | 📋 planned | Generic comment (richtext, polymorphic `objectType + objectId`) + activity feed append-only. Pilot wire-in cho Request (timeline panel + comment richtext + ApprovalFlow component). ACL pattern (AclCalculator + view interface, không BaseEntity wrap) deferred — implement song song hoặc PR riêng. |
+| 7 | Calendar + Booking | 📋 planned | Calendar app với 4 view (day/week/month/list), event/meeting + resource booking (phòng họp / thiết bị / xe), follow đồng nghiệp xem lịch, sync 1-way từ Google + Microsoft. Sidebar trái: mini-calendar + tìm người + danh sách theo dõi + account links. Hiện trạng `/bookings` là placeholder thuần — F7 thay thế. |
 
 ### F3 verify checklist (đã chạy 2026-05-04 qua curl, BE :8000 + DB Docker)
 
@@ -68,6 +69,7 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 4 | ⛔ **Requests per-type** (superseded by F5) | requests | Đã build `LeaveRequest` + `AttendanceCorrection` rời. Refactor sang universal engine F5 vì cần mở rộng linh hoạt cho các loại đơn khác (OT, OOO, …). Drop trong migration `f5_universal_requests`. | — | — |
 | 5 | **Requests: Universal engine + form-builder defer** | requests | `RequestGroup` (system-wide, `fieldsSchema` JSON) + `Request` polymorphic. Validation engine self-built. Side-effect registry keyed by group code (checkin/checkout upsert AttendanceLog). 3 group seed: `leave`, `checkin`, `checkout`. ADR 0006. | `/requests` master-detail (list + preview pane). `DynamicForm` render từ `fieldsSchema`. `/requests/new` chọn group → form. Sidebar gộp 1 link "Requests". | 2, 3 |
 | 6 | **Collaboration: Comments + Activities** (generic, polymorphic) | collaboration (new bounded context) | Bảng `comments` (richtext HTML sanitize) + `activities` (append-only event log), polymorphic `objectType + objectId + userId`. 2 module `@Global` (CommentService + ActivityService). CommentService auto-emit `<object>.commented` activity. Sanitize HTML qua `sanitize-html`. Wire-in pilot vào Request module (3 endpoint: `/requests/:id/comments` GET+POST, `/requests/:id/activities` GET). | Tiptap richtext editor cho comment, timeline panel bên phải `RequestPreview` (FE merge 2 stream comments + activities theo `createdAt`), `<ApprovalFlow>` component (avatar from→to + status arrow) dùng ở list row + detail header. | 5 |
+| 7 | **Calendar + Booking** (event + resource + follow + sync) | calendar (new bounded context) | Schema: `Event`, `EventAttendee`, `Resource`, `CalendarFollow`, `ExternalCalendarLink`. Phase 7.1: events CRUD + recurrence (rrule) + conflict check + 3 endpoint (`/events`, `/events/:id`, `/events/range?from&to`). Phase 7.2: resources + booking attendee. Phase 7.3: follow. Phase 7.4: OAuth Google + Microsoft 1-way sync. | Lib `react-big-calendar` cho 4 view (day/week/month/list/agenda). 2 tab: "Lịch" + "Phòng họp". Sidebar trái: mini-cal + search-user + Quản lý/Theo dõi (checkbox bật/tắt overlay) + Lịch từ Google + Lịch từ Microsoft. Modal tạo event 2 step (chọn loại → form). | 6 |
 
 Mỗi feature **kết thúc xanh khi**:
 
@@ -927,6 +929,470 @@ Dependencies cần thêm:
 - **F6.5 — Rollout cho object khác**: `Employee` (HR note hồ sơ), `Department` (manager note), tương lai Project/Performance. Mỗi object thêm 3 route + 1 ACL calculator, không touch CommentService/ActivityService.
 - **F6.6 — Activity feed dashboard**: trang `/activities` cho HRM appadmin xem stream toàn Org (filter theo action, user, time range). Tận dụng index `(organizationId, createdAt DESC)`.
 - **Audit log integration**: hiện `audit_logs` (ADR 0002) ghi từ `@Auditable` interceptor cho admin ops; `activities` ghi từ service layer cho user-facing timeline. Hai bảng song song, không gộp — audit_logs cho compliance, activities cho UX. Có thể xét gộp sau nếu duplicate quá nhiều.
+
+## Feature 7 — Calendar + Booking
+
+App lịch tích hợp: event/meeting cá nhân/team + đặt tài nguyên (phòng họp / thiết bị / xe) + follow đồng nghiệp xem lịch + sync với Google Calendar + Microsoft Outlook. Thay thế placeholder `/bookings` hiện tại.
+
+Trigger: F6 (Collaboration) sẵn để comment/activity gắn vào event. F1–F5 đã đóng — domain HRM ổn định, có thể mở rộng sang collab tools.
+
+### Layout reference (theo screenshot user cung cấp)
+
+```text
+┌─ Header ─────────────────────────────────────────────────────────────────────┐
+│ [Lịch] [Phòng họp]   [Hôm nay] ‹ ›  4-10 Tháng 5, 2026 📅      │
+│                              [Sự kiện] [Việc cần làm]   [Tuần ▾] [+ Tạo mới]│
+├─ Sidebar 280px ──────┬─ Main calendar flex ──────────────────────────────────┤
+│ ◂ Tháng 5, 2026 ▸    │  T2  T3  T4  T5  T6  T7  CN                          │
+│  T2 T3 T4 T5 T6 T7 CN│  04  05  06* 07  08  09  10                          │
+│  27 28 29 30  1  2 3 │ ┌────┬────┬────┬────┬────┬────┬────┐                 │
+│   4  5 [6] 7 8 9 10  │ │10:00│   │   │   │   │   │   │                       │
+│  11 12 13 14 15...   │ │11:00│   │   │   │   │   │   │                       │
+│                      │ │12:00│   │   │   │   │   │   │                       │
+│ 🔍 Tìm người    [+]  │ │ ... │   │   │   │   │   │   │                       │
+│                      │ │20:00│   │ ▓ │ ▓ │   │   │   │                       │
+│ ▾ Quản lý            │ │21:00│   │ ▓ │ ▓ │   │   │   │                       │
+│  ☑ Phan Thanh Vũ    │ └────┴────┴────┴────┴────┴────┴────┘                  │
+│                      │ ── Now line (red) ──                                   │
+│ ▾ Theo dõi (3)       │                                                        │
+│  ☑ Long Phạm         │                                                        │
+│  ☐ Hoa Nguyễn        │                                                        │
+│  ☐ Mai Lê            │                                                        │
+│                      │                                                        │
+│ ▸ Lịch từ Google  🔄 │                                                        │
+│ ▸ Lịch từ Microsoft  │                                                        │
+└──────────────────────┴────────────────────────────────────────────────────────┘
+```
+
+**View toggle** (`Tuần ▾` dropdown): Ngày · Tuần · Tháng · Danh sách. Mỗi view render khác:
+
+- **Ngày**: 1 cột thời gian, event chiếm full-width — show attendee names
+- **Tuần**: 7 cột (Mon–Sun), grid 30-min slot, event drag-drop
+- **Tháng**: 7×6 grid, mỗi ô compact event chips (title prefix với time)
+- **Danh sách**: vertical list grouped by day, event = row với time range + title + comment count
+
+**2 tab** trên header (`Lịch` / `Phòng họp`): tab "Lịch" hiện calendar bình thường, tab "Phòng họp" đổi context — chọn 1 phòng → calendar chỉ show event của phòng đó (free/busy timeline).
+
+### Open decisions for F7 (cần chốt trước khi code)
+
+| # | Câu hỏi | Default đề xuất |
+| --- | --- | --- |
+| D1 | Sidebar position | **Trái** (theo screenshot + Google/Outlook convention). User bảo "phải" trong message — confirm lại lúc bắt đầu code, vì là CSS swap đơn giản nếu cần. |
+| D2 | Event vs Booking schema | **1 bảng `events`** — booking phòng/xe = event với resource attendee. Tránh 2 bảng song song redundant. |
+| D3 | Approval workflow | **Skip MVP** — direct booking + conflict check. Resource không có "owner approve" gate. Nếu sau cần approval (vd phòng VIP), reuse Request engine F5 với group `room_booking`. |
+| D4 | Recurrence library | **`rrule` npm** (RFC 5545 compliant) — store `recurrenceRule: String` (RRULE) + `recurrenceUntil`. Expand instance khi query range. |
+| D5 | Calendar lib (FE) | **`react-big-calendar`** (~100KB) — đủ 4 view, drag-drop, MIT, đơn giản hơn FullCalendar. FullCalendar có resource view nhưng paid premium. |
+| D6 | External sync direction | **1-way pull** v1 (Google + Microsoft → C-HR read-only). 2-way push deferred (cần handle conflicts when both edit). |
+| D7 | "Việc cần làm" tab | **Phase sau (F7.5)** — task entity riêng hay reuse Request? Defer. MVP chỉ tab "Sự kiện". |
+| D8 | Meeting room types | MVP chỉ 3 kind enum: `ROOM`, `EQUIPMENT`, `VEHICLE`. Custom kinds defer. |
+| D9 | Privacy of follow | **Show busy/free only** mặc định cho follower (không thấy title/details của event người khác). User có thể set event là `isPrivate=true` để khoá hoàn toàn. |
+| D10 | Conflict policy | **Soft conflict** — tạo được nhưng warning UI. Hard block chỉ khi book cùng resource (phòng/xe) — tránh double-book vật lý. Người thì chỉ warn. |
+
+### BE — Schema (Phase 7.1 + 7.2)
+
+```prisma
+enum EventVisibility {
+  PUBLIC      // Org-wide visible
+  PRIVATE     // Chỉ owner + attendees
+  BUSY_ONLY   // Follower thấy busy slot, không title
+}
+
+enum AttendeeResponse {
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+enum ResourceKind {
+  ROOM        // Phòng họp
+  EQUIPMENT   // Laptop, máy chiếu
+  VEHICLE     // Xe
+}
+
+enum ExternalProvider {
+  GOOGLE
+  MICROSOFT
+}
+
+model Event {
+  id             String          @id @default(uuid())
+  organizationId String          @map("organization_id")
+  ownerId        String          @map("owner_id")        // Employee tạo
+
+  title          String
+  description    String?         @db.Text                 // richtext sau (qua Comment F6 thay vì description?)
+  location       String?
+  isAllDay       Boolean         @default(false) @map("is_all_day")
+  startAt        DateTime        @map("start_at")
+  endAt          DateTime        @map("end_at")
+
+  /// RFC 5545 RRULE string (vd "FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20261231"). NULL = single event.
+  recurrenceRule String?         @map("recurrence_rule")
+  /// Master event ID (chính nó nếu là master, hoặc trỏ về master nếu là exception override)
+  parentEventId  String?         @map("parent_event_id")
+  parent         Event?          @relation("EventOverrides", fields: [parentEventId], references: [id], onDelete: Cascade)
+  overrides      Event[]         @relation("EventOverrides")
+
+  visibility     EventVisibility @default(PUBLIC)
+  color          String?                                  // hex hoặc preset name
+  /// External: id từ Google/Microsoft khi pull về — null = local-only
+  externalId     String?         @map("external_id")
+  externalProvider ExternalProvider? @map("external_provider")
+
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt      @map("updated_at")
+  deletedAt      DateTime?       @map("deleted_at")        // soft-delete
+
+  owner          Employee        @relation("EventOwner", fields: [ownerId], references: [id])
+  attendees      EventAttendee[]
+  resources      EventResource[]
+
+  @@index([organizationId, startAt, endAt])
+  @@index([ownerId, startAt])
+  @@index([externalProvider, externalId])
+  @@map("events")
+}
+
+model EventAttendee {
+  id        String           @id @default(uuid())
+  eventId   String           @map("event_id")
+  /// Một trong 2: employeeId (nội bộ) hoặc email (khách external)
+  employeeId String?         @map("employee_id")
+  email     String?
+  response  AttendeeResponse @default(PENDING)
+  isOptional Boolean         @default(false) @map("is_optional")
+
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  event     Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  employee  Employee?        @relation("EventAttendee", fields: [employeeId], references: [id])
+
+  @@unique([eventId, employeeId])
+  @@index([employeeId, response])
+  @@map("event_attendees")
+}
+
+model Resource {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  kind           ResourceKind
+  name           String
+  description    String?
+  capacity       Int?                                      // chỉ cho ROOM
+  color          String?
+  isActive       Boolean      @default(true) @map("is_active")
+
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt      @map("updated_at")
+  deletedAt      DateTime?    @map("deleted_at")
+
+  bookings       EventResource[]
+
+  @@index([organizationId, kind, isActive])
+  @@map("resources")
+}
+
+model EventResource {
+  id         String   @id @default(uuid())
+  eventId    String   @map("event_id")
+  resourceId String   @map("resource_id")
+
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, resourceId])
+  @@index([resourceId])
+  @@map("event_resources")
+}
+
+model CalendarFollow {
+  id           String   @id @default(uuid())
+  followerId   String   @map("follower_id")     // Employee xem
+  followedId   String   @map("followed_id")     // Employee được xem
+
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  follower     Employee @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  followed     Employee @relation("FollowFollowed", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followedId])
+  @@index([followerId])
+  @@map("calendar_follows")
+}
+
+model ExternalCalendarLink {
+  id              String           @id @default(uuid())
+  userId          String           @map("user_id")
+  provider        ExternalProvider
+  externalUserId  String           @map("external_user_id")  // sub claim của OAuth
+  /// Encrypted at rest qua libs/crypto. Tham khảo zk-bridge token pattern.
+  accessToken     String           @db.Text @map("access_token")
+  refreshToken    String?          @db.Text @map("refresh_token")
+  expiresAt       DateTime?        @map("expires_at")
+  /// Cursor cho incremental sync (Google: syncToken; Microsoft: deltaLink)
+  syncToken       String?          @db.Text @map("sync_token")
+  lastSyncedAt    DateTime?        @map("last_synced_at")
+  isActive        Boolean          @default(true) @map("is_active")
+
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt      @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([provider, isActive, lastSyncedAt])
+  @@map("external_calendar_links")
+}
+```
+
+Thêm relation ngược ở `Employee`:
+
+```prisma
+events             Event[]            @relation("EventOwner")
+eventAttendances   EventAttendee[]    @relation("EventAttendee")
+calendarFollowers  CalendarFollow[]   @relation("FollowFollower")
+calendarFollowing  CalendarFollow[]   @relation("FollowFollowed")
+```
+
+Thêm ở `User`:
+
+```prisma
+externalCalendarLinks ExternalCalendarLink[]
+```
+
+Migration: `add_calendar_and_booking`. 5 bảng + 4 enum.
+
+### BE — Module layout (calendar)
+
+```text
+apps/backend/src/apps/calendar/
+├── calendar.module.ts                # imports tất cả sub-modules
+├── event/
+│   ├── event.module.ts
+│   ├── event.controller.ts           # /events CRUD + /events/range query
+│   ├── event.service.ts              # conflict check, recurrence expand
+│   ├── event.repository.ts
+│   ├── recurrence.ts                 # rrule wrapper
+│   ├── conflict.ts                   # check overlap với event/resource
+│   └── dto/
+├── attendee/
+│   ├── attendee.controller.ts        # /events/:id/attendees + /attendees/:id/respond
+│   ├── attendee.service.ts
+│   └── dto/
+├── resource/
+│   ├── resource.controller.ts        # /resources CRUD (admin)
+│   ├── resource.service.ts
+│   └── dto/
+├── follow/
+│   ├── follow.controller.ts          # /calendar-follows POST/DELETE + GET self
+│   ├── follow.service.ts
+│   └── dto/
+└── external-sync/                    # Phase 7.4
+    ├── external-sync.module.ts
+    ├── google.service.ts             # googleapis client
+    ├── microsoft.service.ts          # @microsoft/microsoft-graph-client
+    ├── sync.scheduler.ts             # cron — incremental sync mỗi 5 phút
+    ├── oauth.controller.ts           # /calendar-links/:provider/connect|disconnect|callback
+    └── dto/
+```
+
+### BE — Endpoints (calendar)
+
+```text
+# Events
+GET    /events?from=ISO&to=ISO&ownerId=&resourceId=  — range query, expand recurrence
+GET    /events/:id
+POST   /events           { title, startAt, endAt, ..., attendees, resourceIds, recurrenceRule? }
+PATCH  /events/:id       — sửa single instance hoặc series (qua flag `scope=instance|series`)
+DELETE /events/:id?scope=instance|series
+
+# Attendees
+POST   /events/:id/attendees   { employeeId? | email?, isOptional? }
+DELETE /events/:id/attendees/:attendeeId
+POST   /attendees/:id/respond  { response: ACCEPTED|DECLINED|TENTATIVE }
+
+# Resources (HRM appadmin manage)
+GET    /resources?kind=ROOM|EQUIPMENT|VEHICLE
+GET    /resources/:id
+POST   /resources        — chỉ HRM appadmin
+PATCH  /resources/:id
+DELETE /resources/:id    — soft-delete
+
+# Follows
+GET    /calendar-follows           — list của tôi
+POST   /calendar-follows           { followedId }
+DELETE /calendar-follows/:id
+
+# External sync (Phase 7.4)
+GET    /calendar-links             — list provider đã connect
+POST   /calendar-links/google/connect       — redirect OAuth
+GET    /calendar-links/google/callback      — OAuth callback
+POST   /calendar-links/google/sync          — manual trigger sync
+DELETE /calendar-links/:provider           — disconnect + delete pulled events
+
+# Tương tự cho microsoft
+```
+
+### BE — Conflict detection
+
+`event.service.create/update`:
+
+1. Check time overlap với event khác **của chính owner** → soft warn (return `conflicts: [...]` trong response, FE hiển thị warning nhưng vẫn save).
+2. Check time overlap với event khác đã book **cùng resource** → **hard block** (throw `409 Conflict` với detail event nào đang book).
+3. Check time overlap với attendee đã có event **mandatory** (không phải optional) → soft warn.
+
+SQL:
+
+```sql
+-- Resource conflict (hard)
+SELECT e.* FROM events e
+JOIN event_resources er ON er.event_id = e.id
+WHERE er.resource_id = $1
+  AND e.deleted_at IS NULL
+  AND e.start_at < $newEnd AND e.end_at > $newStart
+  AND e.id != $editingEventId
+LIMIT 5;
+```
+
+Index `(organizationId, startAt, endAt)` + lateral join với `event_resources` đủ nhanh cho < 100k events. Khi scale lên có thể cân nhắc PostgreSQL `tstzrange` + GIST index `&&` operator.
+
+### BE — Recurrence
+
+Mỗi master event có `recurrenceRule` (RRULE string). Query range expand instances trong khoảng query:
+
+```ts
+import { RRule } from 'rrule';
+
+function expandInstances(master: Event, from: Date, to: Date): Event[] {
+  if (!master.recurrenceRule) {
+    return [master]; // single event
+  }
+  const rule = RRule.fromString(`DTSTART:${formatRRule(master.startAt)}\n${master.recurrenceRule}`);
+  const dates = rule.between(from, to, true);
+  const duration = master.endAt.getTime() - master.startAt.getTime();
+  return dates.map((d) => ({
+    ...master,
+    startAt: d,
+    endAt: new Date(d.getTime() + duration),
+    // virtual instance — có cùng id master, FE phân biệt qua flag
+  }));
+}
+```
+
+**Override** (single instance bị edit/delete trong series): row `events` mới với `parentEventId = master.id` + cùng `startAt = original instance time`. Query expand bỏ instance gốc, dùng override thay thế.
+
+### BE — Wire-in F6 Collaboration
+
+Event là object có thể comment + activity log:
+
+- Comment: `objectType: 'Event'`, `objectId: eventId` — qua `/events/:id/comments` (per-feature route, tương tự Request)
+- Activity action: `event.created`, `event.updated`, `event.cancelled`, `event.attendee_responded`, `event.commented` (auto)
+
+### FE — Module layout
+
+```text
+apps/frontend/src/features/calendar/
+├── components/
+│   ├── CalendarShell.tsx        # sidebar + main grid layout
+│   ├── MiniCalendar.tsx         # shadcn <Calendar> single-month picker
+│   ├── PeopleSearch.tsx         # autocomplete tìm employee để follow
+│   ├── ManagedList.tsx          # checkbox toggle "lịch của tôi" (always on)
+│   ├── FollowedList.tsx         # checkbox toggle event của followed users
+│   ├── ExternalSourceItem.tsx   # connect/disconnect Google/Microsoft
+│   ├── EventCard.tsx            # event chip render trong grid
+│   ├── EventCreateDialog.tsx    # form tạo/sửa event (title, time, attendees, resource, recurrence)
+│   ├── EventDetailPanel.tsx     # right-side / popover detail (title, attendees responses, resource, comments)
+│   ├── ResourcePicker.tsx       # multi-select cho phòng/thiết bị/xe
+│   ├── AttendeePicker.tsx       # autocomplete employee + ad-hoc email
+│   ├── RecurrencePicker.tsx     # daily/weekly/monthly preset + custom rule
+│   └── views/
+│       ├── DayView.tsx          # react-big-calendar day view wrap
+│       ├── WeekView.tsx
+│       ├── MonthView.tsx
+│       └── AgendaView.tsx       # "Danh sách" — react-big-calendar agenda
+├── hooks/
+│   ├── useEventsRange.ts
+│   ├── useEvent.ts
+│   ├── useCreateEvent.ts
+│   ├── useFollowedCalendars.ts
+│   ├── useExternalLinks.ts
+│   └── useCalendarStore.ts      # Zustand: selectedDate, selectedView, toggledFollows[]
+├── services/
+│   ├── eventService.ts
+│   ├── resourceService.ts
+│   ├── followService.ts
+│   └── externalSyncService.ts
+├── types/
+│   └── index.ts
+└── views/
+    ├── CalendarView.tsx         # tab "Lịch" — sidebar + chosen view
+    └── RoomView.tsx             # tab "Phòng họp" — chọn phòng → free/busy timeline
+```
+
+Dependencies cần thêm:
+
+- `react-big-calendar` + `date-fns` (đã có) cho date math
+- `rrule` (FE expand recurrence để hiển thị + BE expand)
+- `googleapis` (BE) cho Google OAuth + events API — Phase 7.4
+- `@microsoft/microsoft-graph-client` (BE) — Phase 7.4
+
+### FE — Routing
+
+- `/bookings` (đổi nội dung từ placeholder thành `<CalendarView />`)
+- `/bookings?tab=rooms` → `<RoomView />`
+- `/bookings/events/:id` (deep link, mở detail panel)
+
+Sidebar nav giữ entry "Đặt lịch" hiện tại — chỉ swap content.
+
+### Phasing (5 PR)
+
+| PR | Phase | Deliverable |
+| --- | --- | --- |
+| 7.1 | Events + 4 view | Schema 2 bảng (Event, EventAttendee), event CRUD, conflict check (no resource), recurrence basic, FE 4 view với react-big-calendar, sidebar mini-cal + managed list |
+| 7.2 | Resources + Booking | Schema 2 bảng (Resource, EventResource), resource CRUD, "Phòng họp" tab, ResourcePicker trong EventCreateDialog, hard conflict on resource |
+| 7.3 | Follow + visibility | Schema CalendarFollow, follow/unfollow, sidebar FollowedList với checkbox, BE filter visibility theo follower |
+| 7.4 | External sync | Schema ExternalCalendarLink, OAuth Google + Microsoft, scheduler cron 5min incremental, sidebar Lịch từ Google/Microsoft + connect button |
+| 7.5 | Tasks ("Việc cần làm") | Defer — quyết định reuse Request engine hoặc tạo Task entity riêng |
+
+Mỗi PR ship được độc lập — F7.1 đã có thể demo; F7.2+ là enhancement.
+
+### Done-when (Phase 7.1 — MVP)
+
+- BE: `pnpm --filter @c-hr/backend build` xanh, migration `add_calendar_and_booking_phase1` applied, swagger có `/events`, `/events/:id`, `/events/range`, `/events/:id/attendees`, `/attendees/:id/respond`.
+- FE: `pnpm --filter @c-hr/frontend check` xanh, `/bookings` render `<CalendarView />` thay placeholder.
+- Smoke E2E (curl):
+  - [ ] `POST /events` event đơn → 201
+  - [ ] `POST /events` recurring weekly → master row, query range expand instances
+  - [ ] `GET /events/range?from=&to=` 1 tuần → trả master + recurrence instances
+  - [ ] `POST /events/:id/attendees` → attendee row PENDING
+  - [ ] `POST /attendees/:id/respond { response: ACCEPTED }` → row updated
+  - [ ] `POST /events` overlap với event của chính owner → 200 + `conflicts: [...]` warning
+  - [ ] `PATCH /events/:id?scope=instance` → tạo override row, master không đổi
+  - [ ] `DELETE /events/:id?scope=series` → soft-delete master + cascade attendees
+- Smoke UI:
+  - User mở `/bookings` → CalendarShell render, mini-cal sync với main view
+  - Click ngày trong mini-cal → main view nhảy đến ngày
+  - Toggle view Tuần/Tháng/Ngày/Danh sách → render đổi đúng
+  - Click slot trống → EventCreateDialog mở, pre-fill startAt = slot click
+  - Tạo event recurring → hiện đúng instance trên 4 view
+  - Drag-drop event sang slot khác (week/day view) → PATCH thành công
+  - Click event → detail panel hiện attendee + respond button
+  - Mini-cal có dot indicator dưới ngày có event
+
+### Defers (F7.x / future)
+
+- **F7.4 — External sync**: chi tiết OAuth flow, token refresh, incremental delta sync (Google `syncToken`, Microsoft `deltaLink`), conflict khi cùng event tồn tại hai nơi (chọn priority C-HR vs Google).
+- **F7.5 — Tasks**: "Việc cần làm" tab. Decision: reuse F5 Request engine với group `task`, hay tạo Task entity riêng? Nếu reuse Request, lifecycle PENDING/APPROVED không match task (không cần approve). Nghiêng tạo `Task` riêng với fields: title, description, dueDate, status (TODO/IN_PROGRESS/DONE), assigneeId.
+- **F7.6 — 2-way sync**: tạo event ở C-HR push lên Google. Phức tạp do conflict resolution (last-write-wins? source-of-truth flag?).
+- **F7.7 — Notifications**: email reminder X phút trước event. Real-time WebSocket khi attendee respond.
+- **F7.8 — Resource floor plan**: visualize phòng họp trên sơ đồ tầng. Defer cho khi >20 phòng.
+- **F7.9 — Time-zone proper**: hiện store UTC, render local theo browser TZ. Khi Org có chi nhánh đa-TZ cần "Org timezone" + per-user TZ override.
+- **F7.10 — Recurring exceptions UX**: khi user sửa "this event" vs "this and following" vs "all" — Google Calendar pattern. Cần UI rõ ràng.
+- **F7.11 — Booking approval workflow**: phòng VIP hoặc xe công ty cần manager approve trước → reuse F5 Request engine với group `room_booking` thay vì direct booking.
+- **Conflict với F3 Attendance**: leave request approved (F5 leave) → tự động block calendar slot? Hoặc chỉ show warning. Defer thiết kế.
 
 ## Sau Feature 4 (roadmap dài hơi)
 

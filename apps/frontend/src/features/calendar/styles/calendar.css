@@ -1,0 +1,248 @@
+/* react-big-calendar overrides — clean, Outlook-like aesthetic.
+ *
+ * Uses shadcn/Tailwind tokens directly (`var(--border)`, `var(--accent)`,
+ * `var(--muted-foreground)`) — these are full oklch colors, not HSL
+ * components, so we use them raw without `hsl()` wrappers.
+ *
+ * Event accent uses fixed blue (oklch ~250) instead of the theme
+ * `--primary` because shadcn's neutral preset makes primary near-black,
+ * which renders events as ugly black blocks.
+ */
+
+.rbc-calendar {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--foreground);
+  --cal-event-bg: oklch(0.95 0.04 240);          /* light blue */
+  --cal-event-bg-hover: oklch(0.92 0.06 240);
+  --cal-event-fg: oklch(0.42 0.15 250);          /* deep blue text */
+  --cal-event-border: oklch(0.78 0.1 240);       /* mid blue border */
+  --cal-now-line: oklch(0.65 0.22 22);           /* red */
+}
+
+/* Hide RBC default toolbar — we render <CalendarToolbar />. */
+.rbc-toolbar { display: none !important; }
+
+.rbc-time-view,
+.rbc-month-view {
+  border: none;
+  background: var(--background);
+}
+
+.rbc-time-view {
+  border-top: 1px solid var(--border);
+}
+
+.rbc-time-header,
+.rbc-time-header-content,
+.rbc-month-header {
+  border-color: var(--border);
+}
+
+.rbc-time-header-content,
+.rbc-time-content,
+.rbc-time-gutter,
+.rbc-day-bg,
+.rbc-day-slot,
+.rbc-month-row,
+.rbc-row-bg,
+.rbc-time-content > * + * > *,
+.rbc-header,
+.rbc-header + .rbc-header {
+  border-color: var(--border);
+}
+
+/* Day-of-week header (Mon 04, Tue 05, …) */
+.rbc-header {
+  padding: 10px 6px;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--background);
+}
+
+/* Today column */
+.rbc-today {
+  background-color: oklch(0.97 0.02 240 / 0.5);
+}
+
+.rbc-header.rbc-today {
+  color: oklch(0.42 0.15 250);
+  font-weight: 600;
+}
+
+/* Time gutter labels (left) */
+.rbc-time-gutter,
+.rbc-time-gutter .rbc-timeslot-group,
+.rbc-label {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rbc-timeslot-group {
+  border-color: var(--border);
+  min-height: 48px;
+}
+
+.rbc-time-slot {
+  border-color: color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+/* Event chips */
+.rbc-event {
+  background: var(--cal-event-bg);
+  color: var(--cal-event-fg);
+  border: 1px solid var(--cal-event-border);
+  border-left: 3px solid oklch(0.55 0.18 250);
+  border-radius: 6px;
+  padding: 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  box-shadow: 0 1px 1px oklch(0 0 0 / 0.04);
+  outline: none;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.rbc-event:hover {
+  background: var(--cal-event-bg-hover);
+  box-shadow: 0 2px 6px oklch(0 0 0 / 0.08);
+}
+
+.rbc-event:focus,
+.rbc-event.rbc-selected {
+  background: var(--cal-event-bg-hover);
+  outline: 2px solid oklch(0.55 0.18 250);
+  outline-offset: -2px;
+}
+
+.rbc-day-slot .rbc-event {
+  border-color: var(--cal-event-border);
+}
+
+.rbc-event[data-status="CANCELLED"] { opacity: 0.55; }
+.rbc-event[data-status="TENTATIVE"] {
+  background: oklch(0.97 0.025 80);
+  color: oklch(0.5 0.13 60);
+  border-color: oklch(0.85 0.09 70);
+  border-left-color: oklch(0.65 0.16 60);
+}
+
+/* RBC's per-column indicator is hidden — we render a custom NowLine
+ * (see components/NowLine.tsx) that portals into `.rbc-time-content`
+ * so it scrolls with the grid (not sticky), with dashed segments on
+ * past days, solid+dot on today, nothing on future days. */
+.rbc-current-time-indicator {
+  display: none;
+}
+
+/* Positioning context for the portaled NowLine children. */
+.rbc-time-content {
+  position: relative;
+}
+
+/* Today column in week view: tint the gutter-side label's "today" cell
+ * so the user can locate today even when scrolled away from the now line. */
+.rbc-time-header-cell.rbc-today,
+.rbc-time-header-cell-single-day.rbc-today {
+  color: var(--cal-now-line);
+}
+
+/* Month grid */
+.rbc-off-range-bg { background: color-mix(in srgb, var(--muted) 50%, transparent); }
+.rbc-off-range { color: var(--muted-foreground); }
+
+.rbc-date-cell {
+  padding: 4px 8px;
+  font-size: 12px;
+  text-align: right;
+  color: var(--foreground);
+}
+
+.rbc-date-cell > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+}
+
+.rbc-date-cell.rbc-now > a {
+  background: oklch(0.55 0.18 250);
+  color: oklch(0.99 0 0);
+  font-weight: 600;
+}
+
+/* Agenda view */
+.rbc-agenda-view { border: none; font-size: 13px; }
+.rbc-agenda-view table { border-color: var(--border); }
+.rbc-agenda-view table thead {
+  background: color-mix(in srgb, var(--muted) 60%, transparent);
+}
+.rbc-agenda-view td,
+.rbc-agenda-view th {
+  border-color: var(--border);
+  padding: 10px 14px;
+}
+.rbc-agenda-time-cell {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+/* Month "show more" link */
+.rbc-show-more {
+  background: transparent;
+  color: oklch(0.5 0.16 250);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 4px;
+}
+
+.rbc-show-more:hover {
+  color: oklch(0.42 0.16 250);
+  background: color-mix(in srgb, oklch(0.55 0.18 250) 8%, transparent);
+}
+
+/* Drag-to-create selection */
+.rbc-slot-selection {
+  background: oklch(0.55 0.18 250 / 0.18);
+  color: inherit;
+  border: 1px dashed oklch(0.55 0.18 250);
+  border-radius: 4px;
+}
+
+/* Mini-calendar in sidebar — shadcn primitive uses --primary for "today"
+ * and selected day, which lands as near-black under the neutral theme.
+ * Re-skin with the same blue accent used by main calendar events. */
+[data-slot="calendar"] [data-selected-single="true"],
+[data-slot="calendar"] [data-range-start="true"],
+[data-slot="calendar"] [data-range-end="true"] {
+  background: oklch(0.55 0.18 250) !important;
+  color: oklch(0.99 0 0) !important;
+}
+
+[data-slot="calendar"] [data-range-middle="true"] {
+  background: oklch(0.94 0.04 240) !important;
+  color: oklch(0.42 0.15 250) !important;
+}
+
+[data-slot="calendar"] .rdp-today,
+[data-slot="calendar"] .today {
+  color: oklch(0.42 0.15 250) !important;
+  font-weight: 600;
+}
+
+/* Active-week highlight in mini-cal — applied via `modifiersClassNames`
+ * when the main view is "week". Tint each cell in the week without
+ * overriding the dark selected-day pill. */
+[data-slot="calendar"] .rdp-active-week:not([data-selected-single="true"]) {
+  background-color: oklch(0.94 0.04 240) !important;
+  color: oklch(0.42 0.15 250) !important;
+}
+[data-slot="calendar"] .rdp-active-week:not([data-selected-single="true"]):hover {
+  background-color: oklch(0.91 0.05 240) !important;
+}

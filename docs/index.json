@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-06T07:44:39.075Z",
+  "generatedAt": "2026-05-06T16:03:12.635Z",
   "repoRelativeRoot": ".",
   "count": 48,
   "entries": [
@@ -367,6 +367,20 @@
         "FE — Pilot Request integration",
         "Done-when",
         "Defers (F6.x / future)",
+        "Feature 7 — Calendar + Booking",
+        "Layout reference (theo screenshot user cung cấp)",
+        "Open decisions for F7 (cần chốt trước khi code)",
+        "BE — Schema (Phase 7.1 + 7.2)",
+        "BE — Module layout (calendar)",
+        "BE — Endpoints (calendar)",
+        "BE — Conflict detection",
+        "BE — Recurrence",
+        "BE — Wire-in F6 Collaboration",
+        "FE — Module layout",
+        "FE — Routing",
+        "Phasing (5 PR)",
+        "Done-when (Phase 7.1 — MVP)",
+        "Defers (F7.x / future)",
         "Sau Feature 4 (roadmap dài hơi)",
         "Workflow mỗi feature (template)"
       ],

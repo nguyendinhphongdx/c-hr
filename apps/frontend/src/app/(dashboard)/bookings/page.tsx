@@ -1,12 +1,12 @@
-import { BookingsView } from "@/features/bookings";
+import { CalendarView } from "@/features/calendar";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
-  title: "Đặt lịch",
+  title: "Lịch",
   path: "/bookings",
   noIndex: true,
 });
 
 export default function BookingsPage() {
-  return <BookingsView />;
+  return <CalendarView />;
 }
