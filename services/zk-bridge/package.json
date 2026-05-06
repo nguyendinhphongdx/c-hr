@@ -4,6 +4,16 @@
   "private": true,
   "description": "C-HR pull-side adapter for ZKTeco devices — runs in customer LAN, pushes to C-HR cloud",
   "main": "dist/index.js",
+  "bin": {
+    "zk-bridge": "dist/cli/zk-bridge.js"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
@@ -11,6 +21,7 @@
     "poll:once": "ts-node src/index.ts --once",
     "reset-user": "node dist/cli/reset-user.js",
     "recent-events": "node dist/cli/recent-events.js",
+    "cli": "node dist/cli/zk-bridge.js",
     "lint": "eslint \"src/**/*.ts\""
   },
   "dependencies": {

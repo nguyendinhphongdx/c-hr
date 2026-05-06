@@ -39,6 +39,91 @@ pnpm --filter @c-hr/zk-bridge recent-events --device "Cửa chính" -n 30
 Open <http://127.0.0.1:7000> — first time hits `/setup` to create the local
 admin. Subsequent starts hit `/login`.
 
+## CLI (npm-package style)
+
+The package exposes a `zk-bridge` binary so admins can drive it without
+remembering paths. After installing the package globally:
+
+```bash
+zk-bridge start                                  # UI + scheduler (default)
+zk-bridge poll-once                              # one cycle then exit
+zk-bridge reset-user                             # recover from lost password
+zk-bridge recent-events --device "Cửa chính" -n 30
+zk-bridge --help
+zk-bridge --version
+```
+
+Env vars (`DATA_DIR`, `PORT`, `BIND_HOST`) work as flags via shell:
+
+```bash
+PORT=8080 BIND_HOST=0.0.0.0 zk-bridge start
+```
+
+### Where the data dir lives
+
+`zk-bridge start` prints `[zk-bridge] data dir: <path>` on boot. Resolution
+order:
+
+1. `DATA_DIR` env var (Docker compose / explicit override)
+2. `./data/` if it already exists next to cwd (dev workflow, bind mount)
+3. **Globally installed (npm i -g)** → OS-standard user data dir:
+   - Linux: `$XDG_DATA_HOME/zk-bridge` (default `~/.local/share/zk-bridge`)
+   - macOS: `~/Library/Application Support/zk-bridge`
+   - Windows: `%APPDATA%\zk-bridge` (default `~/AppData/Roaming/zk-bridge`)
+4. `./data/` next to cwd (dev fallback)
+
+### Install globally (before publishing — local install)
+
+```bash
+cd services/zk-bridge
+pnpm install
+pnpm build
+npm install -g .         # symlinks `zk-bridge` to dist/cli/zk-bridge.js
+zk-bridge start
+```
+
+### Ship a tarball to the customer machine
+
+```bash
+cd services/zk-bridge && pnpm build && npm pack
+# yields c-hr-zk-bridge-0.1.0.tgz
+scp c-hr-zk-bridge-0.1.0.tgz <customer-host>:
+ssh <customer-host> 'npm install -g ~/c-hr-zk-bridge-0.1.0.tgz && zk-bridge start'
+```
+
+### Publish to public npm
+
+One-time setup:
+
+1. Decide on a published name. `@c-hr/zk-bridge` requires owning the `c-hr`
+   org on npm. If unavailable, use unscoped (`chr-zk-bridge`) or your personal
+   scope (`@<your-username>/zk-bridge`).
+2. `npm login` (or `npm adduser` for new account).
+3. Set `"private": false` in [package.json](package.json) — required for publish.
+4. Verify `files` (currently `["dist/", "README.md"]`) and run `npm pack` to
+   inspect what would actually ship.
+
+Each release:
+
+```bash
+cd services/zk-bridge
+pnpm build
+npm version <patch|minor|major>          # bumps version + git tag
+npm publish --access public              # --access public required for scoped names
+```
+
+After publishing:
+
+```bash
+# On customer host
+npm install -g @c-hr/zk-bridge
+zk-bridge start
+```
+
+Auto-start on boot is then enabled either via the UI toggle (registers
+systemd / Windows Scheduled Task / launchd pointing at the global `zk-bridge`
+binary) or via the customer's preferred process manager (PM2, supervisord).
+
 ## Environment
 
 The bridge expects almost everything to be entered through the UI. Only path /
