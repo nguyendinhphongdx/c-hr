@@ -7,7 +7,6 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 
-import { isAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
 import { OrgChartService } from '@/apps/hrm/orgchart/orgchart.service';
 import { PrismaService } from '@libs/database/prisma.service';
@@ -18,6 +17,7 @@ import { validateRequestData } from '../request.validator';
 import { getHandler } from '../side-effects';
 
 import { CreateRequestDto, DecideRequestDto, ListRequestsDto } from './dto';
+import { RequestAcl } from './request.acl';
 import { RequestRepository } from './request.repository';
 
 @Injectable()
@@ -33,7 +33,7 @@ export class RequestService {
 
   async list(query: ListRequestsDto) {
     const orgId = this.ctx.requireOrg();
-    const isHrm = await isAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
+    const isHrm = this.ctx.isAppAdmin('HRM', orgId);
 
     const where: Prisma.RequestWhereInput = {};
     if (query.status) where.status = query.status;
@@ -65,8 +65,9 @@ export class RequestService {
     const orgId = this.ctx.requireOrg();
     const r = await this.repo.findByIdByOrg(orgId, id);
     if (!r) throw new NotFoundException('Request not found');
-    await this.assertCanView(orgId, r);
-    return r;
+    const acl = new RequestAcl(r);
+    await acl.require('canView');
+    return { ...r, view: await acl.getAcl() };
   }
 
   async create(dto: CreateRequestDto) {
@@ -130,10 +131,12 @@ export class RequestService {
     const orgId = this.ctx.requireOrg();
     const r = await this.repo.findByIdByOrg(orgId, id);
     if (!r) throw new NotFoundException('Request not found');
-    if (r.requesterId !== this.ctx.employeeId) {
-      throw new ForbiddenException('Only the requester can cancel');
-    }
-    if (r.status !== 'PENDING') {
+    if (!new RequestAcl(r).canCancel()) {
+      // Preserve the previous error split: distinguish "wrong user" vs
+      // "wrong status" so the FE message stays accurate.
+      if (r.requesterId !== this.ctx.employeeId) {
+        throw new ForbiddenException('Only the requester can cancel');
+      }
       throw new BadRequestException(`Cannot cancel a ${r.status} request`);
     }
 
@@ -161,10 +164,12 @@ export class RequestService {
     const r = await this.repo.findByIdByOrg(orgId, id);
     if (!r) throw new NotFoundException('Request not found');
 
-    if (r.approverId !== this.ctx.employeeId) {
-      throw new ForbiddenException('Only the assigned approver can decide');
-    }
-    if (r.status !== 'PENDING') {
+    if (!new RequestAcl(r).canApprove()) {
+      // Preserve the previous error split: assigned-approver gate vs
+      // status gate, so the FE can surface the exact reason.
+      if (r.approverId !== this.ctx.employeeId) {
+        throw new ForbiddenException('Only the assigned approver can decide');
+      }
       throw new BadRequestException(`Cannot decide a ${r.status} request`);
     }
 
@@ -211,16 +216,5 @@ export class RequestService {
       organizationId: orgId,
     });
     return updated;
-  }
-
-  private async assertCanView(
-    orgId: string,
-    r: { requesterId: string; approverId: string | null },
-  ) {
-    const allowed = await isAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
-    if (allowed) return;
-    const eid = this.ctx.employeeId;
-    if (eid && (r.requesterId === eid || r.approverId === eid)) return;
-    throw new ForbiddenException('Cannot view this request');
   }
 }

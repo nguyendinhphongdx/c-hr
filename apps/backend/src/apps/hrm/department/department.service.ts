@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-import { requireAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
+import { DepartmentAcl } from './department.acl';
 import { CreateDepartmentDto, UpdateDepartmentDto } from './dto';
 import { DepartmentRepository } from './department.repository';
 
@@ -25,12 +25,14 @@ export class DepartmentService {
     const orgId = this.ctx.requireOrg();
     const dept = await this.repo.findByIdByOrg(orgId, id);
     if (!dept) throw new NotFoundException('Department not found');
-    return dept;
+    const acl = new DepartmentAcl(dept);
+    await acl.require('canView');
+    return { ...dept, view: await acl.getAcl() };
   }
 
   async create(dto: CreateDepartmentDto) {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
+    this.ctx.requireAppAdmin('HRM', orgId);
 
     if (dto.parentId) await this.assertParentInOrg(orgId, dto.parentId);
     if (dto.managerId) await this.assertManagerInOrg(orgId, dto.managerId);
@@ -57,10 +59,10 @@ export class DepartmentService {
 
   async update(id: string, dto: UpdateDepartmentDto) {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Department not found');
+    await new DepartmentAcl(existing).require('canEdit');
 
     if (dto.parentId !== undefined && dto.parentId !== null) {
       await this.assertParentInOrg(orgId, dto.parentId);
@@ -92,10 +94,10 @@ export class DepartmentService {
 
   async softDelete(id: string) {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Department not found');
+    await new DepartmentAcl(existing).require('canDelete');
 
     await this.repo.softDelete(id);
     return { id, success: true };
