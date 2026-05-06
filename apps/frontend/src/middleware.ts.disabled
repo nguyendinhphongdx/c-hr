@@ -1,0 +1,46 @@
+// DISABLED while BE/FE are on different domains (Render + Vercel).
+// The auth cookie is scoped to the BE host so this edge middleware (running
+// on the FE host) cannot see it — produces a /login redirect loop.
+//
+// To re-enable when BE/FE share a parent domain (e.g. api.c-hr.com +
+// app.c-hr.com with COOKIE_DOMAIN=.c-hr.com on BE):
+//   1. Rename this file to `middleware.ts`.
+//   2. Set COOKIE_DOMAIN on the BE so the cookie is visible to the FE host.
+//   3. Redeploy FE.
+//
+// AuthGuard ([components/layout/AuthGuard.tsx]) handles the redirect
+// client-side in the meantime.
+
+import { NextResponse, type NextRequest } from "next/server";
+
+const SESSION_COOKIE = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? "access_token";
+
+export function middleware(req: NextRequest) {
+  const hasSession = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
+  if (hasSession) return NextResponse.next();
+
+  const loginUrl = new URL("/login", req.url);
+  loginUrl.searchParams.set("next", req.nextUrl.pathname + req.nextUrl.search);
+  return NextResponse.redirect(loginUrl);
+}
+
+export const config = {
+  matcher: [
+    "/home",
+    "/home/:path*",
+    "/settings",
+    "/settings/:path*",
+    "/employees",
+    "/employees/:path*",
+    "/departments",
+    "/departments/:path*",
+    "/orgchart",
+    "/orgchart/:path*",
+    "/timesheet",
+    "/timesheet/:path*",
+    "/admin",
+    "/admin/:path*",
+    "/requests",
+    "/requests/:path*",
+  ],
+};
