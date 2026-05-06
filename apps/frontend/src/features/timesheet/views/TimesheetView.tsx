@@ -215,25 +215,27 @@ function StatsRow({ stats, loading }: { stats: MonthStats; loading: boolean }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
       {tiles.map((t) => (
         <div
           key={t.key}
           className={cn(
-            "flex items-center gap-3 rounded-lg border px-3 py-2.5",
+            "flex items-center gap-2 rounded-md border px-2.5 py-1.5",
             t.className,
           )}
         >
-          <t.icon className="h-5 w-5 shrink-0 opacity-70" />
+          <t.icon className="h-3.5 w-3.5 shrink-0 opacity-70" />
           <div className="min-w-0 flex-1">
-            <div className="text-[11px] uppercase tracking-wide opacity-80">
-              {t.label}
-            </div>
-            <div className="text-lg font-semibold tabular-nums">
-              {loading ? "—" : t.value}
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[10px] uppercase tracking-wide opacity-70">
+                {t.label}
+              </span>
+              <span className="text-sm font-semibold tabular-nums">
+                {loading ? "—" : t.value}
+              </span>
             </div>
             {t.hint && !loading && (
-              <div className="truncate text-[10px] opacity-70">{t.hint}</div>
+              <div className="truncate text-[10px] opacity-60">{t.hint}</div>
             )}
           </div>
         </div>
