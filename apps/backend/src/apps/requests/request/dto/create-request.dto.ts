@@ -1,4 +1,11 @@
-import { IsObject, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateRequestDto {
   @IsUUID()
@@ -7,6 +14,12 @@ export class CreateRequestDto {
   /// Must be one of getApproverCandidates(currentEmployeeId).
   @IsUUID()
   approverId: string;
+
+  /// Free-text user-supplied subject line; primary header in list rows + preview.
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  title: string;
 
   /// Custom-field payload validated server-side against group.fieldsSchema.
   @IsObject()

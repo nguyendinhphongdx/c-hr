@@ -142,7 +142,12 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
       <div className="sticky top-0 z-10 border-b bg-background px-4 pt-4 pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="text-base font-semibold">{request.group.name}</h3>
+            <h2 className="truncate text-base font-semibold">
+              {request.title ?? request.group.name}
+            </h2>
+            <div className="text-xs text-muted-foreground">
+              {request.group.name}
+            </div>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
               <span className="font-mono">#{shortId}</span>
               <span>·</span>
@@ -288,7 +293,17 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
       <div className="sticky bottom-0 border-t bg-background p-3">
         <CommentEditor
           onSubmit={async (bodyHtml, isInternal) => {
-            await createComment.mutateAsync({ bodyHtml, isInternal });
+            try {
+              await createComment.mutateAsync({ bodyHtml, isInternal });
+              toast.success("Đã gửi bình luận");
+            } catch (err) {
+              const msg =
+                (err as { response?: { data?: { error?: { message?: string } } } })
+                  ?.response?.data?.error?.message ?? "Không gửi được bình luận";
+              toast.error(msg);
+              console.error("comment create failed", err);
+              throw err; // let CommentEditor know not to clear
+            }
           }}
           isInternalToggle
           placeholder="Viết bình luận…"

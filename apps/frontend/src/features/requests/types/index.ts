@@ -60,6 +60,7 @@ export interface RequestRow {
   requesterId: ID;
   approverId: Nullable<ID>;
   status: RequestStatus;
+  title: Nullable<string>;
   data: Record<string, unknown>;
   decisionNote: Nullable<string>;
   decidedAt: Nullable<ISODate>;
@@ -73,10 +74,12 @@ export interface RequestRow {
 export interface CreateRequestInput {
   groupId: ID;
   approverId: ID;
+  title: string;
   data: Record<string, unknown>;
 }
 
 export interface UpdateRequestInput {
+  title?: string;
   data?: Record<string, unknown>;
   approverId?: ID;
 }

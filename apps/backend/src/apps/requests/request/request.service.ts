@@ -112,6 +112,7 @@ export class RequestService {
       groupId: dto.groupId,
       requesterId,
       approverId: dto.approverId,
+      title: dto.title,
       data: dto.data as Prisma.InputJsonValue,
       status: 'PENDING',
     });
@@ -153,6 +154,11 @@ export class RequestService {
 
     const changedFields: string[] = [];
     const patch: Prisma.RequestUncheckedUpdateInput = {};
+
+    if (dto.title !== undefined && dto.title !== existing.title) {
+      patch.title = dto.title;
+      changedFields.push('title');
+    }
 
     if (dto.data !== undefined) {
       if (!isFieldsSchema(existing.group.fieldsSchema)) {
@@ -349,11 +355,13 @@ export class RequestService {
 }
 
 type RequestForLabel = {
+  title?: string | null;
   group?: { name?: string | null; code: string } | null;
   requester?: { user?: { name?: string | null } | null } | null;
 };
 
 function buildRequestLabel(r: RequestForLabel): string {
+  if (r.title && r.title.trim().length > 0) return r.title;
   const groupPart = r.group?.name ?? r.group?.code ?? 'Request';
   const requesterName = r.requester?.user?.name;
   return requesterName ? `${groupPart} — ${requesterName}` : groupPart;

@@ -331,6 +331,7 @@ model Request {
   requesterId    String        @map("requester_id")
   approverId     String?       @map("approver_id")
   status         RequestStatus @default(PENDING)
+  title          String?       @map("title")
   data           Json
   decisionNote   String?       @map("decision_note")
   decidedAt      DateTime?     @map("decided_at")

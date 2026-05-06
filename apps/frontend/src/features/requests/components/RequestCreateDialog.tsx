@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChevronRight, Loader2, Save } from "lucide-react";
+import { ArrowLeft, ChevronRight, Loader2, Save, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -62,7 +63,9 @@ export function RequestCreateDialog({
   );
   const [groupId, setGroupId] = useState<string | null>(null);
   const [data, setData] = useState<Record<string, unknown>>({});
+  const [title, setTitle] = useState<string>("");
   const [approverId, setApproverId] = useState<string>("");
+  const [groupSearch, setGroupSearch] = useState<string>("");
   // Track which clone source we already applied so we don't keep
   // overwriting user edits across re-renders.
   const [clonedFrom, setClonedFrom] = useState<string | null>(null);
@@ -75,12 +78,22 @@ export function RequestCreateDialog({
     setStep(cloneFromId ? "fill-form" : "pick-group");
     setGroupId(null);
     setData({});
+    setTitle("");
     setApproverId("");
     setClonedFrom(null);
+    setGroupSearch("");
   }
 
   const groups = (groupsQuery.data ?? []).filter((g) => g.isActive);
   const selectedGroup = groups.find((g) => g.id === groupId) ?? null;
+  const searchTerm = groupSearch.trim().toLowerCase();
+  const filteredGroups = searchTerm
+    ? groups.filter(
+        (g) =>
+          g.name.toLowerCase().includes(searchTerm) ||
+          (g.description?.toLowerCase().includes(searchTerm) ?? false),
+      )
+    : groups;
 
   // Apply clone source once it loads. One-shot via clonedFrom guard so
   // user edits aren't trampled.
@@ -94,6 +107,7 @@ export function RequestCreateDialog({
     const src = cloneSource.data;
     if (src.groupId) setGroupId(src.groupId);
     setData({ ...src.data });
+    setTitle(src.title ?? "");
     setClonedFrom(cloneFromId);
   }
 
@@ -128,6 +142,10 @@ export function RequestCreateDialog({
       toast.error("Chọn loại đơn");
       return;
     }
+    if (!title.trim()) {
+      toast.error("Nhập tiêu đề");
+      return;
+    }
     if (!approverId) {
       toast.error("Chọn người duyệt");
       return;
@@ -136,6 +154,7 @@ export function RequestCreateDialog({
       await create.mutateAsync({
         groupId: selectedGroup.id,
         approverId,
+        title: title.trim(),
         data,
       });
       toast.success("Đã tạo đơn");
@@ -153,7 +172,7 @@ export function RequestCreateDialog({
   const cloneLoading =
     !!cloneFromId && (cloneSource.isLoading || clonedFrom !== cloneFromId);
 
-  const title =
+  const dialogTitle =
     step === "pick-group"
       ? "Chọn loại đơn"
       : (selectedGroup?.name ?? "Tạo đơn");
@@ -200,48 +219,66 @@ export function RequestCreateDialog({
                 <ArrowLeft className="h-4 w-4" />
               </button>
             )}
-            <DialogTitle className="flex-1 text-left">{title}</DialogTitle>
+            <DialogTitle className="flex-1 text-left">{dialogTitle}</DialogTitle>
           </div>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         {step === "pick-group" && (
-          <div className="max-h-[60vh] overflow-y-auto py-1">
-            {groupsQuery.isLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-14 w-full" />
-                <Skeleton className="h-14 w-full" />
-                <Skeleton className="h-14 w-full" />
+          <div className="flex max-h-[60vh] flex-col gap-2 py-1">
+            {groups.length > 0 && (
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  autoFocus
+                  value={groupSearch}
+                  onChange={(e) => setGroupSearch(e.target.value)}
+                  placeholder="Tìm loại đơn theo tên hoặc mô tả..."
+                  className="h-9 pl-8 text-sm"
+                />
               </div>
-            ) : groups.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Chưa có loại đơn nào được kích hoạt.
-              </p>
-            ) : (
-              <ul className="space-y-1.5">
-                {groups.map((g) => (
-                  <li key={g.id}>
-                    <button
-                      type="button"
-                      onClick={() => handlePickGroup(g.id)}
-                      className={cn(
-                        "group flex w-full items-center gap-3 rounded-md border bg-background px-3 py-2.5 text-left transition-colors hover:border-primary hover:bg-accent/40",
-                      )}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium">{g.name}</div>
-                        {g.description && (
-                          <div className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                            {g.description}
-                          </div>
-                        )}
-                      </div>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
             )}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {groupsQuery.isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-14 w-full" />
+                </div>
+              ) : groups.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Chưa có loại đơn nào được kích hoạt.
+                </p>
+              ) : filteredGroups.length === 0 ? (
+                <p className="px-1 py-3 text-sm text-muted-foreground">
+                  Không có loại đơn khớp với &quot;{groupSearch}&quot;.
+                </p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {filteredGroups.map((g) => (
+                    <li key={g.id}>
+                      <button
+                        type="button"
+                        onClick={() => handlePickGroup(g.id)}
+                        className={cn(
+                          "group flex w-full items-center gap-3 rounded-md border bg-background px-3 py-2.5 text-left transition-colors hover:border-primary hover:bg-accent/40",
+                        )}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium">{g.name}</div>
+                          {g.description && (
+                            <div className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                              {g.description}
+                            </div>
+                          )}
+                        </div>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         )}
 
@@ -267,6 +304,19 @@ export function RequestCreateDialog({
                   {selectedGroup.description}
                 </p>
               )}
+
+              <div className="grid gap-2">
+                <Label htmlFor="create-title">Tiêu đề</Label>
+                <Input
+                  id="create-title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ví dụ: Nghỉ phép tuần sau"
+                  maxLength={200}
+                  required
+                  disabled={submitting}
+                />
+              </div>
 
               <DynamicForm
                 schema={selectedGroup.fieldsSchema}

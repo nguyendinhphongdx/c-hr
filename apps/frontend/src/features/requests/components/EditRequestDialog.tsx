@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -46,6 +47,7 @@ export function EditRequestDialog({
   const candidates = useApproverCandidates(requesterEmployeeId);
 
   const [data, setData] = useState<Record<string, unknown>>(request.data);
+  const [title, setTitle] = useState<string>(request.title ?? "");
   const [approverId, setApproverId] = useState<string>(
     request.approverId ?? "",
   );
@@ -56,11 +58,16 @@ export function EditRequestDialog({
   if (open && syncKey !== wantedKey) {
     setSyncKey(wantedKey);
     setData(request.data);
+    setTitle(request.title ?? "");
     setApproverId(request.approverId ?? "");
   }
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title.trim()) {
+      toast.error("Nhập tiêu đề");
+      return;
+    }
     if (!approverId) {
       toast.error("Chọn người duyệt");
       return;
@@ -68,7 +75,7 @@ export function EditRequestDialog({
     try {
       await update.mutateAsync({
         id: request.id,
-        body: { data, approverId },
+        body: { title: title.trim(), data, approverId },
       });
       toast.success("Đã cập nhật đơn");
       onOpenChange(false);
@@ -99,6 +106,19 @@ export function EditRequestDialog({
           onSubmit={onSubmit}
           className="space-y-4 py-1"
         >
+          <div className="grid gap-2">
+            <Label htmlFor="edit-title">Tiêu đề</Label>
+            <Input
+              id="edit-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ví dụ: Nghỉ phép tuần sau"
+              maxLength={200}
+              required
+              disabled={submitting}
+            />
+          </div>
+
           <DynamicForm
             schema={request.group.fieldsSchema}
             value={data}

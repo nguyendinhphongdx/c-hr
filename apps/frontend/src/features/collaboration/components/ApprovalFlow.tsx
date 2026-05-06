@@ -7,6 +7,11 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export type ApprovalFlowStatus =
@@ -59,40 +64,71 @@ export function ApprovalFlow({
 }: ApprovalFlowProps) {
   const avatarClass = size === "sm" ? "h-6 w-6 text-[10px]" : "h-8 w-8 text-xs";
   const labelClass = size === "sm" ? "text-xs" : "text-sm";
+  // List rows reuse this component with size="sm" — at that size names
+  // can blow out the row width, so we hide labels and rely on the
+  // tooltip-on-avatar to surface them on hover.
+  const showLabels = size !== "sm";
+
+  const requesterAvatar = (
+    <Avatar className={avatarClass}>
+      {requester.avatar ? (
+        <AvatarImage src={requester.avatar} alt={requester.name} />
+      ) : null}
+      <AvatarFallback>{initials(requester.name)}</AvatarFallback>
+    </Avatar>
+  );
+
+  const approverName = approver?.name ?? "Chưa có người duyệt";
+  const approverAvatar = (
+    <Avatar className={avatarClass}>
+      {approver?.avatar ? (
+        <AvatarImage src={approver.avatar} alt={approver.name} />
+      ) : null}
+      <AvatarFallback>
+        {approver ? initials(approver.name) : "?"}
+      </AvatarFallback>
+    </Avatar>
+  );
 
   return (
     <div className="inline-flex items-center gap-2">
       <div className="flex items-center gap-2">
-        <Avatar className={avatarClass}>
-          {requester.avatar ? (
-            <AvatarImage src={requester.avatar} alt={requester.name} />
-          ) : null}
-          <AvatarFallback>{initials(requester.name)}</AvatarFallback>
-        </Avatar>
-        <span className={cn("font-medium truncate", labelClass)}>
-          {requester.name}
-        </span>
+        {showLabels ? (
+          requesterAvatar
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>{requesterAvatar}</TooltipTrigger>
+            <TooltipContent>{requester.name}</TooltipContent>
+          </Tooltip>
+        )}
+        {showLabels && (
+          <span className={cn("font-medium truncate", labelClass)}>
+            {requester.name}
+          </span>
+        )}
       </div>
 
       <ArrowRight className="size-4 text-muted-foreground shrink-0" />
 
       <div className="flex items-center gap-2">
-        <Avatar className={avatarClass}>
-          {approver?.avatar ? (
-            <AvatarImage src={approver.avatar} alt={approver.name} />
-          ) : null}
-          <AvatarFallback>
-            {approver ? initials(approver.name) : "?"}
-          </AvatarFallback>
-        </Avatar>
-        <span className={cn("font-medium truncate", labelClass)}>
-          {approver?.name ?? "Chưa có người duyệt"}
-        </span>
+        {showLabels ? (
+          approverAvatar
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>{approverAvatar}</TooltipTrigger>
+            <TooltipContent>{approverName}</TooltipContent>
+          </Tooltip>
+        )}
+        {showLabels && (
+          <span className={cn("font-medium truncate", labelClass)}>
+            {approverName}
+          </span>
+        )}
       </div>
 
       <span
         className={cn(
-          "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium",
+          "inline-flex items-center whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-medium",
           STATUS_BADGE_CLASSES[status],
         )}
       >

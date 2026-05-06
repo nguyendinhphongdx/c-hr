@@ -9,6 +9,7 @@ import {
   Plus,
   Users,
 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -53,11 +54,23 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
  */
 export function RequestListView() {
   const isHrmAdmin = useIsAppAdmin("HRM");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [scope, setScope] = useState<RequestListScope>("mine");
   const [groupId, setGroupId] = useState<string>(ALL);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Selection persisted on URL (`?id=<requestId>`) — survives reload + share.
+  const selectedId = searchParams.get("id");
   const [creating, setCreating] = useState(false);
+
+  const setSelectedId = (id: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (id) params.set("id", id);
+    else params.delete("id");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
 
   const groupsQuery = useRequestGroups();
   const listQuery: { groupId?: string; scope?: "mine" | "incoming" } = {};
@@ -197,11 +210,18 @@ export function RequestListView() {
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{r.group.name}</span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="truncate font-medium">
+                        {r.title ?? r.group.name}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         {format(new Date(r.createdAt), "dd/MM HH:mm")}
                       </span>
                     </div>
+                    {r.title && (
+                      <div className="truncate text-xs text-muted-foreground">
+                        {r.group.name}
+                      </div>
+                    )}
                     <ApprovalFlow
                       size="sm"
                       requester={mapPartyRow(r.requester)}
