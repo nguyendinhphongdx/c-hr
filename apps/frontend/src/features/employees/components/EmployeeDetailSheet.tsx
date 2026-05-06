@@ -82,7 +82,7 @@ export function EmployeeDetailSheet({ id, onClose }: EmployeeDetailSheetProps) {
           </div>
         ) : !e ? (
           <div className="flex h-full items-center justify-center text-sm text-destructive">
-            Không tìm thấy nhân viên.
+            Không tìm thấy nhân sự.
           </div>
         ) : (
           <>

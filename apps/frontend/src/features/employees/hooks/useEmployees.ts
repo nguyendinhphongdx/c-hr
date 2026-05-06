@@ -7,6 +7,7 @@ import type { ID } from "@/lib/types";
 import { employeesService } from "../services/employeesService";
 import type {
   CreateEmployeeInput,
+  EmployeeImportBulkInput,
   EmployeesListQuery,
   UpdateEmployeeInput,
 } from "../types";
@@ -58,6 +59,29 @@ export function useDeleteEmployee() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: ID) => employeesService.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employees", "list"] });
+    },
+  });
+}
+
+export function useParseEmployeeImport() {
+  return useMutation({
+    mutationFn: ({
+      file,
+      onProgress,
+    }: {
+      file: File;
+      onProgress?: (percent: number) => void;
+    }) => employeesService.parseImport(file, onProgress),
+  });
+}
+
+export function useImportEmployees() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: EmployeeImportBulkInput) =>
+      employeesService.bulkCreateImport(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees", "list"] });
     },

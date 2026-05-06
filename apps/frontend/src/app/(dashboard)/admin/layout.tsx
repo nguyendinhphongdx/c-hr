@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 
+import { PageContainer } from "@/components/layout/PageContainer";
 import { AdminNav } from "@/features/admin";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-10">
-      <div className="mb-8">
+    <PageContainer>
+      <div>
         <h1 className="text-2xl font-semibold tracking-tight">Administration</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Org-level configuration. Visible only to admin Org and HRM appadmins.
@@ -17,6 +18,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </aside>
         <div>{children}</div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

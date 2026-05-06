@@ -1,0 +1,179 @@
+import { Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+
+import { requireAppAdmin } from '@/common/auth/access';
+import { RequestContextService } from '@/common/context';
+import { ImportService } from '@/common/import';
+import { PrismaService } from '@libs/database/prisma.service';
+
+import {
+  BulkCreateEmployeesDto,
+  EmployeeImportBulkResponse,
+  EmployeeImportParseResponse,
+  ParsedEmployeeRow,
+} from './dto';
+
+const PASSWORD_BCRYPT_ROUNDS = 10;
+
+const REQUIRED_HEADERS = ['employeeCode', 'email', 'name'] as const;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+@Injectable()
+export class EmployeeImportService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
+    private readonly importer: ImportService,
+  ) {}
+
+  /**
+   * Parse + validate an upload. Each row is annotated with `status` and
+   * `errors[]` so the FE can preview before committing. Validation covers:
+   *   - required fields (employeeCode, email, name)
+   *   - email format
+   *   - duplicate within the file
+   *   - email already in DB (any org — User.email is globally unique)
+   *   - employeeCode already in this Org
+   */
+  async parse(file: Express.Multer.File): Promise<EmployeeImportParseResponse> {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
+
+    const parsed = this.importer.parse(file);
+
+    const rows: ParsedEmployeeRow[] = parsed.rows.map((r) => ({
+      rowNumber: r.rowNumber,
+      employeeCode: r.data.employeeCode ?? '',
+      email: r.data.email ?? '',
+      name: r.data.name ?? '',
+      title: r.data.title ? r.data.title : null,
+      status: 'valid',
+      errors: [],
+    }));
+
+    const codesInFile = new Map<string, number[]>();
+    const emailsInFile = new Map<string, number[]>();
+    for (const row of rows) {
+      if (row.employeeCode) {
+        const list = codesInFile.get(row.employeeCode) ?? [];
+        list.push(row.rowNumber);
+        codesInFile.set(row.employeeCode, list);
+      }
+      if (row.email) {
+        const list = emailsInFile.get(row.email.toLowerCase()) ?? [];
+        list.push(row.rowNumber);
+        emailsInFile.set(row.email.toLowerCase(), list);
+      }
+    }
+
+    const allEmails = Array.from(emailsInFile.keys());
+    const allCodes = Array.from(codesInFile.keys());
+
+    const [existingUsers, existingEmployees] = await Promise.all([
+      allEmails.length
+        ? this.prisma.user.findMany({
+            where: { email: { in: allEmails } },
+            select: { email: true },
+          })
+        : Promise.resolve([]),
+      allCodes.length
+        ? this.prisma.employee.findMany({
+            where: {
+              organizationId: orgId,
+              code: { in: allCodes },
+              deletedAt: null,
+            },
+            select: { code: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    const existingEmailSet = new Set(existingUsers.map((u) => u.email.toLowerCase()));
+    const existingCodeSet = new Set(existingEmployees.map((e) => e.code));
+
+    for (const row of rows) {
+      const errors: string[] = [];
+
+      for (const f of REQUIRED_HEADERS) {
+        const v = (row as unknown as Record<string, string>)[f];
+        if (!v || !v.trim()) errors.push(`Thiếu cột '${f}'`);
+      }
+      if (row.email && !EMAIL_RE.test(row.email)) {
+        errors.push(`Email không hợp lệ: ${row.email}`);
+      }
+
+      const codeDup = row.employeeCode && (codesInFile.get(row.employeeCode)?.length ?? 0) > 1;
+      if (codeDup) errors.push(`Mã '${row.employeeCode}' trùng trong file`);
+
+      const emailDup =
+        row.email && (emailsInFile.get(row.email.toLowerCase())?.length ?? 0) > 1;
+      if (emailDup) errors.push(`Email '${row.email}' trùng trong file`);
+
+      if (row.email && existingEmailSet.has(row.email.toLowerCase())) {
+        errors.push(`Email '${row.email}' đã tồn tại trong hệ thống`);
+      }
+      if (row.employeeCode && existingCodeSet.has(row.employeeCode)) {
+        errors.push(`Mã '${row.employeeCode}' đã tồn tại trong Org`);
+      }
+
+      row.errors = errors;
+      row.status = errors.length === 0 ? 'valid' : 'invalid';
+    }
+
+    return {
+      rows,
+      summary: {
+        total: rows.length,
+        valid: rows.filter((r) => r.status === 'valid').length,
+        invalid: rows.filter((r) => r.status === 'invalid').length,
+      },
+    };
+  }
+
+  /**
+   * Bulk create. Each row becomes a User + Employee in one transaction.
+   * Per-row failures (e.g. a race-condition email collision) are captured
+   * and returned in `failed[]` instead of aborting the whole batch.
+   */
+  async bulkCreate(dto: BulkCreateEmployeesDto): Promise<EmployeeImportBulkResponse> {
+    const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
+
+    const passwordHash = await bcrypt.hash(dto.defaultPassword, PASSWORD_BCRYPT_ROUNDS);
+
+    let created = 0;
+    const failed: EmployeeImportBulkResponse['failed'] = [];
+
+    for (const row of dto.rows) {
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          const employee = await tx.employee.create({
+            data: {
+              organizationId: orgId,
+              code: row.employeeCode,
+              title: row.title ?? null,
+            },
+          });
+          await tx.user.create({
+            data: {
+              email: row.email,
+              name: row.name,
+              password: passwordHash,
+              role: 'user',
+              organizationId: orgId,
+              employeeId: employee.id,
+            },
+          });
+        });
+        created += 1;
+      } catch (err) {
+        failed.push({
+          rowNumber: null,
+          email: row.email,
+          reason: err instanceof Error ? err.message : 'Lỗi không xác định',
+        });
+      }
+    }
+
+    return { created, failed };
+  }
+}

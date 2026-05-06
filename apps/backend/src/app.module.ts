@@ -8,6 +8,7 @@ import { configs } from './config';
 
 import { AuditModule } from './common/audit';
 import { ContextModule } from './common/context';
+import { ImportModule } from './common/import';
 import { DatabaseModule } from './libs/database/database.module';
 import { LoggerModule } from './libs/logger/logger.module';
 import { RedisModule } from './libs/redis/redis.module';
@@ -48,6 +49,7 @@ import { RequestsModule } from './apps/requests/requests.module';
     MailModule,
     StorageModule,
     AuditModule,
+    ImportModule,
 
     CoreModule,
     HrmModule,

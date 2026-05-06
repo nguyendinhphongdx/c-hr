@@ -19,6 +19,14 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
+  // Bundled, read-only assets shipped with the app (import templates, etc.).
+  // Distinct from `uploads/` (writable, ephemeral on Render) — `static/` lives
+  // alongside the source and is copied into the Docker image at build time.
+  const staticPath = join(__dirname, '..', 'static');
+  app.useStaticAssets(staticPath, {
+    prefix: '/static/',
+  });
+
   const apiPrefix = process.env.API_PREFIX || 'api/v1';
   app.setGlobalPrefix(apiPrefix);
 

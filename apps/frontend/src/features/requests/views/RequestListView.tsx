@@ -21,6 +21,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { useIsAppAdmin } from "@/features/auth";
 import { ApprovalFlow } from "@/features/collaboration";
 import { cn } from "@/lib/utils";
@@ -96,7 +97,8 @@ export function RequestListView() {
     filteredRows.find((r) => r.id === selectedId) ?? null;
 
   return (
-    <div className="grid h-[calc(100vh-7rem)] grid-cols-1 overflow-hidden rounded-lg border md:grid-cols-[12rem_minmax(0,24rem)_minmax(0,1fr)]">
+    <PageContainer variant="bleed">
+      <div className="grid h-[calc(100vh-8rem)] grid-cols-1 overflow-hidden rounded-lg border md:grid-cols-[12rem_minmax(0,24rem)_minmax(0,1fr)]">
       {/* Sidebar */}
       <aside className="flex flex-col border-b md:border-b-0 md:border-r">
         <div className="border-b px-3 py-3">
@@ -261,7 +263,8 @@ export function RequestListView() {
         open={creating}
         onClose={() => setCreating(false)}
       />
-    </div>
+      </div>
+    </PageContainer>
   );
 }
 

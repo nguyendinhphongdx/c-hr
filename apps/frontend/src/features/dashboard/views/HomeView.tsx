@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { useAuth } from "@/features/auth";
 
 interface QuickAction {
@@ -76,7 +77,7 @@ export function HomeView() {
   const firstName = user?.name?.split(" ")[0] ?? null;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-10 px-6 py-10">
+    <PageContainer>
       <div className="animate-fade-up rounded-2xl border border-border bg-linear-to-br from-primary/5 via-background to-background p-8">
         <Badge variant="secondary" className="mb-4">
           Chào mừng
@@ -136,7 +137,7 @@ export function HomeView() {
           ))}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

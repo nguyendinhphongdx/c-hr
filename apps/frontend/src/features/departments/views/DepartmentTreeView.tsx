@@ -13,6 +13,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { useIsAppAdmin } from "@/features/auth";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +25,7 @@ export function DepartmentTreeView() {
   const { tree, isLoading, error } = useDepartmentTree();
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 px-6 py-8">
+    <PageContainer>
       <header className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Phòng ban</h1>
@@ -84,7 +85,7 @@ export function DepartmentTreeView() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   );
 }
 

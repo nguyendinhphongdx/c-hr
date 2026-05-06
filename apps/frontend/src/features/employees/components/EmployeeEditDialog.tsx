@@ -111,10 +111,10 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
           status: values.status,
         },
       });
-      toast.success("Đã cập nhật nhân viên");
+      toast.success("Đã cập nhật nhân sự");
       onClose();
     } catch (err) {
-      toast.error("Không cập nhật được nhân viên", {
+      toast.error("Không cập nhật được nhân sự", {
         description:
           err instanceof Error
             ? err.message
@@ -130,7 +130,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
     <Dialog open={!!id} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Sửa nhân viên</DialogTitle>
+          <DialogTitle>Sửa nhân sự</DialogTitle>
           <DialogDescription>
             <span className="font-mono text-xs">{employee.data?.code ?? "…"}</span>
             {" · "}

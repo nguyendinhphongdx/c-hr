@@ -5,6 +5,7 @@ import {
   BackgroundVariant,
   Controls,
   Handle,
+  MarkerType,
   MiniMap,
   Position,
   ReactFlow,
@@ -81,7 +82,7 @@ export function OrgFlowTab() {
   return (
     <Card>
       <CardContent className="p-0">
-        <div className="h-[640px] w-full overflow-hidden rounded-md">
+        <div className="h-160 w-full overflow-hidden rounded-md">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -98,7 +99,14 @@ export function OrgFlowTab() {
           >
             <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
             <Controls showInteractive={false} />
-            <MiniMap pannable zoomable />
+            <MiniMap
+              pannable
+              zoomable
+              nodeColor="#a3b3c2"
+              nodeStrokeColor="#64748b"
+              nodeStrokeWidth={2}
+              maskColor="rgba(15, 23, 42, 0.05)"
+            />
           </ReactFlow>
         </div>
       </CardContent>
@@ -115,7 +123,7 @@ function DeptCard({ data }: NodeProps<DeptFlowNode>) {
       className="rounded-lg border border-border bg-card p-3 shadow-sm"
       style={{ width: NODE_WIDTH }}
     >
-      <Handle type="target" position={Position.Top} className="!opacity-0" />
+      <Handle type="target" position={Position.Top} className="opacity-0!" />
 
       <div className="flex items-baseline justify-between gap-2">
         <div className="truncate text-sm font-semibold">{data.name}</div>
@@ -162,7 +170,7 @@ function DeptCard({ data }: NodeProps<DeptFlowNode>) {
         </div>
       )}
 
-      <Handle type="source" position={Position.Bottom} className="!opacity-0" />
+      <Handle type="source" position={Position.Bottom} className="opacity-0!" />
     </div>
   );
 }
@@ -202,7 +210,8 @@ function buildGraph(
         source: d.parentId,
         target: d.id,
         type: "smoothstep",
-        style: { stroke: "hsl(var(--border))", strokeWidth: 1.5 },
+        style: { stroke: "#94a3b8", strokeWidth: 1.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "#94a3b8" },
       });
     }
   }

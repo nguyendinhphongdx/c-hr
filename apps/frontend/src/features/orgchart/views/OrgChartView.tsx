@@ -4,6 +4,7 @@ import { GitFork, Network, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { PageContainer } from "@/components/layout/PageContainer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { DeptTreeTab } from "./DeptTreeTab";
@@ -32,7 +33,7 @@ export function OrgChartView() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
+    <PageContainer>
       <header>
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Network className="h-5 w-5" />
@@ -70,6 +71,6 @@ export function OrgChartView() {
           <OrgFlowTab />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageContainer>
   );
 }

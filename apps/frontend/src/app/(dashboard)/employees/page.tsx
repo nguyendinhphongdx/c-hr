@@ -2,7 +2,7 @@ import { EmployeeListView } from "@/features/employees";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
-  title: "Nhân viên",
+  title: "Nhân sự",
   path: "/employees",
   noIndex: true,
 });

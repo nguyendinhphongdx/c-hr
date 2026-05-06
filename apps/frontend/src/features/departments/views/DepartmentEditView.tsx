@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { EmployeePicker } from "@/features/employees";
 import type { ID } from "@/lib/types";
 
@@ -97,22 +98,24 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
 
   if (dept.isLoading) {
     return (
-      <div className="mx-auto flex max-w-2xl items-center justify-center gap-2 px-6 py-16 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Đang tải…
-      </div>
+      <PageContainer variant="narrow">
+        <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Đang tải…
+        </div>
+      </PageContainer>
     );
   }
 
   if (dept.error || !dept.data) {
     return (
-      <div className="mx-auto max-w-2xl px-6 py-16">
+      <PageContainer variant="narrow">
         <p className="text-sm text-destructive">Không tìm thấy phòng ban.</p>
         <Button variant="ghost" asChild className="mt-4 gap-2">
           <Link href="/departments">
             <ArrowLeft className="h-3.5 w-3.5" /> Quay lại
           </Link>
         </Button>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -163,7 +166,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
   const parentOptions = (list.data ?? []).filter((d) => d.id !== id);
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6 px-6 py-8">
+    <PageContainer variant="narrow">
       <Button variant="ghost" asChild size="sm" className="gap-2">
         <Link href="/departments">
           <ArrowLeft className="h-3.5 w-3.5" /> Tất cả phòng ban
@@ -293,6 +296,6 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
           </Card>
         </form>
       </Form>
-    </div>
+    </PageContainer>
   );
 }

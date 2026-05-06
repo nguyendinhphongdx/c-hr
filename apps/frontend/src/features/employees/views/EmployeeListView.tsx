@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Plus, Search } from "lucide-react";
+import { ChevronDown, Loader2, Plus, Search, Upload, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -16,6 +16,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -24,12 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { useIsAppAdmin } from "@/features/auth";
 import type { ID } from "@/lib/types";
 
 import { EmployeeCreateDialog } from "../components/EmployeeCreateDialog";
 import { EmployeeDetailSheet } from "../components/EmployeeDetailSheet";
 import { EmployeeEditDialog } from "../components/EmployeeEditDialog";
+import { EmployeeImportDialog } from "../components/EmployeeImportDialog";
 import { EmployeeRowActions } from "../components/EmployeeRowActions";
 import { useDeleteEmployee, useEmployees } from "../hooks/useEmployees";
 import type { EmployeeStatus } from "../types";
@@ -57,6 +65,7 @@ export function EmployeeListView() {
   const [viewingId, setViewingId] = useState<ID | null>(null);
   const [editingId, setEditingId] = useState<ID | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: ID; name: string } | null>(
     null,
   );
@@ -85,19 +94,34 @@ export function EmployeeListView() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
+    <PageContainer>
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Nhân viên</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Nhân sự</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Hồ sơ nhân viên — tìm kiếm, lọc và quản lý (HRM admin).
+            Hồ sơ nhân sự — tìm kiếm, lọc và quản lý (HRM admin).
           </p>
         </div>
         {canManage && (
-          <Button onClick={() => setCreating(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Thêm nhân viên
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Thêm nhân sự
+                <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setCreating(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Thêm 1 nhân sự
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setImporting(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import từ file
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </header>
 
@@ -139,15 +163,15 @@ export function EmployeeListView() {
         {list.isLoading ? (
           <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Đang tải nhân viên…
+            Đang tải nhân sự…
           </div>
         ) : list.error ? (
           <p className="p-6 text-sm text-destructive">
-            Không tải được nhân viên.
+            Không tải được nhân sự.
           </p>
         ) : !list.data?.data.length ? (
           <div className="p-12 text-center text-sm text-muted-foreground">
-            Không có nhân viên phù hợp với bộ lọc.
+            Không có nhân sự phù hợp với bộ lọc.
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -249,6 +273,10 @@ export function EmployeeListView() {
         open={creating}
         onClose={() => setCreating(false)}
       />
+      <EmployeeImportDialog
+        open={importing}
+        onClose={() => setImporting(false)}
+      />
 
       <AlertDialog
         open={!!deleteTarget}
@@ -256,7 +284,7 @@ export function EmployeeListView() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xoá nhân viên?</AlertDialogTitle>
+            <AlertDialogTitle>Xoá nhân sự?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget && (
                 <>
@@ -278,6 +306,6 @@ export function EmployeeListView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   );
 }

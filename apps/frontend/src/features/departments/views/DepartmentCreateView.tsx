@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 import { EmployeePicker } from "@/features/employees/components/EmployeePicker";
 
@@ -100,7 +101,7 @@ export function DepartmentCreateView() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6 px-6 py-8">
+    <PageContainer variant="narrow">
       <Button variant="ghost" asChild size="sm" className="gap-2">
         <Link href="/departments">
           <ArrowLeft className="h-3.5 w-3.5" /> Tất cả phòng ban
@@ -218,6 +219,6 @@ export function DepartmentCreateView() {
           </Card>
         </form>
       </Form>
-    </div>
+    </PageContainer>
   );
 }

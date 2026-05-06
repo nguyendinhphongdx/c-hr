@@ -126,7 +126,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
       };
       if (values.mode === "link") {
         await create.mutateAsync({ ...sharedFields, userId: values.userId ?? undefined });
-        toast.success("Đã tạo nhân viên", {
+        toast.success("Đã tạo nhân sự", {
           description: "User đã được liên kết với hồ sơ Employee mới.",
         });
       } else {
@@ -136,13 +136,13 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
           name: values.name,
           password: values.password,
         });
-        toast.success("Đã tạo nhân viên", {
+        toast.success("Đã tạo nhân sự", {
           description: `${values.name} có thể đăng nhập bằng ${values.email}.`,
         });
       }
       onClose();
     } catch (err) {
-      toast.error("Không tạo được nhân viên", {
+      toast.error("Không tạo được nhân sự", {
         description:
           err instanceof Error
             ? err.message
@@ -155,7 +155,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Thêm nhân viên</DialogTitle>
+          <DialogTitle>Thêm nhân sự</DialogTitle>
           <DialogDescription>
             Tạo user mới + Employee, hoặc liên kết Employee với user đã có
             (ví dụ founder tự đăng ký trước).
@@ -259,7 +259,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
               name="code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mã nhân viên</FormLabel>
+                  <FormLabel>Mã nhân sự</FormLabel>
                   <FormControl>
                     <Input placeholder="EMP-0001" {...field} />
                   </FormControl>

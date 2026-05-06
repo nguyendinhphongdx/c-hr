@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
+
+import { PageContainer } from "@/components/layout/PageContainer";
 import { SettingsNav } from "@/features/settings";
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-10">
-      <div className="mb-8">
+    <PageContainer>
+      <div>
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Your personal profile and security. Org-level configuration lives
@@ -17,6 +19,6 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
         </aside>
         <div>{children}</div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

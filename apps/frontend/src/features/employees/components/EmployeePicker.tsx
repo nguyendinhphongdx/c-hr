@@ -35,7 +35,7 @@ const PAGE_LIMIT = 20;
 export function EmployeePicker({
   value,
   onChange,
-  placeholder = "Chọn nhân viên…",
+  placeholder = "Chọn nhân sự…",
   disabled = false,
   status = "ACTIVE",
 }: EmployeePickerProps) {
@@ -125,7 +125,7 @@ export function EmployeePicker({
             </div>
           ) : !list.data?.data.length ? (
             <p className="p-3 text-xs text-muted-foreground">
-              Không có nhân viên phù hợp.
+              Không có nhân sự phù hợp.
             </p>
           ) : (
             <ul className="py-1">

@@ -71,3 +71,30 @@ export interface UpdateEmployeeInput {
   terminationDate?: Nullable<string>;
   status?: EmployeeStatus;
 }
+
+export type ImportRowStatus = "valid" | "invalid";
+
+export interface ParsedEmployeeRow {
+  rowNumber: number;
+  employeeCode: string;
+  email: string;
+  name: string;
+  title: Nullable<string>;
+  status: ImportRowStatus;
+  errors: string[];
+}
+
+export interface EmployeeImportParseResponse {
+  rows: ParsedEmployeeRow[];
+  summary: { total: number; valid: number; invalid: number };
+}
+
+export interface EmployeeImportBulkInput {
+  defaultPassword: string;
+  rows: { employeeCode: string; email: string; name: string; title?: string }[];
+}
+
+export interface EmployeeImportBulkResponse {
+  created: number;
+  failed: { rowNumber: Nullable<number>; email: string; reason: string }[];
+}
