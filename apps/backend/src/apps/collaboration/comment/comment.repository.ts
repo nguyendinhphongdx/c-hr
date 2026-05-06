@@ -40,6 +40,9 @@ export class CommentRepository {
       where,
       orderBy: { createdAt: 'desc' },
       take,
+      include: {
+        user: { select: { id: true, name: true, avatar: true, email: true } },
+      },
       ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
     });
   }

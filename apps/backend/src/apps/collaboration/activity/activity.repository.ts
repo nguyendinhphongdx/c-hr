@@ -8,6 +8,12 @@ import { ListActivitiesOptions } from './activity.types';
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
+/** Eager-load the actor so the FE doesn't fall back to a generic
+ *  "Người dùng" placeholder. Same select shape as comment repo. */
+const ACTOR_INCLUDE = {
+  user: { select: { id: true, name: true, avatar: true, email: true } },
+} as const;
+
 @Injectable()
 export class ActivityRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -23,6 +29,7 @@ export class ActivityRepository {
       where: { organizationId, objectType, objectId },
       orderBy: { createdAt: 'desc' },
       take,
+      include: ACTOR_INCLUDE,
       ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
     });
   }
