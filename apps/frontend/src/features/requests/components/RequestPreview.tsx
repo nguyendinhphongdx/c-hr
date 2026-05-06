@@ -2,7 +2,6 @@
 
 import { format } from "date-fns";
 import { Check, Copy, Loader2, Pencil, X } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -40,6 +39,7 @@ import type { RequestParticipant, RequestRow } from "../types";
 
 import { DynamicDataView } from "./DynamicDataView";
 import { EditRequestDialog } from "./EditRequestDialog";
+import { RequestCreateDialog } from "./RequestCreateDialog";
 import { StatusBadge } from "./StatusBadge";
 
 /**
@@ -49,7 +49,6 @@ import { StatusBadge } from "./StatusBadge";
  * and feeds it the selected row.
  */
 export function RequestPreview({ request }: { request: RequestRow | null }) {
-  const router = useRouter();
   const { user } = useAuth();
   const employeeId = user?.employeeId ?? null;
 
@@ -61,6 +60,7 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
   const [showReject, setShowReject] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+  const [cloning, setCloning] = useState(false);
 
   const objectRef = request
     ? encodeObjectRef({ objectType: "Request", objectId: request.id })
@@ -129,10 +129,6 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
     }
   };
 
-  const onClone = () => {
-    router.push(`/requests/new?clone=${request.id}`);
-  };
-
   const shortId = request.id.slice(-8);
   const approverName = request.approver
     ? request.approver.user?.name ??
@@ -175,7 +171,11 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
                 Sửa
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={onClone}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCloning(true)}
+            >
               <Copy className="mr-1.5 h-3.5 w-3.5" />
               Nhân bản
             </Button>
@@ -303,6 +303,12 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
           onOpenChange={setEditOpen}
         />
       )}
+
+      <RequestCreateDialog
+        open={cloning}
+        onClose={() => setCloning(false)}
+        cloneFromId={request.id}
+      />
 
       <AlertDialog
         open={confirmCancelOpen}

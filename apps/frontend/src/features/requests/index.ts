@@ -2,6 +2,7 @@ export { RequestListView } from "./views/RequestListView";
 export { RequestCreateView } from "./views/RequestCreateView";
 export { DynamicForm } from "./components/DynamicForm";
 export { DynamicDataView } from "./components/DynamicDataView";
+export { RequestCreateDialog } from "./components/RequestCreateDialog";
 export { RequestPreview } from "./components/RequestPreview";
 export { StatusBadge as RequestStatusBadge } from "./components/StatusBadge";
 export {

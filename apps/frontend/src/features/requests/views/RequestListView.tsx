@@ -9,7 +9,6 @@ import {
   Plus,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +24,7 @@ import { useIsAppAdmin } from "@/features/auth";
 import { ApprovalFlow } from "@/features/collaboration";
 import { cn } from "@/lib/utils";
 
+import { RequestCreateDialog } from "../components/RequestCreateDialog";
 import { RequestPreview } from "../components/RequestPreview";
 import { useRequestGroups, useRequests } from "../hooks/useRequests";
 import type {
@@ -57,6 +57,7 @@ export function RequestListView() {
   const [groupId, setGroupId] = useState<string>(ALL);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const groupsQuery = useRequestGroups();
   const listQuery: { groupId?: string; scope?: "mine" | "incoming" } = {};
@@ -141,11 +142,9 @@ export function RequestListView() {
         </nav>
 
         <div className="mt-auto border-t p-2">
-          <Button asChild className="w-full">
-            <Link href="/requests/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Tạo đơn
-            </Link>
+          <Button className="w-full" onClick={() => setCreating(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tạo đơn
           </Button>
         </div>
       </aside>
@@ -237,6 +236,11 @@ export function RequestListView() {
           </div>
         )}
       </section>
+
+      <RequestCreateDialog
+        open={creating}
+        onClose={() => setCreating(false)}
+      />
     </div>
   );
 }
