@@ -1,9 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import { requireAppAdmin } from '@/common/auth/access';
@@ -186,6 +188,45 @@ export class EmployeeService {
 
     await this.repo.softDelete(id);
     return { id, success: true };
+  }
+
+  /**
+   * Change the linked User's role. Gated by `canEdit` (HRM appadmin and
+   * above). The employee must already be linked to a User — there's no
+   * role to change otherwise.
+   *
+   * Refuses to demote the last sysowner so the Org cannot lock itself out.
+   */
+  async updateRole(id: string, role: Role) {
+    const orgId = this.ctx.requireOrg();
+
+    const existing = await this.repo.findByIdByOrg(orgId, id);
+    if (!existing) throw new NotFoundException('Employee not found');
+    await new EmployeeAcl(existing).require('canEdit');
+
+    const linkedUser = await this.prisma.user.findFirst({
+      where: { employeeId: id },
+      select: { id: true, role: true },
+    });
+    if (!linkedUser) {
+      throw new BadRequestException('Employee is not linked to a User');
+    }
+    if (linkedUser.role === role) return { id, role };
+
+    if (linkedUser.role === 'sysowner' && role !== 'sysowner') {
+      const sysOwnerCount = await this.prisma.user.count({
+        where: { organizationId: orgId, role: 'sysowner' },
+      });
+      if (sysOwnerCount <= 1) {
+        throw new ForbiddenException('Không thể hạ cấp sysowner cuối cùng của Org.');
+      }
+    }
+
+    await this.prisma.user.update({
+      where: { id: linkedUser.id },
+      data: { role },
+    });
+    return { id, role };
   }
 
   // ──────────────────────────────────────────────────────────────────

@@ -33,14 +33,19 @@ import {
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useIsAppAdmin } from "@/features/auth";
 import type { ID } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 import { EmployeeCreateDialog } from "../components/EmployeeCreateDialog";
 import { EmployeeDetailSheet } from "../components/EmployeeDetailSheet";
 import { EmployeeEditDialog } from "../components/EmployeeEditDialog";
 import { EmployeeImportDialog } from "../components/EmployeeImportDialog";
 import { EmployeeRowActions } from "../components/EmployeeRowActions";
-import { useDeleteEmployee, useEmployees } from "../hooks/useEmployees";
-import type { EmployeeStatus } from "../types";
+import {
+  useDeleteEmployee,
+  useEmployees,
+  useUpdateEmployeeRole,
+} from "../hooks/useEmployees";
+import type { EmployeeStatus, Role } from "../types";
 
 const PAGE_SIZE = 20;
 
@@ -54,6 +59,20 @@ const statusVariant: Record<EmployeeStatus, "default" | "secondary" | "outline">
   ACTIVE: "default",
   ON_LEAVE: "secondary",
   TERMINATED: "outline",
+};
+
+const ROLE_LABEL: Record<Role, string> = {
+  sysowner: "Chủ hệ thống",
+  admin: "Admin Org",
+  user: "Nhân viên",
+};
+
+const ROLE_BADGE_CLASS: Record<Role, string> = {
+  sysowner:
+    "border-purple-300 bg-purple-100 text-purple-700 dark:border-purple-800/60 dark:bg-purple-900/40 dark:text-purple-300",
+  admin:
+    "border-blue-300 bg-blue-100 text-blue-700 dark:border-blue-800/60 dark:bg-blue-900/40 dark:text-blue-300",
+  user: "border-border bg-muted text-muted-foreground",
 };
 
 export function EmployeeListView() {
@@ -77,6 +96,18 @@ export function EmployeeListView() {
     limit: PAGE_SIZE,
   });
   const remove = useDeleteEmployee();
+  const updateRole = useUpdateEmployeeRole();
+
+  const onChangeRole = async (id: ID, role: Role) => {
+    try {
+      await updateRole.mutateAsync({ id, role });
+      toast.success(`Đã đổi vai trò → ${ROLE_LABEL[role]}`);
+    } catch (err) {
+      toast.error("Không đổi được vai trò", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
+  };
 
   const totalPages = list.data ? Math.max(1, Math.ceil(list.data.total / PAGE_SIZE)) : 1;
 
@@ -181,6 +212,7 @@ export function EmployeeListView() {
                 <th className="px-4 py-3 font-medium">Họ tên</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Chức danh</th>
+                <th className="px-4 py-3 font-medium">Vai trò</th>
                 <th className="px-4 py-3 font-medium">Trạng thái</th>
                 <th className="w-12 px-4 py-3" />
               </tr>
@@ -203,6 +235,20 @@ export function EmployeeListView() {
                     {emp.title ?? "—"}
                   </td>
                   <td className="px-4 py-3">
+                    {emp.user?.role ? (
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px]",
+                          ROLE_BADGE_CLASS[emp.user.role],
+                        )}
+                      >
+                        {ROLE_LABEL[emp.user.role]}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
                     <Badge variant={statusVariant[emp.status]}>
                       {emp.status.replace("_", " ").toLowerCase()}
                     </Badge>
@@ -222,6 +268,7 @@ export function EmployeeListView() {
                           name: emp.user?.name ?? emp.code,
                         })
                       }
+                      onChangeRole={onChangeRole}
                     />
                   </td>
                 </tr>

@@ -9,6 +9,7 @@ import type {
   CreateEmployeeInput,
   EmployeeImportBulkInput,
   EmployeesListQuery,
+  Role,
   UpdateEmployeeInput,
 } from "../types";
 
@@ -59,6 +60,17 @@ export function useDeleteEmployee() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: ID) => employeesService.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employees", "list"] });
+    },
+  });
+}
+
+export function useUpdateEmployeeRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, role }: { id: ID; role: Role }) =>
+      employeesService.updateRole(id, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees", "list"] });
     },

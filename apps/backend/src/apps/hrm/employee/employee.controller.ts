@@ -26,6 +26,7 @@ import {
   CreateEmployeeDto,
   ListEmployeesDto,
   UpdateEmployeeDto,
+  UpdateEmployeeRoleDto,
 } from './dto';
 import { EmployeeImportService } from './employee-import.service';
 import { EmployeeService } from './employee.service';
@@ -92,6 +93,12 @@ export class EmployeeController {
   @Auditable({ action: 'EMPLOYEE_UPDATE', entity: 'Employee' })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEmployeeDto) {
     return this.service.update(id, dto);
+  }
+
+  @Patch(':id/role')
+  @Auditable({ action: 'EMPLOYEE_ROLE_UPDATE', entity: 'Employee' })
+  updateRole(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEmployeeRoleDto) {
+    return this.service.updateRole(id, dto.role);
   }
 
   @Delete(':id')

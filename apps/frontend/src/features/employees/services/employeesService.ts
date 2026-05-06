@@ -11,6 +11,7 @@ import type {
   EmployeeImportParseResponse,
   EmployeesListQuery,
   EmployeesListResponse,
+  Role,
   UpdateEmployeeInput,
 } from "../types";
 
@@ -40,6 +41,14 @@ export const employeesService = {
   remove: async (id: ID): Promise<{ id: ID; success: true }> => {
     const res = await apiClient.delete<{ id: ID; success: true }>(
       `/employees/${id}`,
+    );
+    return res.data;
+  },
+
+  updateRole: async (id: ID, role: Role): Promise<{ id: ID; role: Role }> => {
+    const res = await apiClient.patch<{ id: ID; role: Role }>(
+      `/employees/${id}/role`,
+      { role },
     );
     return res.data;
   },

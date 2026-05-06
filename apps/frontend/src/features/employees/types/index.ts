@@ -2,6 +2,7 @@ import type { ID, ISODate, Nullable } from "@/lib/types";
 
 export type EmployeeStatus = "ACTIVE" | "ON_LEAVE" | "TERMINATED";
 export type Gender = "MALE" | "FEMALE" | "OTHER";
+export type Role = "sysowner" | "admin" | "user";
 
 export interface EmployeeUser {
   id: ID;
@@ -11,6 +12,7 @@ export interface EmployeeUser {
   dob: Nullable<ISODate>;
   gender: Nullable<Gender>;
   phone: Nullable<string>;
+  role: Role;
 }
 
 export interface Employee {

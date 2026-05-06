@@ -23,6 +23,7 @@ const USER_VIEW = {
       dob: true,
       gender: true,
       phone: true,
+      role: true,
     },
   },
 } as const satisfies Prisma.EmployeeInclude;
