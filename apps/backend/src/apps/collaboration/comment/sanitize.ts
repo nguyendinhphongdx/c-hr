@@ -31,9 +31,15 @@ export function sanitize(input: string): string {
     },
     allowedSchemes: ['http', 'https', 'mailto'],
     transformTags: {
-      a: sanitizeHtml.simpleTransform('a', {
-        target: '_blank',
-        rel: 'noopener noreferrer',
+      // Inline plain transform — `sanitizeHtml.simpleTransform` is missing
+      // off the default import in this CJS/ESM interop setup.
+      a: (tagName, attribs) => ({
+        tagName,
+        attribs: {
+          ...attribs,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
       }),
     },
   });
