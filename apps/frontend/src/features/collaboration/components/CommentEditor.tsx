@@ -44,6 +44,10 @@ export function CommentEditor({
 }: CommentEditorProps) {
   const [isInternal, setIsInternal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Tiptap v3 `useEditor` doesn't re-render on transactions by default,
+  // so `editor.isEmpty` read at render time goes stale. Track it via
+  // onUpdate so the submit button reflects the current document state.
+  const [isEmpty, setIsEmpty] = useState(true);
 
   const editor = useEditor({
     extensions: [
@@ -56,6 +60,8 @@ export function CommentEditor({
     ],
     content: initialHtml,
     immediatelyRender: false,
+    onCreate: ({ editor: e }) => setIsEmpty(e.isEmpty),
+    onUpdate: ({ editor: e }) => setIsEmpty(e.isEmpty),
     editorProps: {
       attributes: {
         class:
@@ -75,6 +81,7 @@ export function CommentEditor({
       await onSubmit(html, isInternal);
       editor.commands.clearContent();
       setIsInternal(false);
+      setIsEmpty(true);
     } finally {
       setSubmitting(false);
     }
@@ -194,7 +201,7 @@ export function CommentEditor({
             type="button"
             size="sm"
             onClick={handleSubmit}
-            disabled={submitting || editor.isEmpty}
+            disabled={submitting || isEmpty}
           >
             {submitLabel}
           </Button>
