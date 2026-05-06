@@ -2,6 +2,7 @@
 
 import {
   Building2,
+  CalendarClock,
   Calendar,
   Home,
   Inbox,
@@ -45,7 +46,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Nhân sự",
     items: [
-      { href: "/employees", label: "Nhân viên", icon: Users },
+      { href: "/employees", label: "Nhân sự", icon: Users },
       { href: "/departments", label: "Phòng ban", icon: Building2 },
       { href: "/orgchart", label: "Cây tổ chức", icon: Network },
     ],
@@ -57,6 +58,10 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Đơn từ",
     items: [{ href: "/requests", label: "Đơn từ", icon: Inbox }],
+  },
+  {
+    label: "Đặt lịch",
+    items: [{ href: "/bookings", label: "Đặt lịch", icon: CalendarClock }],
   },
 ];
 
