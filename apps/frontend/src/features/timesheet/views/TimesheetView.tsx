@@ -1,6 +1,16 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CircleCheck,
+  CircleX,
+  Clock,
+  Coffee,
+  Loader2,
+  LogOut,
+  type LucideIcon,
+} from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +40,27 @@ const STATUS_LABEL: Record<DayStatus, string> = {
   EARLY_LEAVE: "Về sớm",
   ABSENT: "Vắng",
   WEEKEND: "Off",
+};
+
+const STATUS_ICON: Record<DayStatus, LucideIcon> = {
+  PRESENT: CircleCheck,
+  LATE: Clock,
+  EARLY_LEAVE: LogOut,
+  ABSENT: CircleX,
+  WEEKEND: Coffee,
+};
+
+const STATUS_BADGE_CLASSES: Record<DayStatus, string> = {
+  PRESENT:
+    "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-900/40 dark:text-emerald-300",
+  LATE:
+    "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-800/60 dark:bg-amber-900/40 dark:text-amber-300",
+  EARLY_LEAVE:
+    "border-orange-300 bg-orange-100 text-orange-700 dark:border-orange-800/60 dark:bg-orange-900/40 dark:text-orange-300",
+  ABSENT:
+    "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-800/60 dark:bg-rose-900/40 dark:text-rose-300",
+  WEEKEND:
+    "border-border bg-muted text-muted-foreground",
 };
 
 const DAY_LABELS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
@@ -254,11 +285,21 @@ function DayCell({ day, isToday }: { day: TimesheetDay; isToday: boolean }) {
         >
           {dayNum}
         </span>
-        {displayStatus !== "WEEKEND" && (
-          <Badge variant="outline" className="text-[10px] font-normal">
-            {STATUS_LABEL[displayStatus]}
-          </Badge>
-        )}
+        {displayStatus !== "WEEKEND" && (() => {
+          const Icon = STATUS_ICON[displayStatus];
+          return (
+            <Badge
+              variant="outline"
+              className={cn(
+                "gap-1 text-[10px] font-medium",
+                STATUS_BADGE_CLASSES[displayStatus],
+              )}
+            >
+              <Icon className="h-3 w-3" />
+              {STATUS_LABEL[displayStatus]}
+            </Badge>
+          );
+        })()}
       </div>
       {(day.shift || hasLog) && (
         <div className="mt-2 space-y-1">
@@ -303,15 +344,22 @@ function DayCell({ day, isToday }: { day: TimesheetDay; isToday: boolean }) {
 
 function Legend() {
   return (
-    <div className="flex flex-wrap items-center gap-3 text-[11px] font-normal text-muted-foreground">
-      {(Object.keys(STATUS_LABEL) as DayStatus[]).map((s) => (
-        <span key={s} className="inline-flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-2 text-[11px] font-normal">
+      {(Object.keys(STATUS_LABEL) as DayStatus[]).map((s) => {
+        const Icon = STATUS_ICON[s];
+        return (
           <span
-            className={cn("h-2.5 w-2.5 rounded-sm border", STATUS_CLASSES[s])}
-          />
-          {STATUS_LABEL[s]}
-        </span>
-      ))}
+            key={s}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5",
+              STATUS_BADGE_CLASSES[s],
+            )}
+          >
+            <Icon className="h-3 w-3" />
+            {STATUS_LABEL[s]}
+          </span>
+        );
+      })}
     </div>
   );
 }
