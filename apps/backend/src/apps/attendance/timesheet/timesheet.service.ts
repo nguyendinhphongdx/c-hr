@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 
-import { isAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
+import { EmployeeAcl } from '@/apps/hrm/employee/employee.acl';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { AttendanceLogRepository } from '../attendance-log/attendance-log.repository';
@@ -52,7 +52,10 @@ export class TimesheetService {
 
   async get(query: TimesheetQueryDto): Promise<TimesheetResponse> {
     const orgId = this.ctx.requireOrg();
-    await this.requireSelfOrHrmAppAdmin(orgId, query.employeeId);
+    const acl = new EmployeeAcl({ id: query.employeeId, organizationId: orgId });
+    if (!acl.canViewLogs()) {
+      throw new ForbiddenException('Can only view your own timesheet');
+    }
 
     const [employee, organization] = await Promise.all([
       this.prisma.employee.findFirst({
@@ -110,18 +113,6 @@ export class TimesheetService {
         : null,
       days,
     };
-  }
-
-  // ──────────────────────────────────────────────────────────────────
-  // Helpers
-  // ──────────────────────────────────────────────────────────────────
-
-  private async requireSelfOrHrmAppAdmin(orgId: string, employeeId: string) {
-    if (this.ctx.employeeId === employeeId) return;
-    const ok = await isAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
-    if (!ok) {
-      throw new ForbiddenException('Can only view your own timesheet');
-    }
   }
 }
 

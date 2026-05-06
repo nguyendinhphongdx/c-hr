@@ -49,6 +49,19 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
     if (!user) throw new UnauthorizedException('User no longer exists');
 
+    // Pre-load the user's app-admin grants once at auth time so
+    // downstream ACL checks stay sync. Org admins/sysowners inherit, so
+    // we only need the explicit AppAdmin rows for non-admin users.
+    const appAdminCodes =
+      user.role === 'user' && user.organizationId
+        ? (
+            await this.prisma.appAdmin.findMany({
+              where: { userId: user.id, organizationId: user.organizationId },
+              select: { appCode: true },
+            })
+          ).map((r) => r.appCode)
+        : [];
+
     // Populate the per-request ALS context so services can read auth
     // data via RequestContextService (ADR 0007). Passport also stores
     // the returned object on `request.user` for @CurrentUser() callers
@@ -59,6 +72,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       role: user.role,
       organizationId: user.organizationId,
       employeeId: user.employeeId,
+      appAdminCodes,
     });
 
     return {

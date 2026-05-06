@@ -45,10 +45,11 @@ export class AuditInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap((result) => {
+        const paramsId = (req.params?.id as string | undefined) ?? null;
         const payload: AuditWritePayload = {
           action: opts.action,
           entityType: opts.entity,
-          entityId: extractId(result) ?? (req.params?.id as string | undefined) ?? null,
+          entityId: paramsId ?? extractId(result),
           organizationId,
           actorUserId,
           actorIpAddress,
@@ -61,10 +62,21 @@ export class AuditInterceptor implements NestInterceptor {
   }
 }
 
+/**
+ * Pulls the resource id from a handler/response payload. Handles both the
+ * raw shape returned by services (`{ id, … }`) and the shape produced by
+ * TransformInterceptor (`{ success, data: { id, … } }`) — interceptor
+ * execution order between APP_INTERCEPTOR and useGlobalInterceptors is not
+ * guaranteed, so we cover both. Used for CREATE-style actions where there
+ * is no `:id` URL param.
+ */
 function extractId(result: unknown): string | null {
-  if (result && typeof result === 'object' && 'id' in result) {
-    const id = (result as { id: unknown }).id;
-    return typeof id === 'string' ? id : null;
+  if (!result || typeof result !== 'object') return null;
+  const obj = result as Record<string, unknown>;
+  if (typeof obj.id === 'string') return obj.id;
+  const data = obj.data;
+  if (data && typeof data === 'object' && typeof (data as Record<string, unknown>).id === 'string') {
+    return (data as { id: string }).id;
   }
   return null;
 }

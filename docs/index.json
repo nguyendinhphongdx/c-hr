@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-05T17:15:24.393Z",
+  "generatedAt": "2026-05-06T04:41:40.743Z",
   "repoRelativeRoot": ".",
-  "count": 46,
+  "count": 48,
   "entries": [
     {
       "id": "AGENTS",
@@ -666,6 +666,29 @@
       "summary": "- **Status**: Accepted - **Date**: 2026-05-04 - **Deciders**: @nguyendinhphongdx"
     },
     {
+      "id": "docs:decisions:0008-entity-acl-pattern",
+      "path": "docs/decisions/0008-entity-acl-pattern.md",
+      "title": "ADR 0008: Entity ACL pattern (BaseAcl + ambient ctx)",
+      "description": "How object-level permissions are expressed and consumed in C-HR. Implements ADR 0003 (no permission engine) at the entity level.",
+      "tags": [
+        "project",
+        "adr",
+        "decision",
+        "acl",
+        "authorization"
+      ],
+      "scope": "decision",
+      "category": "decisions",
+      "headings": [
+        "Context",
+        "Decision",
+        "Consequences",
+        "Alternatives considered",
+        "References"
+      ],
+      "summary": "- **Status**: Accepted - **Date**: 2026-05-06 - **Deciders**: @phongnd - **Supersedes**: — - **Relates to**: [ADR 0003 (no permission engine)](0003-no-permission-engine.md), [ADR 0007 (services read RequestContext)](0007-service-reads-request-context.md)"
+    },
+    {
       "id": "docs:backend:recipes:add-cli-command",
       "path": "docs/backend/recipes/add-cli-command.md",
       "title": "Add a CLI command",
@@ -684,6 +707,30 @@
         "Why not [`nest-commander`](https://github.com/jmcdo29/nest-commander)?"
       ],
       "summary": "The CLI runner reuses the full DI graph via `CliModule`. Each command is an `@Injectable()` class implementing the `CliCommand` interface."
+    },
+    {
+      "id": "docs:backend:recipes:add-entity-acl",
+      "path": "docs/backend/recipes/add-entity-acl.md",
+      "title": "Add an entity ACL",
+      "description": "Step-by-step recipe for adding object-level permissions (canView / canEdit / canDelete + custom flags) to a NestJS feature module. Implements ADR 0008.",
+      "tags": [
+        "recipe",
+        "acl",
+        "authorization",
+        "security"
+      ],
+      "scope": "backend",
+      "category": "recipe",
+      "headings": [
+        "When you need this",
+        "When you don't",
+        "1. Create `<feature>.acl.ts`",
+        "2. Use it in the service",
+        "3. Don'ts",
+        "4. Custom flags pattern",
+        "5. Testing"
+      ],
+      "summary": "For row-level \"can the current user view / edit / delete this object?\" decisions. Action-level checks (\"can the user call this endpoint at all\") still go through `requireAppAdmin` from [`common/auth/access.ts`](../../../apps/backend/src/common/auth/access.ts)."
     },
     {
       "id": "docs:backend:recipes:add-module",

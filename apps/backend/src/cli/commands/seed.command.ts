@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '@libs/database/prisma.service';
+import { DEFAULT_REQUEST_GROUPS } from '@/apps/requests/groups.config';
 import { CliCommand } from '../contracts/cli-command.interface';
 
 @Injectable()
@@ -14,6 +15,11 @@ export class SeedCommand implements CliCommand {
   ) {}
 
   async run(): Promise<void> {
+    await this.seedSysOwner();
+    await this.seedRequestGroups();
+  }
+
+  private async seedSysOwner(): Promise<void> {
     const email = process.env.ADMIN_EMAIL || 'admin@example.com';
     const password = process.env.ADMIN_PASSWORD || 'Admin@123456';
 
@@ -28,5 +34,26 @@ export class SeedCommand implements CliCommand {
       data: { email, password: passwordHash, name: 'Administrator', role: 'sysowner' },
     });
     this.logger.log(`Created admin user: ${email}`);
+  }
+
+  private async seedRequestGroups(): Promise<void> {
+    for (const g of DEFAULT_REQUEST_GROUPS) {
+      await this.prisma.requestGroup.upsert({
+        where: { code: g.code },
+        create: {
+          code: g.code,
+          name: g.name,
+          description: g.description,
+          fieldsSchema: g.fieldsSchema as unknown as object,
+          isActive: true,
+        },
+        update: {
+          name: g.name,
+          description: g.description,
+          fieldsSchema: g.fieldsSchema as unknown as object,
+        },
+      });
+      this.logger.log(`request_group seeded: ${g.code}`);
+    }
   }
 }

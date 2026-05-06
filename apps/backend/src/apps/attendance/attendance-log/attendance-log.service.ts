@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 
 import { isAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
+import { EmployeeAcl } from '@/apps/hrm/employee/employee.acl';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { ListLogsQueryDto, UpdateAttendanceLogDto } from './dto';
@@ -17,7 +18,10 @@ export class AttendanceLogService {
 
   async list(query: ListLogsQueryDto) {
     const orgId = this.ctx.requireOrg();
-    await this.requireSelfOrHrmAppAdmin(orgId, query.employeeId);
+    const acl = new EmployeeAcl({ id: query.employeeId, organizationId: orgId });
+    if (!acl.canViewLogs()) {
+      throw new ForbiddenException('Can only view your own attendance logs');
+    }
 
     const from = parseDateOnly(query.from);
     const to = parseDateOnly(query.to);
@@ -45,18 +49,6 @@ export class AttendanceLogService {
       // explicit. The audit_logs table records who/when via @Auditable.
       source: 'MANUAL_HR',
     });
-  }
-
-  // ──────────────────────────────────────────────────────────────────
-  // Helpers
-  // ──────────────────────────────────────────────────────────────────
-
-  private async requireSelfOrHrmAppAdmin(orgId: string, employeeId: string) {
-    if (this.ctx.employeeId === employeeId) return;
-    const ok = await isAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
-    if (!ok) {
-      throw new ForbiddenException('Can only view your own attendance logs');
-    }
   }
 }
 

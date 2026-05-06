@@ -11,6 +11,7 @@ import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { CreateEmployeeDto, ListEmployeesDto, UpdateEmployeeDto } from './dto';
+import { EmployeeAcl } from './employee.acl';
 import { EmployeeRepository } from './employee.repository';
 
 const PASSWORD_BCRYPT_ROUNDS = 10;
@@ -51,7 +52,9 @@ export class EmployeeService {
     const orgId = this.ctx.requireOrg();
     const employee = await this.repo.findByIdByOrg(orgId, id);
     if (!employee) throw new NotFoundException('Employee not found');
-    return employee;
+    const acl = new EmployeeAcl(employee);
+    await acl.require('canView');
+    return { ...employee, view: await acl.getAcl() };
   }
 
   async create(dto: CreateEmployeeDto) {
@@ -128,10 +131,10 @@ export class EmployeeService {
 
   async update(id: string, dto: UpdateEmployeeDto) {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Employee not found');
+    await new EmployeeAcl(existing).require('canEdit');
 
     if (dto.departmentId !== undefined && dto.departmentId !== null) {
       await this.assertDepartmentInOrg(orgId, dto.departmentId);
@@ -176,10 +179,10 @@ export class EmployeeService {
 
   async softDelete(id: string) {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.repo.findByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Employee not found');
+    await new EmployeeAcl(existing).require('canDelete');
 
     await this.repo.softDelete(id);
     return { id, success: true };

@@ -56,6 +56,7 @@ scripts/                # one-off node scripts (init-project, switch-db)
 12. **Don't write business logic in controllers.** Controllers are thin: validate, delegate to a service, return.
 13. **Don't use `console.log` in committed code.** Use `Logger` from `@nestjs/common` (or `LoggerService` from `libs/logger`).
 14. **Don't write comments that narrate code.** Comments explain *why* (a non-obvious constraint), never *what*.
+15. **Row-level permissions go through `BaseAcl`**, not free functions. One ACL file per entity (`<feature>.acl.ts`), extending `@/common/acl`'s `BaseAcl<T, V>`. Service calls `acl.require('canEdit')` to gate writes and attaches `view: await acl.getAcl()` on detail responses. Endpoint-level role gates (no row in scope, e.g. `create`) keep using `requireAppAdmin` from `common/auth/access.ts`. Recipe: [docs/backend/recipes/add-entity-acl.md](../../docs/backend/recipes/add-entity-acl.md). Rationale: [ADR 0008](../../docs/decisions/0008-entity-acl-pattern.md).
 
 ## When to put code where
 

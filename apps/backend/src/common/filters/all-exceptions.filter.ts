@@ -1,6 +1,17 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+const ERROR_CODES_BY_STATUS: Record<number, string> = {
+  [HttpStatus.BAD_REQUEST]: 'BAD_REQUEST',
+  [HttpStatus.UNAUTHORIZED]: 'UNAUTHORIZED',
+  [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
+  [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
+  [HttpStatus.CONFLICT]: 'CONFLICT',
+  [HttpStatus.UNPROCESSABLE_ENTITY]: 'VALIDATION_ERROR',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'RATE_LIMIT_EXCEEDED',
+  [HttpStatus.INTERNAL_SERVER_ERROR]: 'INTERNAL_SERVER_ERROR',
+};
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -15,7 +26,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const errorResponse = {
       success: false,
       error: {
-        code: 'INTERNAL_SERVER_ERROR',
+        code: ERROR_CODES_BY_STATUS[status] || 'INTERNAL_SERVER_ERROR',
         message: exception.message || 'Internal server error',
       },
       timestamp: new Date().toISOString(),

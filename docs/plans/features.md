@@ -45,9 +45,9 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 ### Edge findings (non-blocking, ghi chú để fix sau)
 
 1. **Multi-event push idempotency**: bảng `attendance_logs` chỉ store 1 `event_log_id` per `(employee, date)` row. Khi push IN+OUT cùng 1 ngày trong 1 request, chỉ event đầu được track; replay event thứ 2 trả `accepted: 1` thay vì `duplicates: 1`. Không phá data (row không dup, range timestamps merge OK), nhưng counter lệch. Fix khi vào prod: tách bảng `attendance_events` riêng, aggregate sang `attendance_logs`.
-2. **`audit_logs.entity_id` empty cho CREATE actions** (DEPARTMENT_CREATE, EMPLOYEE_CREATE, ATTENDANCE_DEVICE_CREATE, WORK_SCHEDULE_CREATE). UPDATE actions ghi đúng. Pre-existing — `AuditInterceptor` chưa capture entity id từ response sau khi handler trả về. Fix: extract id từ response body trong interceptor (sau ResponseTransform).
-3. **Error envelope code label**: BadRequestException trả body có `error.code: "INTERNAL_SERVER_ERROR"` nhưng HTTP status 400 đúng. Issue ở exception filter mapping → label cần map theo HttpException type. Nhỏ, FE đã unwrap `success/data` envelope nên không thấy.
-4. **Timezone**: timestamps lưu UTC, nhưng status logic so wall-clock với shift `startTime "08:00"` (local). Test push UTC `01:12Z` (Vietnam 08:12) bị parse thành 01:12 → status sai logic. Cần convert sang Org timezone trước khi compare. Defer cho proper i18n pass.
+2. ✅ **`audit_logs.entity_id` empty cho CREATE actions** — fixed 2026-05-06. `AuditInterceptor.extractId` giờ đọc cả raw service-return shape (`{id, …}`) và `TransformInterceptor`-wrapped shape (`{success, data: {id, …}}`); `req.params.id` vẫn ưu tiên cho UPDATE/DELETE.
+3. ✅ **Error envelope code label** — fixed 2026-05-06. `AllExceptionsFilter` (catches first do registration order) giờ dùng cùng status→code map như `HttpExceptionFilter`.
+4. ✅ **Timezone status logic** — fixed `43247db`. `deriveStatus` đọc wall-clock theo `Organization.timezone` qua `Intl.DateTimeFormat`.
 
 ### Manual UI smoke (chờ demo qua browser)
 
@@ -94,11 +94,11 @@ Dọn nền **không đụng schema**. Mọi việc cần model mới (BaseRepos
 
 ### FE
 
-- [ ] Fix [`apps/frontend/src/features/auth/components/LoginForm.tsx`](apps/frontend/src/features/auth/components/LoginForm.tsx) — 2 errors `react-hooks/set-state-in-effect`.
-- [ ] Fix [`apps/frontend/src/features/auth/components/RegisterForm.tsx`](apps/frontend/src/features/auth/components/RegisterForm.tsx) — error tương tự.
-- [ ] Fix [`apps/frontend/src/features/auth/views/VerifyOtpView.tsx:47`](apps/frontend/src/features/auth/views/VerifyOtpView.tsx#L47) — bỏ `setShake/setCode` ra khỏi useEffect body.
-- [ ] Fix [`apps/frontend/src/features/dashboard/views/HomeView.tsx:15`](apps/frontend/src/features/dashboard/views/HomeView.tsx#L15) — bỏ import `Button` không dùng.
-- [ ] `pnpm --filter @c-hr/frontend check` xanh.
+- [x] Fix [`apps/frontend/src/features/auth/components/LoginForm.tsx`](apps/frontend/src/features/auth/components/LoginForm.tsx) — 2 errors `react-hooks/set-state-in-effect`. (Resolved by F1-F5 work; verified 2026-05-06.)
+- [x] Fix [`apps/frontend/src/features/auth/components/RegisterForm.tsx`](apps/frontend/src/features/auth/components/RegisterForm.tsx) — error tương tự. (Resolved by F1-F5 work.)
+- [x] Fix [`apps/frontend/src/features/auth/views/VerifyOtpView.tsx:47`](apps/frontend/src/features/auth/views/VerifyOtpView.tsx#L47) — bỏ `setShake/setCode` ra khỏi useEffect body. (Resolved by F1-F5 work.)
+- [x] Fix [`apps/frontend/src/features/dashboard/views/HomeView.tsx:15`](apps/frontend/src/features/dashboard/views/HomeView.tsx#L15) — bỏ import `Button` không dùng. (Resolved by F1-F5 work.)
+- [x] `pnpm --filter @c-hr/frontend check` xanh. (Verified 2026-05-06: 0 errors, 1 unrelated `react-hooks/incompatible-library` warning on `EmployeeCreateDialog.tsx` re `form.watch()` — not in F0 scope.)
 - [ ] `<DashboardShell>` sidebar — thêm slot nav cho HRM (Employees, Departments, OrgChart), Attendance (Timesheet, Devices, Schedules), Requests (Leave, Corrections), Settings (Organization, AppAdmins). Disabled link đến khi feature implement, enable qua flag.
 
 ### Done-when

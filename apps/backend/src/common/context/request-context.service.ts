@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { Role } from '@prisma/client';
-import { ClsService } from 'nestjs-cls';
+import { AppCode, Role } from '@prisma/client';
+import { ClsService, ClsServiceManager } from 'nestjs-cls';
 
 export interface RequestContextData {
   userId?: string;
@@ -11,6 +11,12 @@ export interface RequestContextData {
   organizationId?: string | null;
   /** Linked Employee row id. Null if user is not yet linked. Undefined when no auth. */
   employeeId?: string | null;
+  /**
+   * Apps the user is appadmin for in the current org. Pre-loaded at auth
+   * time so ACL checks stay sync. Empty for users without explicit
+   * grants; org admins/sysowners pass appadmin checks via role inherit.
+   */
+  appAdminCodes?: AppCode[];
   ip?: string;
   userAgent?: string;
 }
@@ -33,6 +39,17 @@ export interface RequestContextData {
 @Injectable()
 export class RequestContextService {
   constructor(private readonly cls: ClsService) {}
+
+  /**
+   * Static accessor — read the per-request ctx from CLS without DI.
+   * Lets ambient consumers (BaseAcl, domain helpers) avoid threading
+   * `ctx` through every signature. The instance is a thin wrapper over
+   * the same CLS store that DI'd instances read from, so values are
+   * identical within a request.
+   */
+  static current(): RequestContextService {
+    return new RequestContextService(ClsServiceManager.getClsService());
+  }
 
   // ──────────────────────────────────────────────────────────────────
   // Setters
@@ -74,6 +91,10 @@ export class RequestContextService {
 
   get employeeId(): string | null | undefined {
     return this.cls.get('employeeId');
+  }
+
+  get appAdminCodes(): AppCode[] {
+    return this.cls.get('appAdminCodes') ?? [];
   }
 
   get ip(): string | undefined {
@@ -139,6 +160,27 @@ export class RequestContextService {
   requireAdmin(orgId: string): void {
     if (!this.isAdmin(orgId)) {
       throw new ForbiddenException('Need admin role for this organization');
+    }
+  }
+
+  /**
+   * Per-app admin check, sync. Reads `appAdminCodes` baked into ctx at
+   * auth time (see `JwtStrategy.validate`). Org admins/sysowners pass
+   * via `isAdmin` inherit.
+   */
+  isAppAdmin(app: AppCode, orgId: string): boolean {
+    if (this.isAdmin(orgId)) return true;
+    if (this.organizationId !== orgId) return false;
+    return this.appAdminCodes.includes(app);
+  }
+
+  /**
+   * Throws `ForbiddenException` if `isAppAdmin` returns false. Sync
+   * counterpart of `common/auth/access.ts:requireAppAdmin`.
+   */
+  requireAppAdmin(app: AppCode, orgId: string): void {
+    if (!this.isAppAdmin(app, orgId)) {
+      throw new ForbiddenException(`Need ${app} appadmin or admin role`);
     }
   }
 
