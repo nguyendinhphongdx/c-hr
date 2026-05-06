@@ -33,28 +33,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDepartments } from "@/features/departments";
+import { UserPicker } from "@/features/users";
 
 import { useCreateEmployee } from "../hooks/useEmployees";
 
 const NO_DEPARTMENT = "__none__";
 
-const schema = z.object({
-  email: z.string().email("Email không hợp lệ").max(255),
-  name: z.string().min(1, "Bắt buộc").max(100),
-  password: z.string().min(8, "Ít nhất 8 ký tự").max(100),
-  code: z
-    .string()
-    .min(1, "Bắt buộc")
-    .max(50)
-    .regex(/^[A-Za-z0-9-_]+$/, "Chỉ chữ cái, số, gạch ngang, gạch dưới"),
-  title: z.string().max(100).optional(),
-  hireDate: z.string().optional(),
-  departmentId: z.union(
-    [z.literal(NO_DEPARTMENT), z.string().uuid("Chọn phòng ban hợp lệ")],
-    { message: "Chọn phòng ban hợp lệ" },
-  ),
-});
+const schema = z
+  .object({
+    mode: z.enum(["create", "link"]),
+    email: z.string().max(255).optional(),
+    name: z.string().max(100).optional(),
+    password: z.string().max(100).optional(),
+    userId: z.string().uuid().optional().nullable(),
+    code: z
+      .string()
+      .min(1, "Bắt buộc")
+      .max(50)
+      .regex(/^[A-Za-z0-9-_]+$/, "Chỉ chữ cái, số, gạch ngang, gạch dưới"),
+    title: z.string().max(100).optional(),
+    hireDate: z.string().optional(),
+    departmentId: z.union(
+      [z.literal(NO_DEPARTMENT), z.string().uuid("Chọn phòng ban hợp lệ")],
+      { message: "Chọn phòng ban hợp lệ" },
+    ),
+  })
+  .superRefine((val, ctx) => {
+    if (val.mode === "create") {
+      if (!val.email || !/.+@.+\..+/.test(val.email)) {
+        ctx.addIssue({ code: "custom", path: ["email"], message: "Email không hợp lệ" });
+      }
+      if (!val.name) {
+        ctx.addIssue({ code: "custom", path: ["name"], message: "Bắt buộc" });
+      }
+      if (!val.password || val.password.length < 8) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["password"],
+          message: "Ít nhất 8 ký tự",
+        });
+      }
+    } else if (!val.userId) {
+      ctx.addIssue({ code: "custom", path: ["userId"], message: "Chọn user" });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -64,9 +88,11 @@ interface EmployeeCreateDialogProps {
 }
 
 const DEFAULTS: FormValues = {
+  mode: "create",
   email: "",
   name: "",
   password: "",
+  userId: null,
   code: "",
   title: "",
   hireDate: "",
@@ -82,27 +108,38 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
     defaultValues: DEFAULTS,
   });
 
-  // Reset whenever the dialog re-opens so leftover values from a previous
-  // attempt don't bleed in.
   useEffect(() => {
     if (open) form.reset(DEFAULTS);
   }, [open, form]);
 
+  const mode = form.watch("mode");
+  const userId = form.watch("userId");
+
   const onSubmit = async (values: FormValues) => {
     try {
-      await create.mutateAsync({
-        email: values.email,
-        name: values.name,
-        password: values.password,
+      const sharedFields = {
         code: values.code,
         title: values.title || undefined,
         hireDate: values.hireDate || undefined,
         departmentId:
           values.departmentId === NO_DEPARTMENT ? undefined : values.departmentId,
-      });
-      toast.success("Đã tạo nhân viên", {
-        description: `${values.name} có thể đăng nhập bằng ${values.email}.`,
-      });
+      };
+      if (values.mode === "link") {
+        await create.mutateAsync({ ...sharedFields, userId: values.userId ?? undefined });
+        toast.success("Đã tạo nhân viên", {
+          description: "User đã được liên kết với hồ sơ Employee mới.",
+        });
+      } else {
+        await create.mutateAsync({
+          ...sharedFields,
+          email: values.email,
+          name: values.name,
+          password: values.password,
+        });
+        toast.success("Đã tạo nhân viên", {
+          description: `${values.name} có thể đăng nhập bằng ${values.email}.`,
+        });
+      }
       onClose();
     } catch (err) {
       toast.error("Không tạo được nhân viên", {
@@ -120,10 +157,20 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
         <DialogHeader>
           <DialogTitle>Thêm nhân viên</DialogTitle>
           <DialogDescription>
-            Tạo đồng thời tài khoản User (login) + hồ sơ Employee. Chia sẻ
-            password ban đầu cho nhân viên qua kênh an toàn — họ tự đổi sau.
+            Tạo user mới + Employee, hoặc liên kết Employee với user đã có
+            (ví dụ founder tự đăng ký trước).
           </DialogDescription>
         </DialogHeader>
+
+        <Tabs
+          value={mode}
+          onValueChange={(v) => form.setValue("mode", v as "create" | "link")}
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="create">Tạo user mới</TabsTrigger>
+            <TabsTrigger value="link">Liên kết user có sẵn</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         <Form {...form}>
           <form
@@ -131,51 +178,81 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
             className="space-y-4"
             id="create-employee-form"
           >
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Họ tên</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nguyễn Văn A" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {mode === "create" ? (
+              <>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Họ tên</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nguyễn Văn A" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email (login)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="user@acme.com"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password ban đầu</FormLabel>
+                        <FormControl>
+                          <Input type="text" autoComplete="off" {...field} />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Tối thiểu 8 ký tự.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </>
+            ) : (
               <FormField
                 control={form.control}
-                name="email"
+                name="userId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email (login)</FormLabel>
+                    <FormLabel>User</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="user@acme.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password ban đầu</FormLabel>
-                    <FormControl>
-                      <Input type="text" autoComplete="off" {...field} />
+                      <UserPicker
+                        value={field.value ?? null}
+                        onChange={(u) => field.onChange(u?.id ?? null)}
+                        placeholder="Chọn user chưa có hồ sơ Employee…"
+                        availableForLink
+                      />
                     </FormControl>
                     <FormDescription className="text-xs">
-                      Tối thiểu 8 ký tự.
+                      Chỉ hiển thị user trong Org chưa được gán Employee.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
+            )}
 
             <FormField
               control={form.control}
@@ -259,7 +336,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
           <Button
             type="submit"
             form="create-employee-form"
-            disabled={create.isPending}
+            disabled={create.isPending || (mode === "link" && !userId)}
             className="gap-2"
           >
             {create.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

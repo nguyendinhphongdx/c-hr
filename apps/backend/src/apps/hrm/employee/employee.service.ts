@@ -60,6 +60,35 @@ export class EmployeeService {
 
     if (dto.departmentId) await this.assertDepartmentInOrg(orgId, dto.departmentId);
 
+    // Link-existing-user path: skip user creation, just attach.
+    if (dto.userId) {
+      await this.assertUserAvailableForLink(orgId, dto.userId);
+      return this.prisma.$transaction(async (tx) => {
+        const employee = await tx.employee.create({
+          data: {
+            organizationId: orgId,
+            code: dto.code,
+            departmentId: dto.departmentId,
+            title: dto.title,
+            hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
+          },
+        });
+        await tx.user.update({
+          where: { id: dto.userId },
+          data: { employeeId: employee.id },
+        });
+        return employee;
+      });
+    }
+
+    // class-validator already rejects this branch when these are missing,
+    // but TypeScript doesn't know — narrow explicitly.
+    if (!dto.email || !dto.name || !dto.password) {
+      throw new BadRequestException(
+        'email, name and password are required when not linking an existing user',
+      );
+    }
+
     // User.email is globally unique. Catching here gives a clearer 409 than
     // letting the Prisma constraint blow up.
     const emailTaken = await this.prisma.user.findUnique({
@@ -71,6 +100,7 @@ export class EmployeeService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, PASSWORD_BCRYPT_ROUNDS);
+    const { email, name } = dto;
 
     return this.prisma.$transaction(async (tx) => {
       const employee = await tx.employee.create({
@@ -84,8 +114,8 @@ export class EmployeeService {
       });
       await tx.user.create({
         data: {
-          email: dto.email,
-          name: dto.name,
+          email,
+          name,
           password: passwordHash,
           role: 'user',
           organizationId: orgId,

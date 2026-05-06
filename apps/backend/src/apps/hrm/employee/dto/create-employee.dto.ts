@@ -7,17 +7,18 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 /**
- * Atomic "Add staff" — creating an Employee always provisions a fresh
- * User row in the same Org. Personal info (name, email, dob, gender,
- * phone) lives on the User; HR fields (code, dept, title, hireDate) on
- * the Employee. Both rows are created in one transaction.
+ * "Add staff" — two modes:
  *
- * To link an existing User (e.g. the admin founder who signed up before
- * being added as a real employee), use the edit form's user re-link
- * picker instead.
+ *  - Default: provision a fresh User atomically (email + name + password
+ *    required). HR fields (code, dept, title, hireDate) live on the
+ *    Employee. Both rows are created in one transaction.
+ *  - Link existing: pass `userId` (e.g. the founder who self-registered
+ *    before being added as a real employee). Email/name/password are
+ *    ignored; the existing User is attached to the new Employee.
  */
 export class CreateEmployeeDto {
   /** Required, unique within Org. HR-generated (e.g. "EMP-0001"). */
@@ -29,21 +30,30 @@ export class CreateEmployeeDto {
   })
   code: string;
 
-  // ── New User fields (created together with Employee) ─────────────
+  // ── Link-existing-user mode (mutually exclusive with email/name/password) ─
 
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
+
+  // ── New-user mode: required only when `userId` is not set ─────────
+
+  @ValidateIf((o) => !o.userId)
   @IsEmail()
   @MaxLength(255)
-  email: string;
+  email?: string;
 
+  @ValidateIf((o) => !o.userId)
   @IsString()
   @MinLength(1)
   @MaxLength(100)
-  name: string;
+  name?: string;
 
+  @ValidateIf((o) => !o.userId)
   @IsString()
   @MinLength(8)
   @MaxLength(100)
-  password: string;
+  password?: string;
 
   // ── Employee fields ──────────────────────────────────────────────
 

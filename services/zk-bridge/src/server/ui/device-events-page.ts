@@ -118,10 +118,18 @@ export function renderDeviceEventsPage(opts: {
             dưới = đã push (pushed).
           </p>
         </div>
-        <a href="/devices/${device.id}/events"
-           class="text-xs px-3 py-1.5 border border-slate-300 rounded hover:bg-slate-100">
-          Reload
-        </a>
+        <div class="flex gap-2">
+          <a href="/devices/${device.id}/events"
+             class="text-xs px-3 py-1.5 border border-slate-300 rounded hover:bg-slate-100">
+            Reload
+          </a>
+          <form method="post" action="/devices/${device.id}/reset-cursor" class="inline"
+                onsubmit="return confirm('Reset cursor về 0 cho ${escapeHtml(device.name)}?\\n\\nCycle tiếp theo sẽ re-pull TẤT CẢ event còn trên device. C-HR dedupe qua (deviceId, eventLogId) nên an toàn nhưng có thể push hàng nghìn record 1 lúc.')">
+            <button class="text-xs px-3 py-1.5 border border-rose-300 text-rose-700 rounded hover:bg-rose-50">
+              Reset cursor
+            </button>
+          </form>
+        </div>
       </div>
       <table class="w-full">
         <thead>

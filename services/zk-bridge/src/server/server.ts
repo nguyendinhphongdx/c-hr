@@ -11,6 +11,7 @@ import {
   getDevice,
   listCycleLogs,
   listDevices,
+  resetDeviceCursor,
   setConfig,
   setConfigMany,
   updateDevice,
@@ -261,6 +262,12 @@ export function createServer(): Hono<SessionVars> {
     const id = Number(c.req.param('id'));
     if (Number.isFinite(id)) await deleteDeviceRow(id);
     return c.redirect('/devices');
+  });
+
+  app.post('/devices/:id/reset-cursor', async (c) => {
+    const id = Number(c.req.param('id'));
+    if (Number.isFinite(id)) await resetDeviceCursor(id);
+    return c.redirect(`/devices/${id}/events`);
   });
 
   app.get('/devices/:id/events', async (c) => {
