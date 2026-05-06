@@ -6,18 +6,21 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/features/auth";
-import { useEmployee } from "@/features/employees";
+import { useAuth, useIsAppAdmin } from "@/features/auth";
+import { EmployeePicker, useEmployee } from "@/features/employees";
+import type { ID } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { useTimesheet } from "../hooks/useTimesheet";
 import type { DayStatus, TimesheetDay } from "../types";
 
 const STATUS_CLASSES: Record<DayStatus, string> = {
-  PRESENT: "bg-emerald-50 border-emerald-200",
-  LATE: "bg-amber-50 border-amber-200",
-  EARLY_LEAVE: "bg-orange-50 border-orange-200",
-  ABSENT: "bg-rose-50 border-rose-200",
+  PRESENT:
+    "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800/60",
+  LATE: "bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800/60",
+  EARLY_LEAVE:
+    "bg-orange-50 border-orange-200 dark:bg-orange-950/40 dark:border-orange-800/60",
+  ABSENT: "bg-rose-50 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800/60",
   WEEKEND: "bg-muted/40 border-border",
 };
 
@@ -86,21 +89,33 @@ function formatYm(year: number, month: number): string {
 
 export function TimesheetView() {
   const { user } = useAuth();
-  const employee = useEmployee(user?.employeeId ?? null);
+  const canPickOther = useIsAppAdmin("HRM");
 
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { year, month } = parseYm(searchParams.get("ym"));
 
-  const employeeId = user?.employeeId ?? null;
-  const sheet = useTimesheet(employeeId, year, month);
+  // HRM admins can override the viewed employee via `?e=<id>`. Regular
+  // users always see their own row regardless of URL.
+  const ownEmployeeId = user?.employeeId ?? null;
+  const overrideId = searchParams.get("e");
+  const selectedEmployeeId: ID | null = canPickOther
+    ? (overrideId ?? ownEmployeeId)
+    : ownEmployeeId;
 
-  const navigateTo = (y: number, mo: number) => {
+  const employee = useEmployee(selectedEmployeeId);
+  const sheet = useTimesheet(selectedEmployeeId, year, month);
+
+  const updateParams = (mutate: (p: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("ym", formatYm(y, mo));
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    mutate(params);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
+
+  const navigateTo = (y: number, mo: number) =>
+    updateParams((p) => p.set("ym", formatYm(y, mo)));
 
   const goPrev = () => {
     if (month === 1) navigateTo(year - 1, 12);
@@ -111,7 +126,14 @@ export function TimesheetView() {
     else navigateTo(year, month + 1);
   };
 
-  if (!employeeId) {
+  const onPickEmployee = (id: ID | null) => {
+    updateParams((p) => {
+      if (!id || id === ownEmployeeId) p.delete("e");
+      else p.set("e", id);
+    });
+  };
+
+  if (!selectedEmployeeId) {
     return (
       <div className="mx-auto max-w-4xl px-6 py-16 text-sm text-muted-foreground">
         Tài khoản chưa được link với hồ sơ Employee — liên hệ HRM admin.
@@ -131,7 +153,16 @@ export function TimesheetView() {
             </span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {canPickOther && (
+            <div className="w-64">
+              <EmployeePicker
+                value={selectedEmployeeId}
+                onChange={onPickEmployee}
+                placeholder="Chọn nhân viên…"
+              />
+            </div>
+          )}
           <Button variant="outline" size="icon" onClick={goPrev} aria-label="Tháng trước">
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -238,7 +269,8 @@ function DayCell({ day, isToday }: { day: TimesheetDay; isToday: boolean }) {
             <span
               className={cn(
                 "tabular-nums text-[11px]",
-                displayStatus === "LATE" && "text-amber-700 font-semibold",
+                displayStatus === "LATE" &&
+                  "font-semibold text-amber-700 dark:text-amber-400",
               )}
             >
               {formatHHMM(day.checkInAt)}
@@ -251,7 +283,8 @@ function DayCell({ day, isToday }: { day: TimesheetDay; isToday: boolean }) {
             <span
               className={cn(
                 "tabular-nums text-[11px]",
-                displayStatus === "EARLY_LEAVE" && "text-orange-700 font-semibold",
+                displayStatus === "EARLY_LEAVE" &&
+                  "font-semibold text-orange-700 dark:text-orange-400",
               )}
             >
               {formatHHMM(day.checkOutAt)}
