@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -15,7 +16,12 @@ import { Auditable } from '@/common/audit';
 import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
 
-import { CreateRequestDto, DecideRequestDto, ListRequestsDto } from './dto';
+import {
+  CreateRequestDto,
+  DecideRequestDto,
+  ListRequestsDto,
+  UpdateRequestDto,
+} from './dto';
 import { RequestService } from './request.service';
 
 @ApiTags('requests')
@@ -39,6 +45,15 @@ export class RequestController {
   @Auditable({ action: 'REQUEST_CREATE', entity: 'Request' })
   create(@Body() dto: CreateRequestDto) {
     return this.service.create(dto);
+  }
+
+  @Patch(':id')
+  @Auditable({ action: 'REQUEST_UPDATE', entity: 'Request' })
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateRequestDto,
+  ) {
+    return this.service.update(id, dto);
   }
 
   @Post(':id/approve')

@@ -9,6 +9,7 @@ import type {
   CreateRequestInput,
   DecideRequestInput,
   ListRequestsQuery,
+  UpdateRequestInput,
 } from "../types";
 
 export const requestKeys = {
@@ -48,6 +49,18 @@ export function useCreateRequest() {
     mutationFn: (data: CreateRequestInput) => requestService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
+    },
+  });
+}
+
+export function useUpdateRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: ID; body: UpdateRequestInput }) =>
+      requestService.update(id, body),
+    onSuccess: (row) => {
+      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      queryClient.invalidateQueries({ queryKey: requestKeys.detail(row.id) });
     },
   });
 }

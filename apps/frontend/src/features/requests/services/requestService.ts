@@ -7,6 +7,7 @@ import type {
   ListRequestsQuery,
   RequestGroup,
   RequestRow,
+  UpdateRequestInput,
 } from "../types";
 
 export const requestService = {
@@ -29,6 +30,14 @@ export const requestService = {
 
   create: async (data: CreateRequestInput): Promise<RequestRow> => {
     const res = await apiClient.post<RequestRow>("/requests", data);
+    return res.data;
+  },
+
+  update: async (
+    id: ID,
+    body: UpdateRequestInput,
+  ): Promise<RequestRow> => {
+    const res = await apiClient.patch<RequestRow>(`/requests/${id}`, body);
     return res.data;
   },
 

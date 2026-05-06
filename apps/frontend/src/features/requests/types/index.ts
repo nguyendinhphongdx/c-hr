@@ -76,6 +76,11 @@ export interface CreateRequestInput {
   data: Record<string, unknown>;
 }
 
+export interface UpdateRequestInput {
+  data?: Record<string, unknown>;
+  approverId?: ID;
+}
+
 export interface DecideRequestInput {
   decisionNote?: string;
 }

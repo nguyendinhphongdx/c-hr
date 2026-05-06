@@ -25,7 +25,11 @@ import { useAuth } from "@/features/auth";
 import { useApproverCandidates } from "@/features/orgchart";
 
 import { DynamicForm } from "../components/DynamicForm";
-import { useCreateRequest, useRequestGroups } from "../hooks/useRequests";
+import {
+  useCreateRequest,
+  useRequest,
+  useRequestGroups,
+} from "../hooks/useRequests";
 
 /**
  * Two-step "create request" flow:
@@ -47,12 +51,18 @@ export function RequestCreateView() {
 
   const initialGroupCode = search.get("group");
   const initialDate = search.get("date");
+  const cloneId = search.get("clone");
+
+  const cloneSource = useRequest(cloneId);
 
   const [groupId, setGroupId] = useState<string>("");
   const [data, setData] = useState<Record<string, unknown>>(
     initialDate ? { date: initialDate } : {},
   );
   const [approverId, setApproverId] = useState("");
+  // Track whether we've applied the clone source so we don't keep overwriting
+  // the user's edits if they re-render.
+  const [clonedFrom, setClonedFrom] = useState<string | null>(null);
 
   const groups = groupsQuery.data ?? [];
   const selectedGroup = groups.find((g) => g.id === groupId) ?? null;
@@ -64,8 +74,22 @@ export function RequestCreateView() {
     const matched = groups.find((g) => g.code === initialGroupCode);
     if (matched) setGroupId(matched.id);
   }
-  // Default approver = suggested. One-shot.
-  if (!approverId && candidates.data?.suggested?.employeeId) {
+  // Apply ?clone=<id> source — pre-fill group + data, leave approverId reset
+  // so the user re-picks. One-shot (clonedFrom guard).
+  if (
+    cloneId &&
+    clonedFrom !== cloneId &&
+    cloneSource.data &&
+    groups.length > 0
+  ) {
+    const src = cloneSource.data;
+    if (src.groupId) setGroupId(src.groupId);
+    setData({ ...src.data });
+    setClonedFrom(cloneId);
+  }
+  // Default approver = suggested. One-shot. Skip for cloned requests so the
+  // user is forced to re-pick.
+  if (!approverId && !cloneId && candidates.data?.suggested?.employeeId) {
     setApproverId(candidates.data.suggested.employeeId);
   }
 
@@ -116,6 +140,13 @@ export function RequestCreateView() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {cloneId && cloneSource.data && (
+          <div className="mb-4 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs text-foreground">
+            Đang nhân bản từ đơn{" "}
+            <span className="font-mono">#{cloneId.slice(-8)}</span> ·{" "}
+            {cloneSource.data.group.name}. Vui lòng chọn lại người duyệt.
+          </div>
+        )}
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="group">Loại đơn</Label>

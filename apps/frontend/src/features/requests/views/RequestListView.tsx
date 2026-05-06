@@ -1,19 +1,26 @@
 "use client";
 
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import {
+  Inbox,
+  Layers,
+  ListChecks,
+  Mail,
+  Plus,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { useIsAppAdmin } from "@/features/auth";
 import { ApprovalFlow } from "@/features/collaboration";
 import { cn } from "@/lib/utils";
@@ -24,18 +31,31 @@ import type {
   RequestListScope,
   RequestParticipant,
   RequestRow,
+  RequestStatus,
 } from "../types";
 
 const ALL = "all";
 
+type StatusFilter = "all" | RequestStatus;
+
+const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: "all", label: "Tất cả" },
+  { value: "PENDING", label: "Chờ duyệt" },
+  { value: "APPROVED", label: "Đã duyệt" },
+  { value: "REJECTED", label: "Từ chối" },
+  { value: "CANCELLED", label: "Đã huỷ" },
+];
+
 /**
- * Master-detail layout: list on the left, preview/decisions on the right
- * via shadcn/ui Resizable panels. Group + scope filters in the header.
+ * Outlook-style 3-pane: scope/group nav (left) → dense list (middle) →
+ * sticky preview (right). Scope and group are server-side filters; status
+ * is filtered client-side off the list result.
  */
 export function RequestListView() {
   const isHrmAdmin = useIsAppAdmin("HRM");
   const [scope, setScope] = useState<RequestListScope>("mine");
   const [groupId, setGroupId] = useState<string>(ALL);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const groupsQuery = useRequestGroups();
@@ -44,61 +64,130 @@ export function RequestListView() {
   if (scope !== "all") listQuery.scope = scope;
   const { data: rows, isLoading } = useRequests(listQuery);
 
+  // Pending badge for "Cần duyệt" scope — count incoming PENDING regardless of
+  // current scope/group selection so the user always knows the inbox size.
+  const incomingQuery = useRequests({ scope: "incoming" });
+  const pendingCount = useMemo(
+    () => (incomingQuery.data ?? []).filter((r) => r.status === "PENDING").length,
+    [incomingQuery.data],
+  );
+
+  const filteredRows = useMemo(() => {
+    if (!rows) return [];
+    if (statusFilter === "all") return rows;
+    return rows.filter((r) => r.status === statusFilter);
+  }, [rows, statusFilter]);
+
   const selected: RequestRow | null =
-    rows?.find((r) => r.id === selectedId) ?? null;
+    filteredRows.find((r) => r.id === selectedId) ?? null;
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Đơn từ</h1>
-          <p className="text-sm text-muted-foreground">
-            Quản lý đơn xin nghỉ và đơn quên chấm — chọn 1 dòng để xem chi tiết.
+    <div className="grid h-[calc(100vh-7rem)] grid-cols-1 overflow-hidden rounded-lg border md:grid-cols-[12rem_minmax(0,24rem)_minmax(0,1fr)]">
+      {/* Sidebar */}
+      <aside className="flex flex-col border-b md:border-b-0 md:border-r">
+        <div className="border-b px-3 py-3">
+          <h1 className="text-sm font-semibold tracking-tight">Đơn từ</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Đơn nghỉ & quên chấm
           </p>
         </div>
-        <Button asChild>
-          <Link href="/requests/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Tạo đơn
-          </Link>
-        </Button>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Tabs value={scope} onValueChange={(v) => setScope(v as RequestListScope)}>
-          <TabsList>
-            <TabsTrigger value="mine">Của tôi</TabsTrigger>
-            <TabsTrigger value="incoming">Cần duyệt</TabsTrigger>
-            {isHrmAdmin && <TabsTrigger value="all">Tất cả Org</TabsTrigger>}
-          </TabsList>
-        </Tabs>
+        <nav className="flex flex-col gap-1 p-2">
+          <SidebarSection label="Phạm vi" />
+          <SidebarItem
+            icon={<Mail className="h-4 w-4" />}
+            label="Của tôi"
+            active={scope === "mine"}
+            onClick={() => setScope("mine")}
+          />
+          <SidebarItem
+            icon={<Inbox className="h-4 w-4" />}
+            label="Cần duyệt"
+            active={scope === "incoming"}
+            onClick={() => setScope("incoming")}
+            trailing={
+              pendingCount > 0 ? (
+                <Badge variant="default" className="h-5 px-1.5 text-[10px]">
+                  {pendingCount}
+                </Badge>
+              ) : null
+            }
+          />
+          {isHrmAdmin && (
+            <SidebarItem
+              icon={<Users className="h-4 w-4" />}
+              label="Tất cả Org"
+              active={scope === "all"}
+              onClick={() => setScope("all")}
+            />
+          )}
 
-        <Select value={groupId} onValueChange={setGroupId}>
-          <SelectTrigger className="w-56">
-            <SelectValue placeholder="Loại đơn" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Tất cả loại</SelectItem>
-            {(groupsQuery.data ?? []).map((g) => (
-              <SelectItem key={g.id} value={g.id}>
-                {g.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          <SidebarSection label="Loại đơn" className="mt-3" />
+          <SidebarItem
+            icon={<Layers className="h-4 w-4" />}
+            label="Tất cả loại"
+            active={groupId === ALL}
+            onClick={() => setGroupId(ALL)}
+          />
+          {(groupsQuery.data ?? []).map((g) => (
+            <SidebarItem
+              key={g.id}
+              icon={<ListChecks className="h-4 w-4" />}
+              label={g.name}
+              active={groupId === g.id}
+              onClick={() => setGroupId(g.id)}
+            />
+          ))}
+        </nav>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-lg border md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        <div className="overflow-y-auto border-r">
+        <div className="mt-auto border-t p-2">
+          <Button asChild className="w-full">
+            <Link href="/requests/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Tạo đơn
+            </Link>
+          </Button>
+        </div>
+      </aside>
+
+      {/* Middle pane — list */}
+      <section className="flex min-h-0 flex-col border-b md:border-b-0 md:border-r">
+        <div className="flex flex-wrap gap-1.5 border-b p-2">
+          {STATUS_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setStatusFilter(f.value)}
+              className={cn(
+                "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                statusFilter === f.value
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background text-muted-foreground hover:bg-accent/40",
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading ? (
             <p className="p-4 text-sm text-muted-foreground">Đang tải...</p>
-          ) : !rows || rows.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">
-              Không có đơn nào.
-            </p>
+          ) : filteredRows.length === 0 ? (
+            <Empty className="border-0">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Inbox />
+                </EmptyMedia>
+                <EmptyTitle>Không có đơn nào</EmptyTitle>
+                <EmptyDescription>
+                  Thử đổi phạm vi, loại đơn hoặc bộ lọc trạng thái.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <ul className="divide-y">
-              {rows.map((r) => (
+              {filteredRows.map((r) => (
                 <li key={r.id}>
                   <button
                     type="button"
@@ -126,11 +215,79 @@ export function RequestListView() {
             </ul>
           )}
         </div>
-        <div className="overflow-hidden">
+      </section>
+
+      {/* Right pane — preview */}
+      <section className="hidden min-h-0 md:block">
+        {selected ? (
           <RequestPreview request={selected} />
-        </div>
-      </div>
+        ) : (
+          <div className="flex h-full items-center justify-center p-6">
+            <Empty className="border-0">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Mail />
+                </EmptyMedia>
+                <EmptyTitle>Chưa chọn đơn</EmptyTitle>
+                <EmptyDescription>
+                  Chọn 1 đơn ở danh sách để xem chi tiết, duyệt hoặc bình luận.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
+        )}
+      </section>
     </div>
+  );
+}
+
+function SidebarSection({
+  label,
+  className,
+}: {
+  label: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "px-2 pt-1 pb-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground",
+        className,
+      )}
+    >
+      {label}
+    </div>
+  );
+}
+
+function SidebarItem({
+  icon,
+  label,
+  active,
+  onClick,
+  trailing,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+        active
+          ? "bg-accent text-accent-foreground"
+          : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+      )}
+    >
+      <span className="shrink-0">{icon}</span>
+      <span className="flex-1 truncate">{label}</span>
+      {trailing}
+    </button>
   );
 }
 

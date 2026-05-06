@@ -13,6 +13,7 @@ export {
   useRequest,
   useRequestGroups,
   useRequests,
+  useUpdateRequest,
 } from "./hooks/useRequests";
 export { requestService } from "./services/requestService";
 export type {
@@ -28,4 +29,5 @@ export type {
   RequestParticipant,
   RequestRow,
   RequestStatus,
+  UpdateRequestInput,
 } from "./types";

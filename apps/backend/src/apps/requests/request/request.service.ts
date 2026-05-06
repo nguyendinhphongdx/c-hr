@@ -17,7 +17,12 @@ import { RequestGroupService } from '../request-group/request-group.service';
 import { validateRequestData } from '../request.validator';
 import { getHandler } from '../side-effects';
 
-import { CreateRequestDto, DecideRequestDto, ListRequestsDto } from './dto';
+import {
+  CreateRequestDto,
+  DecideRequestDto,
+  ListRequestsDto,
+  UpdateRequestDto,
+} from './dto';
 import { RequestAcl } from './request.acl';
 import { RequestRepository } from './request.repository';
 
@@ -137,6 +142,64 @@ export class RequestService {
       throw new BadRequestException('decisionNote is required when rejecting');
     }
     return this.decide(id, 'REJECTED', dto.decisionNote);
+  }
+
+  async update(id: string, dto: UpdateRequestDto) {
+    const orgId = this.ctx.requireOrg();
+    const existing = await this.repo.findByIdByOrg(orgId, id);
+    if (!existing) throw new NotFoundException('Request not found');
+
+    await new RequestAcl(existing).require('canEdit');
+
+    const changedFields: string[] = [];
+    const patch: Prisma.RequestUncheckedUpdateInput = {};
+
+    if (dto.data !== undefined) {
+      if (!isFieldsSchema(existing.group.fieldsSchema)) {
+        throw new BadRequestException(
+          `Group "${existing.group.code}" has invalid schema`,
+        );
+      }
+      const validationError = validateRequestData(
+        existing.group.fieldsSchema,
+        dto.data,
+      );
+      if (validationError) throw new BadRequestException(validationError);
+      patch.data = dto.data as Prisma.InputJsonValue;
+      changedFields.push('data');
+    }
+
+    if (dto.approverId !== undefined && dto.approverId !== existing.approverId) {
+      const { candidates } = await this.orgChart.getApproverCandidates(
+        existing.requesterId,
+      );
+      if (!candidates.some((c) => c.employeeId === dto.approverId)) {
+        throw new BadRequestException(
+          'approverId is not in the suggested approver candidates',
+        );
+      }
+      patch.approverId = dto.approverId;
+      changedFields.push('approverId');
+    }
+
+    if (changedFields.length === 0) return existing;
+
+    const updated = await this.repo.update(id, patch);
+
+    this.activities.log({
+      organizationId: orgId,
+      objectType: 'Request',
+      objectId: id,
+      action: 'request.updated',
+      userId: this.ctx.userId,
+      objectLabel: buildRequestLabel(updated),
+      metadata: { changedFields },
+    });
+    this.events.emit(`request.${existing.group.code}.updated`, {
+      id,
+      organizationId: orgId,
+    });
+    return updated;
   }
 
   async cancel(id: string) {
