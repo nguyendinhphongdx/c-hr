@@ -22,6 +22,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { useIsAppAdmin } from "@/features/auth";
 
 import { ResourceCreateDialog } from "../components/ResourceCreateDialog";
@@ -53,21 +54,27 @@ export function ResourcesAdminView() {
 
   if (!isHrmAdmin) {
     return (
-      <Empty className="border">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <ShieldOff />
-          </EmptyMedia>
-          <EmptyTitle>Không có quyền truy cập</EmptyTitle>
-          <EmptyDescription>
-            Chỉ HRM admin xem được tài nguyên.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <PageContainer>
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ShieldOff />
+            </EmptyMedia>
+            <EmptyTitle>Không có quyền truy cập</EmptyTitle>
+            <EmptyDescription>
+              Chỉ HRM admin xem được tài nguyên.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </PageContainer>
     );
   }
 
-  return <ResourcesAdminViewInner />;
+  return (
+    <PageContainer>
+      <ResourcesAdminViewInner />
+    </PageContainer>
+  );
 }
 
 function ResourcesAdminViewInner() {

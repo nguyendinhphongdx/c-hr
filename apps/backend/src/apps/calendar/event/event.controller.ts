@@ -17,12 +17,7 @@ import { Auditable } from '@/common/audit';
 import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
 
-import {
-  CreateEventDto,
-  ListEventsDto,
-  RespondAttendeeDto,
-  UpdateEventDto,
-} from './dto';
+import { CreateEventDto, ListEventsDto, RespondAttendeeDto, UpdateEventDto } from './dto';
 import { EventService } from './event.service';
 
 @ApiTags('events')
@@ -50,10 +45,7 @@ export class EventController {
 
   @Patch(':id')
   @Auditable({ action: 'EVENT_UPDATE', entity: 'Event' })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateEventDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEventDto) {
     return this.service.update(id, dto);
   }
 
@@ -74,10 +66,7 @@ export class EventController {
   @Post(':id/respond')
   @HttpCode(HttpStatus.OK)
   @Auditable({ action: 'EVENT_RESPOND', entity: 'EventAttendee' })
-  respond(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: RespondAttendeeDto,
-  ) {
+  respond(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RespondAttendeeDto) {
     return this.service.respond(id, dto);
   }
 }

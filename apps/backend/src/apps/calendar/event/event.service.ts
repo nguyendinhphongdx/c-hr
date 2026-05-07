@@ -5,18 +5,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { EventVisibility, Prisma, PreferenceScope } from '@prisma/client';
 
 import { ActivityService } from '@/apps/collaboration/activity/activity.service';
+import { PreferenceService } from '@/apps/core/preference';
 import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
-import {
-  CreateEventDto,
-  ListEventsDto,
-  RespondAttendeeDto,
-  UpdateEventDto,
-} from './dto';
+import { CreateEventDto, ListEventsDto, RespondAttendeeDto, UpdateEventDto } from './dto';
 import { EventAcl, EventAclSubject } from './event.acl';
 import { EventRepository } from './event.repository';
 
@@ -29,6 +25,7 @@ export class EventService {
     private readonly ctx: RequestContextService,
     private readonly repo: EventRepository,
     private readonly activities: ActivityService,
+    private readonly preferences: PreferenceService,
   ) {}
 
   // ──────────────────────────────────────────────────────────────────
@@ -66,19 +63,14 @@ export class EventService {
     } else if (Array.isArray(query.userIds) && query.userIds.length > 0) {
       // Explicit user list (e.g. colleague calendar). Only HRM admin can
       // peek at any user; others can only request themselves.
-      const allowed = isHrm
-        ? query.userIds
-        : query.userIds.filter((u) => u === userId);
+      const allowed = isHrm ? query.userIds : query.userIds.filter((u) => u === userId);
       where.OR = [
         { ownerId: { in: allowed } },
         { attendees: { some: { userId: { in: allowed } } } },
       ];
     } else {
       // Default "mine" — owned OR invited.
-      where.OR = [
-        { ownerId: userId },
-        { attendees: { some: { userId } } },
-      ];
+      where.OR = [{ ownerId: userId }, { attendees: { some: { userId } } }];
     }
 
     const rows = await this.repo.findRangeByOrg(orgId, from, to, where);
@@ -122,22 +114,18 @@ export class EventService {
     }
 
     const attendeeRows = await this.resolveAttendees(orgId, dto.attendees);
-    const resourceRows = await this.resolveResources(
-      orgId,
-      dto.resourceIds,
-      startAt,
-      endAt,
-    );
+    const resourceRows = await this.resolveResources(orgId, dto.resourceIds, startAt, endAt);
 
     // F7.3 — when the DTO doesn't specify visibility, fall back to the
-    // caller's per-user default (settings → /settings/calendar).
+    // caller's per-user default (settings → /settings/calendar). Stored
+    // generically in the Preference table now.
     let visibility = dto.visibility;
     if (visibility === undefined) {
-      const caller = await this.prisma.user.findUnique({
-        where: { id: callerId },
-        select: { calendarDefaultVisibility: true },
-      });
-      visibility = caller?.calendarDefaultVisibility ?? 'DEFAULT';
+      visibility = await this.preferences.get<EventVisibility>(
+        PreferenceScope.USER,
+        callerId,
+        'calendar.visibility',
+      );
     }
 
     const created = await this.repo.create({
@@ -154,12 +142,8 @@ export class EventService {
       visibility,
       isPrivate: dto.isPrivate ?? false,
       color: dto.color ?? null,
-      attendees: attendeeRows.length
-        ? { create: attendeeRows }
-        : undefined,
-      resources: resourceRows.length
-        ? { create: resourceRows }
-        : undefined,
+      attendees: attendeeRows.length ? { create: attendeeRows } : undefined,
+      resources: resourceRows.length ? { create: resourceRows } : undefined,
     });
 
     this.activities.log({
@@ -205,17 +189,9 @@ export class EventService {
     // Resource update — replace strategy. Validate + conflict-check
     // against the (possibly-new) time range first; if it passes, run
     // delete+create+update inside one tx so nothing partial sticks.
-    let resourceCreate:
-      | Prisma.EventResourceUncheckedCreateWithoutEventInput[]
-      | undefined;
+    let resourceCreate: Prisma.EventResourceUncheckedCreateWithoutEventInput[] | undefined;
     if (dto.resourceIds !== undefined) {
-      resourceCreate = await this.resolveResources(
-        orgId,
-        dto.resourceIds,
-        newStart,
-        newEnd,
-        id,
-      );
+      resourceCreate = await this.resolveResources(orgId, dto.resourceIds, newStart, newEnd, id);
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -327,9 +303,7 @@ export class EventService {
   // Helpers
   // ──────────────────────────────────────────────────────────────────
 
-  private buildAcl(
-    row: Awaited<ReturnType<EventRepository['findByIdByOrg']>>,
-  ): EventAcl {
+  private buildAcl(row: Awaited<ReturnType<EventRepository['findByIdByOrg']>>): EventAcl {
     if (!row) throw new NotFoundException('Event not found');
     const subject: EventAclSubject = {
       id: row.id,
@@ -338,9 +312,7 @@ export class EventService {
       createdById: row.createdById,
       isPrivate: row.isPrivate,
       visibility: row.visibility,
-      _attendeeUserIds: row.attendees
-        .map((a) => a.userId)
-        .filter((u): u is string => !!u),
+      _attendeeUserIds: row.attendees.map((a) => a.userId).filter((u): u is string => !!u),
     };
     return new EventAcl(subject);
   }
@@ -371,9 +343,7 @@ export class EventService {
       createdById: row.createdById,
       isPrivate: row.isPrivate,
       visibility: row.visibility,
-      _attendeeUserIds: row.attendees
-        .map((a) => a.userId)
-        .filter((u): u is string => !!u),
+      _attendeeUserIds: row.attendees.map((a) => a.userId).filter((u): u is string => !!u),
     });
     return this.shapeRow(row, acl.canViewDetail());
   }
@@ -420,7 +390,9 @@ export class EventService {
       }
     }
     // Strip the placeholder eventId — Prisma nested create will fill it.
-    return rows.map(({ eventId: _ignored, ...rest }) => rest as Prisma.EventAttendeeUncheckedCreateInput);
+    return rows.map(
+      ({ eventId: _ignored, ...rest }) => rest as Prisma.EventAttendeeUncheckedCreateInput,
+    );
   }
 
   /**

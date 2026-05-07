@@ -103,6 +103,9 @@ importers:
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.2
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.9

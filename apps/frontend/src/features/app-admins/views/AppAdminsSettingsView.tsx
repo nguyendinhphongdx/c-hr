@@ -125,7 +125,6 @@ export function AppAdminsSettingsView() {
                       <UserPicker
                         value={field.value || null}
                         onChange={(u) => field.onChange(u?.id ?? "")}
-                        availableForLink={false}
                         placeholder="Chọn người dùng trong Org này…"
                       />
                     </FormControl>

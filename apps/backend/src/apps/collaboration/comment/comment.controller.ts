@@ -92,10 +92,7 @@ export class CommentController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateCommentDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCommentDto) {
     return this.service.update(id, this.ctx.requireUserId(), dto);
   }
 

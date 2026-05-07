@@ -33,12 +33,7 @@ export class EventRepository {
    * overlaps with [from, to). Soft-deleted rows excluded; cancelled
    * stay (FE renders strikethrough).
    */
-  findRangeByOrg(
-    organizationId: string,
-    from: Date,
-    to: Date,
-    extra: Prisma.EventWhereInput = {},
-  ) {
+  findRangeByOrg(organizationId: string, from: Date, to: Date, extra: Prisma.EventWhereInput = {}) {
     return this.prisma.event.findMany({
       where: {
         organizationId,
@@ -80,9 +75,7 @@ export class EventRepository {
 
   // ── Attendee operations ──────────────────────────────────────────
 
-  createAttendees(
-    rows: Prisma.EventAttendeeUncheckedCreateInput[],
-  ) {
+  createAttendees(rows: Prisma.EventAttendeeUncheckedCreateInput[]) {
     if (rows.length === 0) return Promise.resolve({ count: 0 });
     return this.prisma.eventAttendee.createMany({ data: rows, skipDuplicates: true });
   }
@@ -93,10 +86,7 @@ export class EventRepository {
     });
   }
 
-  updateAttendee(
-    id: string,
-    data: Prisma.EventAttendeeUncheckedUpdateInput,
-  ) {
+  updateAttendee(id: string, data: Prisma.EventAttendeeUncheckedUpdateInput) {
     return this.prisma.eventAttendee.update({ where: { id }, data });
   }
 }

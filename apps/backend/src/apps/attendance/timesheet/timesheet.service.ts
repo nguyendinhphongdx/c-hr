@@ -9,12 +9,7 @@ import { WorkScheduleRepository } from '../work-schedule/work-schedule.repositor
 
 import { TimesheetQueryDto } from './dto';
 
-export type DayStatus =
-  | 'PRESENT'
-  | 'LATE'
-  | 'EARLY_LEAVE'
-  | 'ABSENT'
-  | 'WEEKEND';
+export type DayStatus = 'PRESENT' | 'LATE' | 'EARLY_LEAVE' | 'ABSENT' | 'WEEKEND';
 
 export interface TimesheetDay {
   date: string; // YYYY-MM-DD

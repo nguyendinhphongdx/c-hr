@@ -24,10 +24,12 @@ import { cn } from "@/lib/utils";
 
 import { CalendarTabs } from "../components/CalendarTabs";
 import { EventCreateDialog } from "../components/EventCreateDialog";
-import { useEvents } from "../hooks/useEvents";
+import { EventDetailDialog } from "../components/EventDetailDialog";
+import { useEvent, useEvents, useDeleteEvent } from "../hooks/useEvents";
 import { useResources } from "../hooks/useResources";
 import { useTickingNow } from "../hooks/useTickingNow";
 import { formatDateParam, parseDateParam } from "../lib/format";
+import { userColorFromId } from "../lib/user-color";
 import type { EventRow, ResourceRow } from "../types";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -184,6 +186,18 @@ export function RoomsView() {
     start: string;
     end: string;
   } | null>(null);
+
+  // ── Event detail open ──────────────────────────────────────────
+  const [selectedEventId, setSelectedEventId] = useState<ID | null>(null);
+  const detail = useEvent(selectedEventId);
+  const deleteEvent = useDeleteEvent();
+  const onDeleteEvent = useCallback(
+    async (id: ID) => {
+      await deleteEvent.mutateAsync(id);
+      setSelectedEventId(null);
+    },
+    [deleteEvent],
+  );
 
   const onRowMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>, roomId: ID) => {
@@ -372,6 +386,7 @@ export function RoomsView() {
                             key={ev.id}
                             ev={ev}
                             dayStart={dayStart}
+                            onOpen={() => setSelectedEventId(ev.id)}
                           />
                         ))}
                         {/* drag ghost */}
@@ -400,6 +415,14 @@ export function RoomsView() {
         // initialResourceIds via its own state (see useEffect on `open`).
         initialResourceIds={createSlot ? [createSlot.roomId] : undefined}
       />
+
+      <EventDetailDialog
+        event={detail.data ?? null}
+        open={!!selectedEventId && !!detail.data}
+        onEdit={() => setCreateOpen(true)}
+        onDelete={() => detail.data && onDeleteEvent(detail.data.id)}
+        onClose={() => setSelectedEventId(null)}
+      />
     </PageContainer>
   );
 }
@@ -417,7 +440,15 @@ function NowLineOverlay({ nowPct }: { nowPct: number }) {
   );
 }
 
-function EventBlock({ ev, dayStart }: { ev: EventRow; dayStart: Date }) {
+function EventBlock({
+  ev,
+  dayStart,
+  onOpen,
+}: {
+  ev: EventRow;
+  dayStart: Date;
+  onOpen: () => void;
+}) {
   const start = new Date(ev.startAt);
   const end = new Date(ev.endAt);
   const leftPct = pctOfDay(start, dayStart);
@@ -428,31 +459,52 @@ function EventBlock({ ev, dayStart }: { ev: EventRow; dayStart: Date }) {
     ev.owner?.name ??
     null;
   const palette =
-    ev.color ?? ev.resources?.[0]?.resource.color ?? null;
+    ev.color ??
+    ev.resources?.[0]?.resource.color ??
+    userColorFromId(ev.ownerId);
+  const cancelled = ev.status === "CANCELLED";
 
   return (
-    <Tooltip delayDuration={150}>
+    <Tooltip delayDuration={250}>
       <TooltipTrigger asChild>
-        <div
+        <button
+          type="button"
           data-event-chip
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
           className={cn(
-            "absolute top-1 bottom-1 flex items-center gap-1 truncate rounded-sm border px-1.5 text-[11px] font-medium shadow-sm",
-            !palette && "border-blue-500/40 bg-blue-500/30 text-foreground",
+            "group absolute top-1 bottom-1 flex flex-col items-stretch overflow-hidden rounded-md border text-left text-[11px] leading-tight shadow-sm transition-all hover:z-10 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+            cancelled && "opacity-60",
           )}
           style={{
             left: `${leftPct}%`,
             width: `${widthPct}%`,
-            ...(palette
-              ? {
-                  backgroundColor: `${palette}40`,
-                  borderColor: `${palette}80`,
-                }
-              : null),
+            backgroundColor: `color-mix(in oklab, ${palette} 22%, var(--background))`,
+            borderColor: palette,
           }}
-          title={ev.title}
         >
-          <span className="truncate">{ev.title}</span>
-        </div>
+          <span
+            aria-hidden
+            className="absolute inset-y-0 left-0 w-1 rounded-l-md"
+            style={{ backgroundColor: palette }}
+          />
+          <div className="flex h-full flex-col justify-center gap-0.5 px-2 pl-3">
+            <span className="text-[10px] font-medium tabular-nums text-muted-foreground">
+              {formatHm(start)} – {formatHm(end)}
+            </span>
+            <span
+              className={cn(
+                "truncate font-semibold text-foreground",
+                cancelled && "line-through",
+              )}
+            >
+              {ev.title}
+            </span>
+          </div>
+        </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-xs">
         <div className="space-y-0.5">

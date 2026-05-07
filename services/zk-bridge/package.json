@@ -1,8 +1,24 @@
 {
-  "name": "@c-hr/zk-bridge",
-  "version": "0.1.0",
-  "private": true,
-  "description": "C-HR pull-side adapter for ZKTeco devices — runs in customer LAN, pushes to C-HR cloud",
+  "name": "@hanoilab/zk-bridge",
+  "version": "0.1.7",
+  "private": false,
+  "description": "Pull-side bridge for ZKTeco attendance devices — polls over LAN and pushes events to any HTTP backend",
+  "keywords": [
+    "zkteco",
+    "attendance",
+    "bridge",
+    "biometric",
+    "fingerprint",
+    "lan",
+    "iclock",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nguyendinhphongdx/c-hr.git",
+    "directory": "services/zk-bridge"
+  },
   "main": "dist/index.js",
   "bin": {
     "zk-bridge": "dist/cli/zk-bridge.js"

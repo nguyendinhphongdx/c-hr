@@ -4,11 +4,7 @@ import { Activity, Prisma } from '@prisma/client';
 import { encodeObjectRef } from '@/common/object-ref';
 
 import { ActivityRepository } from './activity.repository';
-import {
-  ActivityDto,
-  ListActivitiesOptions,
-  LogActivityInput,
-} from './activity.types';
+import { ActivityDto, ListActivitiesOptions, LogActivityInput } from './activity.types';
 
 /** Decorate a raw Activity row with the `objectRef` token, matching the
  *  CommentDto wire shape. Storage remains the 3 columns. */
@@ -55,12 +51,7 @@ export class ActivityService {
     objectId: string,
     opts?: ListActivitiesOptions,
   ): Promise<ActivityDto[]> {
-    const rows = await this.repo.findManyByObjectByOrg(
-      orgId,
-      objectType,
-      objectId,
-      opts,
-    );
+    const rows = await this.repo.findManyByObjectByOrg(orgId, objectType, objectId, opts);
     return rows.map(toActivityDto);
   }
 

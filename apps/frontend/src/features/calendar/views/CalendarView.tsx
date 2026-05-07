@@ -10,7 +10,7 @@ import { useAuth } from "@/features/auth";
 import { CalendarSidebar } from "../components/CalendarSidebar";
 import { CalendarToolbar } from "../components/CalendarToolbar";
 import { EventCreateDialog } from "../components/EventCreateDialog";
-import { EventDetailPanel } from "../components/EventDetailPanel";
+import { EventDetailDialog } from "../components/EventDetailDialog";
 import { useCalendarUrlState } from "../hooks/useCalendarUrlState";
 import { useTickingNow } from "../hooks/useTickingNow";
 import {
@@ -200,15 +200,15 @@ export function CalendarView() {
           {view === "month" && <CalendarViewMonth {...commonViewProps} />}
           {view === "agenda" && <CalendarViewRange {...commonViewProps} />}
 
-          {selectedId && detail.data && (
-            <EventDetailPanel
-              event={detail.data}
-              onEdit={() => setCreateOpen(true)}
-              onDelete={() => onDelete(detail.data!.id)}
-              onClose={() => setSelectedId(null)}
-            />
-          )}
         </div>
+
+        <EventDetailDialog
+          event={detail.data ?? null}
+          open={!!selectedId && !!detail.data}
+          onEdit={() => setCreateOpen(true)}
+          onDelete={() => detail.data && onDelete(detail.data.id)}
+          onClose={() => setSelectedId(null)}
+        />
 
         <EventCreateDialog
           open={createOpen}

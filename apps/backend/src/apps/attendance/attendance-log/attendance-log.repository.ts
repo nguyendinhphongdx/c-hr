@@ -7,12 +7,7 @@ import { PrismaService } from '@libs/database/prisma.service';
 export class AttendanceLogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findByRange(
-    organizationId: string,
-    employeeId: string,
-    from: Date,
-    to: Date,
-  ) {
+  findByRange(organizationId: string, employeeId: string, from: Date, to: Date) {
     return this.prisma.attendanceLog.findMany({
       where: {
         organizationId,

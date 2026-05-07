@@ -6,6 +6,18 @@ import { closeDb, openDb } from './db/index';
 import { runOnce, startScheduler, stopScheduler } from './poll/scheduler';
 import { createServer } from './server/server';
 
+// Prefix every console line with an ISO timestamp so log files / `pm2 logs`
+// / `docker compose logs` stay aligned with cycle timing. We monkey-patch
+// rather than refactoring every call site (~100s of console.log spread
+// across poll, scheduler, ZK client, server, ...).
+const _origLog = console.log.bind(console);
+const _origErr = console.error.bind(console);
+const _origWarn = console.warn.bind(console);
+const ts = (): string => `[${new Date().toISOString()}]`;
+console.log = (...args: unknown[]): void => _origLog(ts(), ...args);
+console.error = (...args: unknown[]): void => _origErr(ts(), ...args);
+console.warn = (...args: unknown[]): void => _origWarn(ts(), ...args);
+
 // Defensive top-level handlers. Bridge is a long-running daemon — a stray
 // promise rejection from the ZK protocol layer (e.g. a stale `waitForPacket`
 // timer firing after socket close) must NOT crash the process. We log it and

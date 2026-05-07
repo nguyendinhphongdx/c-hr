@@ -185,8 +185,9 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                       <UserPicker
                         value={field.value || null}
                         onChange={(u) => field.onChange(u?.id ?? "")}
-                        availableForLink
-                        includeLinkedTo={id ?? undefined}
+                        filter={(u) =>
+                          u.employeeId === null || u.employeeId === id
+                        }
                         fallback={
                           linkedUser
                             ? { name: linkedUser.name, email: linkedUser.email }

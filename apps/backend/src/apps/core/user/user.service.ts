@@ -1,4 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { PreferenceScope, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import { requireAppAdmin } from '@/common/auth/access';
@@ -6,12 +12,7 @@ import { RequestContextService } from '@/common/context';
 import { omit } from '@/common/utils';
 import { PrismaService } from '@libs/database/prisma.service';
 
-import {
-  ChangePasswordDto,
-  ListUsersDto,
-  UpdateCalendarSettingsDto,
-  UpdateUserDto,
-} from './dto';
+import { ChangePasswordDto, ListUsersDto, UpdateUserDto } from './dto';
 
 const SALT_ROUNDS = 10;
 
@@ -34,9 +35,9 @@ export class UserService {
 
   /**
    * Resolve everything the FE `me` query needs in one round trip:
-   * the user row, their Organization (null for sysowner), and the
-   * AppAdmin grants for users with role=user. Admin/sysowner inherit
-   * appadmin so their list is empty by design.
+   * the user row, their Organization (null for sysowner), the AppAdmin
+   * grants, and the user-scope preferences map (so calendar/etc. don't
+   * need a separate round trip on app load).
    */
   async findMeWithRelations(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -49,21 +50,24 @@ export class UserService {
       },
     });
     if (!user) throw new NotFoundException('User not found');
-    return omit(user, ['password']);
+
+    // Bulk preferences for this user — direct Prisma read (cheaper than
+    // going through PreferenceService for a pure read; defaults are
+    // applied client-side via the registry).
+    const prefRows = await this.prisma.preference.findMany({
+      where: { scope: PreferenceScope.USER, scopeId: userId },
+      select: { key: true, value: true },
+    });
+    const preferences = Object.fromEntries(
+      prefRows.map((r) => [r.key, (r.value as { value: unknown } | null)?.value]),
+    );
+    return { ...omit(user, ['password']), preferences };
   }
 
   async update(id: string, dto: UpdateUserDto) {
     const user = await this.prisma.user.update({
       where: { id },
       data: dto,
-    });
-    return omit(user, ['password']);
-  }
-
-  async updateCalendarSettings(id: string, dto: UpdateCalendarSettingsDto) {
-    const user = await this.prisma.user.update({
-      where: { id },
-      data: { calendarDefaultVisibility: dto.calendarDefaultVisibility },
     });
     return omit(user, ['password']);
   }
@@ -114,8 +118,8 @@ export class UserService {
     }
     await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
-    const limit = query.limit ?? 100;
-    const where: any = { organizationId: orgId };
+    const limit = query.limit ?? 200;
+    const where: Prisma.UserWhereInput = { organizationId: orgId };
 
     if (query.q) {
       const term = query.q.trim();
@@ -125,18 +129,6 @@ export class UserService {
           { name: { contains: term, mode: 'insensitive' } },
         ];
       }
-    }
-
-    if (query.availableForLink) {
-      // Either not linked at all, or linked to the employee being edited.
-      where.AND = [
-        {
-          OR: [
-            { employeeId: null },
-            ...(query.includeLinkedTo ? [{ employeeId: query.includeLinkedTo }] : []),
-          ],
-        },
-      ];
     }
 
     const rows = await this.prisma.user.findMany({

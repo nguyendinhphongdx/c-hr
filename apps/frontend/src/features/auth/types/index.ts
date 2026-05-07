@@ -26,13 +26,14 @@ export interface User {
   gender: Nullable<Gender>;
   phone: Nullable<string>;
   role: Role;
-  /** Default visibility applied to new events created by this user when the
-   *  create payload doesn't specify one. Set on /settings/calendar (F7.3). */
-  calendarDefaultVisibility?: CalendarDefaultVisibility;
   /** Null for sysowner. */
   organizationId: Nullable<ID>;
   /** Null until HR provisions the Employee record for this user. */
   employeeId: Nullable<ID>;
+  /** USER-scope preferences map (e.g. `calendar.visibility`) — embedded
+   *  on /me so the FE doesn't need a separate round-trip on app load.
+   *  Generic key/value: keys live in BE `PREF_REGISTRY`. */
+  preferences?: Record<string, unknown>;
   createdAt: ISODate;
   updatedAt: ISODate;
 }
@@ -109,10 +110,6 @@ export interface UpdateProfileInput {
   dob?: Nullable<string>;
   gender?: Nullable<Gender>;
   phone?: Nullable<string>;
-}
-
-export interface UpdateCalendarSettingsInput {
-  calendarDefaultVisibility: CalendarDefaultVisibility;
 }
 
 // ──────────────────────────────────────────────────────────────────────

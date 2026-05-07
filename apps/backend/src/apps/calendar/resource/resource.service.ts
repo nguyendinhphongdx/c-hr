@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { RequestContextService } from '@/common/context';
@@ -76,10 +72,7 @@ export class ResourceService {
       })
       .catch((err) => {
         // Unique violation (`organizationId, name`)
-        if (
-          err instanceof Prisma.PrismaClientKnownRequestError &&
-          err.code === 'P2002'
-        ) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
           throw new ConflictException('Tên tài nguyên đã tồn tại trong Org');
         }
         throw err;
@@ -119,10 +112,7 @@ export class ResourceService {
     }
 
     return this.repo.update(id, data).catch((err) => {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException('Tên tài nguyên đã tồn tại trong Org');
       }
       throw err;

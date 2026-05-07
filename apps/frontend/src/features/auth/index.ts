@@ -21,7 +21,6 @@ export {
   useResendOtp,
   useChangePassword,
   useUpdateProfile,
-  useUpdateCalendarSettings,
   authKeys,
 } from "./hooks/useAuth";
 export { authService, oauthStartUrl } from "./services/authService";
@@ -41,7 +40,6 @@ export type {
   RegisterInput,
   ResetPasswordInput,
   Role,
-  UpdateCalendarSettingsInput,
   UpdateProfileInput,
   User,
   VerifyEmailConfirmInput,

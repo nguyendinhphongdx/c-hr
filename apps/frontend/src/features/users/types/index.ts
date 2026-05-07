@@ -10,8 +10,5 @@ export interface OrgUser {
 
 export interface ListOrgUsersQuery {
   q?: string;
-  availableForLink?: boolean;
-  /** When editing an existing Employee, include the user currently linked to it. */
-  includeLinkedTo?: ID;
   limit?: number;
 }

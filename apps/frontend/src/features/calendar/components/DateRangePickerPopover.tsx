@@ -46,7 +46,7 @@ export function DateRangePickerPopover({
           <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0">
+      <PopoverContent align="start" className="w-68 p-2">
         <Calendar
           mode="single"
           locale={vi}
@@ -58,6 +58,7 @@ export function DateRangePickerPopover({
             onSelect(d);
             setOpen(false);
           }}
+          className="w-full p-0"
           modifiers={weekRange ? { activeWeek: weekRange } : undefined}
           modifiersClassNames={{ activeWeek: "rdp-active-week" }}
         />

@@ -16,12 +16,7 @@ import { Auditable } from '@/common/audit';
 import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
 
-import {
-  CreateRequestDto,
-  DecideRequestDto,
-  ListRequestsDto,
-  UpdateRequestDto,
-} from './dto';
+import { CreateRequestDto, DecideRequestDto, ListRequestsDto, UpdateRequestDto } from './dto';
 import { RequestService } from './request.service';
 
 @ApiTags('requests')
@@ -49,10 +44,7 @@ export class RequestController {
 
   @Patch(':id')
   @Auditable({ action: 'REQUEST_UPDATE', entity: 'Request' })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateRequestDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRequestDto) {
     return this.service.update(id, dto);
   }
 

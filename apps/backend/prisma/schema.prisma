@@ -24,6 +24,29 @@ enum AppCode {
   HRM
 }
 
+// Polymorphic key/value store for per-user / per-org / per-employee
+// settings (calendar defaults, notifications, theme...). Same shape as
+// Comment/Activity (scope+scopeId+key) — see core/preference module.
+enum PreferenceScope {
+  USER
+  ORG
+  EMPLOYEE
+}
+
+model Preference {
+  id        String          @id @default(uuid())
+  scope     PreferenceScope
+  scopeId   String          @map("scope_id")
+  key       String
+  value     Json
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt      @map("updated_at")
+
+  @@unique([scope, scopeId, key])
+  @@index([scope, scopeId])
+  @@map("preferences")
+}
+
 enum EmployeeStatus {
   ACTIVE
   ON_LEAVE
@@ -79,10 +102,6 @@ model User {
   gender         Gender?
   phone          String?
   role           Role      @default(user)
-  // Default visibility applied to new events created by this user when
-  // the create payload doesn't specify `visibility`. Per-user setting —
-  // surfaced via /settings/calendar (F7.3).
-  calendarDefaultVisibility EventVisibility @default(PUBLIC) @map("calendar_default_visibility")
   // Null for sysowner (no Org). Required for role=admin/user — enforced in app code.
   organizationId String?   @map("organization_id")
   // 1-1 link to Employee. Null until HR provisions the employee record.

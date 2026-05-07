@@ -1,11 +1,5 @@
 import { Transform } from 'class-transformer';
-import {
-  IsArray,
-  IsDateString,
-  IsIn,
-  IsOptional,
-  IsUUID,
-} from 'class-validator';
+import { IsArray, IsDateString, IsIn, IsOptional, IsUUID } from 'class-validator';
 
 const csvToArray = ({ value }: { value: unknown }): string[] | undefined => {
   if (Array.isArray(value)) return value as string[];

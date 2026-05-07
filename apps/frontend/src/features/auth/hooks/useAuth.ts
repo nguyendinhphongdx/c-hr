@@ -12,7 +12,6 @@ import type {
   OrgSignupInput,
   RegisterInput,
   ResetPasswordInput,
-  UpdateCalendarSettingsInput,
   UpdateProfileInput,
   VerifyEmailConfirmInput,
   VerifyOtpInput,
@@ -191,13 +190,3 @@ export function useUpdateProfile() {
   });
 }
 
-export function useUpdateCalendarSettings() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: UpdateCalendarSettingsInput) =>
-      authService.updateCalendarSettings(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: authKeys.me });
-    },
-  });
-}

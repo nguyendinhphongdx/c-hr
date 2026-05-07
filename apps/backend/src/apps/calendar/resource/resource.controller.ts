@@ -45,10 +45,7 @@ export class ResourceController {
 
   @Patch(':id')
   @Auditable({ action: 'RESOURCE_UPDATE', entity: 'Resource' })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateResourceDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateResourceDto) {
     return this.service.update(id, dto);
   }
 

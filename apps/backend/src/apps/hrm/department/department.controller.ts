@@ -44,10 +44,7 @@ export class DepartmentController {
 
   @Patch(':id')
   @Auditable({ action: 'DEPARTMENT_UPDATE', entity: 'Department' })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateDepartmentDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDepartmentDto) {
     return this.service.update(id, dto);
   }
 

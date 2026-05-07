@@ -34,12 +34,7 @@ export class ImportService {
     if (ext === 'csv' || mime.includes('csv') || mime === 'text/plain') {
       return this.parseCsv(file.buffer);
     }
-    if (
-      ext === 'xlsx' ||
-      ext === 'xls' ||
-      mime.includes('spreadsheet') ||
-      mime.includes('excel')
-    ) {
+    if (ext === 'xlsx' || ext === 'xls' || mime.includes('spreadsheet') || mime.includes('excel')) {
       return this.parseXlsx(file.buffer);
     }
     throw new BadRequestException(
@@ -83,8 +78,7 @@ export class ImportService {
       raw: false,
     });
 
-    const headers =
-      records[0] ? Object.keys(records[0]).map((h) => h.trim()) : [];
+    const headers = records[0] ? Object.keys(records[0]).map((h) => h.trim()) : [];
 
     const rows: ParsedRow[] = records.map((rec, i) => {
       const data: Record<string, string> = {};

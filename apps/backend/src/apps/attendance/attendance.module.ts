@@ -10,17 +10,7 @@ import { WorkScheduleModule } from './work-schedule/work-schedule.module';
  * queries. Per ADR 0005, cross-context imports must go through this barrel.
  */
 @Module({
-  imports: [
-    WorkScheduleModule,
-    AttendanceDeviceModule,
-    AttendanceLogModule,
-    TimesheetModule,
-  ],
-  exports: [
-    WorkScheduleModule,
-    AttendanceDeviceModule,
-    AttendanceLogModule,
-    TimesheetModule,
-  ],
+  imports: [WorkScheduleModule, AttendanceDeviceModule, AttendanceLogModule, TimesheetModule],
+  exports: [WorkScheduleModule, AttendanceDeviceModule, AttendanceLogModule, TimesheetModule],
 })
 export class AttendanceModule {}

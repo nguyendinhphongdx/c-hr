@@ -21,10 +21,12 @@ interface UserPickerProps {
   onChange: (user: OrgUser | null) => void;
   placeholder?: string;
   disabled?: boolean;
-  /** Restrict to users with no Employee link yet. Set false in edit mode. */
-  availableForLink?: boolean;
-  /** When editing an Employee, include the user currently linked to it. */
-  includeLinkedTo?: ID;
+  /**
+   * Optional client-side filter applied to the fetched list. BE returns
+   * every Org member; the caller decides what's pickable in this context
+   * (e.g. only unlinked users for Employee create, etc.).
+   */
+  filter?: (user: OrgUser) => boolean;
   /** Initial display when value is set but no fetch has happened yet. */
   fallback?: { name: string | null; email: string } | null;
 }
@@ -39,8 +41,7 @@ export function UserPicker({
   onChange,
   placeholder = "Pick a user…",
   disabled = false,
-  availableForLink = true,
-  includeLinkedTo,
+  filter,
   fallback,
 }: UserPickerProps) {
   const [open, setOpen] = useState(false);
@@ -48,10 +49,10 @@ export function UserPicker({
 
   const list = useOrgUsers({
     q: search.trim() || undefined,
-    availableForLink,
-    includeLinkedTo,
-    limit: 50,
+    limit: 200,
   });
+
+  const visibleUsers = filter ? list.data?.filter(filter) : list.data;
 
   // The selected user might still be off-screen if the search filters it
   // out. We reuse the same /users response — when the picker first mounts
@@ -112,16 +113,14 @@ export function UserPicker({
               Không tải được danh sách:{" "}
               {(list.error as Error).message ?? "lỗi không xác định"}
             </p>
-          ) : !list.data?.length ? (
+          ) : !visibleUsers?.length ? (
             <p className="p-3 text-xs text-muted-foreground">
               Không có người dùng nào.
             </p>
           ) : (
             <ul className="py-1">
-              {list.data.map((u) => {
+              {visibleUsers.map((u) => {
                 const active = u.id === value;
-                const linkedElsewhere =
-                  u.employeeId !== null && u.employeeId !== includeLinkedTo;
                 return (
                   <li key={u.id}>
                     <button
@@ -131,20 +130,14 @@ export function UserPicker({
                         setOpen(false);
                         setSearch("");
                       }}
-                      disabled={linkedElsewhere}
                       className={cn(
-                        "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent/50 disabled:cursor-not-allowed disabled:opacity-50",
+                        "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent/50",
                         active && "bg-accent/30",
                       )}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm">
-                          {u.name ?? "(no name)"}
-                          {linkedElsewhere && (
-                            <span className="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-                              already linked
-                            </span>
-                          )}
+                          {u.name ?? "(không tên)"}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
                           {u.email}

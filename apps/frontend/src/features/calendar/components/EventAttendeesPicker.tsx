@@ -70,7 +70,6 @@ export function EventAttendeesPicker({
           }
           placeholder="Chọn người chủ trì..."
           disabled={disabled}
-          availableForLink={false}
           fallback={
             organizer ? { name: organizer.name, email: organizer.email } : null
           }
@@ -85,7 +84,6 @@ export function EventAttendeesPicker({
           onChange={addInvitee}
           placeholder="Thêm người được mời..."
           disabled={disabled}
-          availableForLink={false}
         />
         {invitees.length > 0 && (
           <ul className="mt-1 flex flex-wrap gap-1.5">

@@ -17,12 +17,7 @@ import { RequestGroupService } from '../request-group/request-group.service';
 import { validateRequestData } from '../request.validator';
 import { getHandler } from '../side-effects';
 
-import {
-  CreateRequestDto,
-  DecideRequestDto,
-  ListRequestsDto,
-  UpdateRequestDto,
-} from './dto';
+import { CreateRequestDto, DecideRequestDto, ListRequestsDto, UpdateRequestDto } from './dto';
 import { RequestAcl } from './request.acl';
 import { RequestRepository } from './request.repository';
 
@@ -50,9 +45,7 @@ export class RequestService {
     if (!isHrm) {
       const eid = this.ctx.employeeId;
       if (!eid) {
-        throw new ForbiddenException(
-          'Account is not linked to an employee — cannot view requests',
-        );
+        throw new ForbiddenException('Account is not linked to an employee — cannot view requests');
       }
       const own = { requesterId: eid };
       const assigned = { approverId: eid };
@@ -81,9 +74,7 @@ export class RequestService {
     const orgId = this.ctx.requireOrg();
     const requesterId = this.ctx.employeeId;
     if (!requesterId) {
-      throw new ForbiddenException(
-        'Account is not linked to an employee — cannot create requests',
-      );
+      throw new ForbiddenException('Account is not linked to an employee — cannot create requests');
     }
 
     const group = await this.groups.findById(dto.groupId);
@@ -102,9 +93,7 @@ export class RequestService {
     // Approver must be in candidates list — same gate as F4.
     const { candidates } = await this.orgChart.getApproverCandidates(requesterId);
     if (!candidates.some((c) => c.employeeId === dto.approverId)) {
-      throw new BadRequestException(
-        'approverId is not in the suggested approver candidates',
-      );
+      throw new BadRequestException('approverId is not in the suggested approver candidates');
     }
 
     const created = await this.repo.create({
@@ -162,27 +151,18 @@ export class RequestService {
 
     if (dto.data !== undefined) {
       if (!isFieldsSchema(existing.group.fieldsSchema)) {
-        throw new BadRequestException(
-          `Group "${existing.group.code}" has invalid schema`,
-        );
+        throw new BadRequestException(`Group "${existing.group.code}" has invalid schema`);
       }
-      const validationError = validateRequestData(
-        existing.group.fieldsSchema,
-        dto.data,
-      );
+      const validationError = validateRequestData(existing.group.fieldsSchema, dto.data);
       if (validationError) throw new BadRequestException(validationError);
       patch.data = dto.data as Prisma.InputJsonValue;
       changedFields.push('data');
     }
 
     if (dto.approverId !== undefined && dto.approverId !== existing.approverId) {
-      const { candidates } = await this.orgChart.getApproverCandidates(
-        existing.requesterId,
-      );
+      const { candidates } = await this.orgChart.getApproverCandidates(existing.requesterId);
       if (!candidates.some((c) => c.employeeId === dto.approverId)) {
-        throw new BadRequestException(
-          'approverId is not in the suggested approver candidates',
-        );
+        throw new BadRequestException('approverId is not in the suggested approver candidates');
       }
       patch.approverId = dto.approverId;
       changedFields.push('approverId');

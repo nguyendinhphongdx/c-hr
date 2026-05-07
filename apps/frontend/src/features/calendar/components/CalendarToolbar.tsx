@@ -7,11 +7,18 @@ import {
   ListTodo,
   Plus,
   Settings,
+  SlidersHorizontal,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { ToolbarProps, View } from "react-big-calendar";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -22,6 +29,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
+import { CalendarSettingsDialog } from "./CalendarSettingsDialog";
 import { CalendarTabs } from "./CalendarTabs";
 import { DateRangePickerPopover } from "./DateRangePickerPopover";
 
@@ -56,6 +64,7 @@ export function CalendarToolbar<TEvent extends object>(
     feedTab,
     onFeedTabChange,
   } = props;
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-3">
@@ -137,16 +146,32 @@ export function CalendarToolbar<TEvent extends object>(
           Tạo mới
         </Button>
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-9 w-9"
-          aria-label="Cài đặt"
-          disabled
-          title="Sắp ra mắt"
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              aria-label="Tuỳ chọn"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              onSelect={() => setSettingsOpen(true)}
+              className="gap-2"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Cài đặt lịch
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <CalendarSettingsDialog
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+        />
       </div>
     </div>
   );

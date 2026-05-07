@@ -102,11 +102,7 @@ export class CommentService {
     return toCommentDto(created);
   }
 
-  async update(
-    id: string,
-    userId: string,
-    input: UpdateCommentInput,
-  ): Promise<CommentDto> {
+  async update(id: string, userId: string, input: UpdateCommentInput): Promise<CommentDto> {
     const existing = await this.repo.findById(id);
     if (!existing || existing.deletedAt) {
       throw new NotFoundException('Comment not found');
@@ -145,11 +141,7 @@ export class CommentService {
     return toCommentDto(updated);
   }
 
-  async softDelete(
-    id: string,
-    userId: string,
-    allowModeration = false,
-  ): Promise<void> {
+  async softDelete(id: string, userId: string, allowModeration = false): Promise<void> {
     const existing = await this.repo.findById(id);
     if (!existing || existing.deletedAt) {
       throw new NotFoundException('Comment not found');

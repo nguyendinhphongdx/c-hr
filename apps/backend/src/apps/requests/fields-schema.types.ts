@@ -8,14 +8,7 @@
  * See docs/decisions/0006-universal-request-engine.md.
  */
 
-export type FieldType =
-  | 'text'
-  | 'textarea'
-  | 'number'
-  | 'date'
-  | 'time'
-  | 'datetime'
-  | 'enum';
+export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'time' | 'datetime' | 'enum';
 
 export interface EnumOption {
   value: string;

@@ -242,7 +242,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
                         value={field.value ?? null}
                         onChange={(u) => field.onChange(u?.id ?? null)}
                         placeholder="Chọn user chưa có hồ sơ Employee…"
-                        availableForLink
+                        filter={(u) => u.employeeId === null}
                       />
                     </FormControl>
                     <FormDescription className="text-xs">

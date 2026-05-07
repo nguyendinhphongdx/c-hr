@@ -1,24 +1,25 @@
 "use client";
 
 import { vi } from "date-fns/locale";
-import {
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  Search,
-  Unplug,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Trash2, Unplug } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import type { View } from "react-big-calendar";
 
 import { GoogleIcon, MicrosoftIcon } from "@/components/icons";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/features/auth";
+import { EmployeePicker } from "@/features/employees";
 import { cn } from "@/lib/utils";
 
 import { useActiveWeekRange } from "../hooks/useActiveWeekRange";
+import {
+  useCalendarFollows,
+  useCreateCalendarFollow,
+  useDeleteCalendarFollow,
+} from "../hooks/useCalendarFollows";
+import { userColorFromId } from "../lib/user-color";
 
 interface CalendarSidebarProps {
   selectedDate: Date;
@@ -82,6 +83,11 @@ export function CalendarSidebar({
 
   const weekRange = useActiveWeekRange(mainView, selectedDate);
 
+  const followsQuery = useCalendarFollows();
+  const createFollow = useCreateCalendarFollow();
+  const deleteFollow = useDeleteCalendarFollow();
+  const follows = followsQuery.data ?? [];
+
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r bg-background">
       {/* Mini calendar */}
@@ -93,36 +99,33 @@ export function CalendarSidebar({
           weekStartsOn={1}
           selected={selectedDate}
           onSelect={(d) => d && onSelectDate(d)}
-          className="w-full"
+          className="w-full p-1"
           modifiers={weekRange ? { activeWeek: weekRange } : undefined}
           modifiersClassNames={{ activeWeek: "rdp-active-week" }}
         />
       </div>
 
-      {/* Search people */}
+      {/* Add follow */}
       <div className="border-y px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Tìm người"
-              className="h-8 pl-8 text-xs"
-              disabled
-              title="Sắp ra mắt"
-            />
-          </div>
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent disabled:opacity-50"
-            disabled
-            aria-label="Thêm theo dõi"
-            title="Sắp ra mắt"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        </div>
+        <EmployeePicker
+          value={null}
+          onChange={(id) => {
+            if (!id) return;
+            createFollow.mutate(
+              { followedId: id },
+              {
+                onSuccess: () => toast.success("Đã theo dõi"),
+                onError: (err) =>
+                  toast.error(
+                    (err as { response?: { data?: { error?: { message?: string } } } })
+                      ?.response?.data?.error?.message ?? "Không theo dõi được",
+                  ),
+              },
+            );
+          }}
+          placeholder="Thêm người để theo dõi…"
+        />
       </div>
-
       {/* Sections */}
       <div className="flex-1 overflow-y-auto">
         <Section label="Quản lý">
@@ -140,10 +143,62 @@ export function CalendarSidebar({
           )}
         </Section>
 
-        <Section label="Theo dõi" defaultOpen={false}>
-          <p className="text-xs text-muted-foreground">
-            Chưa theo dõi ai. Tính năng theo dõi đồng nghiệp đang được xây dựng.
-          </p>
+        <Section label={`Theo dõi (${follows.length})`} defaultOpen>
+          {follows.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Chưa theo dõi ai.
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {follows.map((f) => {
+                const userId = f.followed?.user?.id;
+                const name =
+                  f.followed?.user?.name ??
+                  f.followed?.user?.email ??
+                  f.followed?.code ??
+                  "(không tên)";
+                return (
+                  <div
+                    key={f.id}
+                    className="group flex items-center gap-2.5 py-1 text-sm"
+                  >
+                    <Checkbox
+                      checked={!!userId && visibleUserIds.includes(userId)}
+                      disabled={!userId}
+                      onCheckedChange={(v) =>
+                        userId && onToggleUser(userId, v === true)
+                      }
+                    />
+                    <span
+                      aria-hidden
+                      className="inline-block h-2.5 w-2.5 rounded-sm border"
+                      style={{
+                        backgroundColor: userId
+                          ? `${userColorFromId(userId)}40`
+                          : undefined,
+                        borderColor: userId
+                          ? userColorFromId(userId)
+                          : undefined,
+                      }}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{name}</span>
+                    <button
+                      type="button"
+                      className="opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                      aria-label="Bỏ theo dõi"
+                      onClick={() =>
+                        deleteFollow.mutate(f.id, {
+                          onSuccess: () => toast.success("Đã bỏ theo dõi"),
+                        })
+                      }
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Section>
 
         <Section

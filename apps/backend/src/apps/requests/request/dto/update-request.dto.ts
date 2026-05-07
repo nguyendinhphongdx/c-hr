@@ -1,11 +1,4 @@
-import {
-  IsObject,
-  IsOptional,
-  IsString,
-  IsUUID,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsObject, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class UpdateRequestDto {
   /// User-supplied subject line — same constraints as create.

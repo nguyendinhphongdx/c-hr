@@ -104,8 +104,7 @@ export class EmployeeImportService {
       const codeDup = row.employeeCode && (codesInFile.get(row.employeeCode)?.length ?? 0) > 1;
       if (codeDup) errors.push(`Mã '${row.employeeCode}' trùng trong file`);
 
-      const emailDup =
-        row.email && (emailsInFile.get(row.email.toLowerCase())?.length ?? 0) > 1;
+      const emailDup = row.email && (emailsInFile.get(row.email.toLowerCase())?.length ?? 0) > 1;
       if (emailDup) errors.push(`Email '${row.email}' trùng trong file`);
 
       if (row.email && existingEmailSet.has(row.email.toLowerCase())) {

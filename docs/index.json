@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-06T16:03:12.635Z",
+  "generatedAt": "2026-05-07T07:03:24.559Z",
   "repoRelativeRoot": ".",
-  "count": 48,
+  "count": 50,
   "entries": [
     {
       "id": "AGENTS",
@@ -1034,6 +1034,33 @@
       "summary": "```text cookie present? browser ───────────► middleware.ts (edge) │ NO → redirect /login?next=… │ YES → continue ▼ RSC route renders │ ▼ client hydrates │ TanStack Query ▼ GET /auth/me ──► apiClient (axios, withCredentials) │ 401? │ └─► /auth/refresh (deduped) │ ok? retry original │ fail? redirect /login ▼ user data → useAuth() hook ```"
     },
     {
+      "id": "docs:frontend:recipes:dialog",
+      "path": "docs/frontend/recipes/dialog.md",
+      "title": "Dialog layout",
+      "description": "Standard layout, sizing, ordering, and footer rules for shadcn Dialogs in C-HR. Apply to every Dialog so the UI feels uniform.",
+      "tags": [
+        "recipe",
+        "dialog",
+        "ui",
+        "forms"
+      ],
+      "scope": "frontend",
+      "category": "recipe",
+      "headings": [
+        "Anatomy (top-down)",
+        "Sizes",
+        "Form field rules",
+        "Language",
+        "Footer rules",
+        "Body rules",
+        "State patterns",
+        "2-column dialog (detail with sidebar)",
+        "Reference components",
+        "Verify"
+      ],
+      "summary": "Every Dialog in C-HR (Create, Edit, Detail) follows the same anatomy. Reference implementations: `EventCreateDialog`, `RequestCreateDialog`, `EmployeeCreateDialog`, `EditRequestDialog`, `EventDetailDialog`."
+    },
+    {
       "id": "docs:frontend:recipes:icons",
       "path": "docs/frontend/recipes/icons.md",
       "title": "Icons",
@@ -1057,6 +1084,35 @@
         "Other libraries (for reference)"
       ],
       "summary": "| Need | Use | | --- | --- | | UI icon (arrow, check, eye, settings, …) | `lucide-react` (already installed) | | Brand mark (GitHub, Google, X, Discord, Apple, …) | Add a file in [`src/components/icons/`](../../../apps/frontend/src/components/icons/) | | 15+ brand marks at once | Install `simple-icons` (see \"Scaling up\") |"
+    },
+    {
+      "id": "docs:frontend:recipes:mutations",
+      "path": "docs/frontend/recipes/mutations.md",
+      "title": "TanStack mutations",
+      "description": "Standard pattern for mutations + cache invalidation + toast feedback in C-HR.",
+      "tags": [
+        "recipe",
+        "tanstack-query",
+        "mutations",
+        "ui"
+      ],
+      "scope": "frontend",
+      "category": "recipe",
+      "headings": [
+        "1. Service (axios)",
+        "2. Hooks (TanStack)",
+        "3. UI consumer",
+        "Conventions",
+        "Hook naming",
+        "`mutateAsync` vs `mutate`",
+        "Cache key invalidation",
+        "Optimistic updates",
+        "Error message extraction",
+        "Toast contract",
+        "Don'ts",
+        "Reference"
+      ],
+      "summary": "Server writes go through a `useMutation` hook in the feature's `hooks/` folder. UI components only call `mutateAsync(...)` and toast."
     },
     {
       "id": "docs:frontend:recipes:theming",

@@ -16,12 +16,7 @@ import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
 import { RequestUser } from '@/common/types';
 
-import {
-  ChangePasswordDto,
-  ListUsersDto,
-  UpdateCalendarSettingsDto,
-  UpdateUserDto,
-} from './dto';
+import { ChangePasswordDto, ListUsersDto, UpdateUserDto } from './dto';
 import { UserService } from './user.service';
 
 @ApiTags('users')
@@ -54,14 +49,6 @@ export class UserController {
   @Patch('me/password')
   changeMyPassword(@CurrentUser() user: RequestUser, @Body() dto: ChangePasswordDto) {
     return this.userService.changePassword(user.id, dto);
-  }
-
-  @Patch('me/calendar-settings')
-  updateMyCalendarSettings(
-    @CurrentUser() user: RequestUser,
-    @Body() dto: UpdateCalendarSettingsDto,
-  ) {
-    return this.userService.updateCalendarSettings(user.id, dto);
   }
 
   @Get(':id')

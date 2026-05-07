@@ -75,7 +75,11 @@ function extractId(result: unknown): string | null {
   const obj = result as Record<string, unknown>;
   if (typeof obj.id === 'string') return obj.id;
   const data = obj.data;
-  if (data && typeof data === 'object' && typeof (data as Record<string, unknown>).id === 'string') {
+  if (
+    data &&
+    typeof data === 'object' &&
+    typeof (data as Record<string, unknown>).id === 'string'
+  ) {
     return (data as { id: string }).id;
   }
   return null;

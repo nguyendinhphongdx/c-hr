@@ -21,9 +21,7 @@ const HANDLERS: Record<string, RequestSideEffectHandler> = {
   // is a future feature — log emitted by service is the only audit trail).
 };
 
-export function getHandler(
-  groupCode: string,
-): RequestSideEffectHandler | null {
+export function getHandler(groupCode: string): RequestSideEffectHandler | null {
   return HANDLERS[groupCode] ?? null;
 }
 
@@ -31,10 +29,7 @@ export function getHandler(
 // Handlers
 // ──────────────────────────────────────────────────────────────────────
 
-async function applyCheckinCorrection(
-  req: Request,
-  tx: Prisma.TransactionClient,
-): Promise<void> {
+async function applyCheckinCorrection(req: Request, tx: Prisma.TransactionClient): Promise<void> {
   const data = req.data as {
     date: string;
     requestedCheckInAt: string;
@@ -65,10 +60,7 @@ async function applyCheckinCorrection(
   );
 }
 
-async function applyCheckoutCorrection(
-  req: Request,
-  tx: Prisma.TransactionClient,
-): Promise<void> {
+async function applyCheckoutCorrection(req: Request, tx: Prisma.TransactionClient): Promise<void> {
   const data = req.data as {
     date: string;
     requestedCheckOutAt: string;
@@ -104,9 +96,7 @@ async function applyCheckoutCorrection(
 // ──────────────────────────────────────────────────────────────────────
 
 function startOfDayUtc(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
 /**

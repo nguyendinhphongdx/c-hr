@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,8 +25,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import { useCreateEvent, useUpdateEvent } from "../hooks/useEvents";
+import { useResources } from "../hooks/useResources";
 import type {
   CreateEventAttendeeInput,
   EventDetail,
@@ -327,7 +334,18 @@ export function EventCreateDialog({
                 <FormItem>
                   <FormLabel>Địa điểm</FormLabel>
                   <FormControl>
-                    <Input placeholder="Phòng họp A / Online" {...field} />
+                    <LocationInputWithRoomPicker
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      pickedResourceIds={resourceIds}
+                      onPickRoom={(room) => {
+                        field.onChange(room.name);
+                        if (!resourceIds.includes(room.id)) {
+                          setResourceIds([...resourceIds, room.id]);
+                        }
+                      }}
+                      disabled={submitting}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -434,5 +452,111 @@ export function EventCreateDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface RoomOption {
+  id: string;
+  name: string;
+  location: string | null;
+}
+
+interface LocationInputWithRoomPickerProps {
+  value: string;
+  onChange: (v: string) => void;
+  pickedResourceIds: string[];
+  onPickRoom: (room: RoomOption) => void;
+  disabled?: boolean;
+}
+
+/** Free-text location input with a trailing icon that pops a list of
+ *  rooms. Picking a room fills the text + adds it to the resource
+ *  booking list (so the slot is reserved, not just labelled). */
+function LocationInputWithRoomPicker({
+  value,
+  onChange,
+  pickedResourceIds,
+  onPickRoom,
+  disabled,
+}: LocationInputWithRoomPickerProps) {
+  const [open, setOpen] = useState(false);
+  const rooms = useResources({ kind: "ROOM", activeOnly: true });
+
+  return (
+    <div className="relative">
+      <Input
+        placeholder="Phòng họp A / Online"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="pr-10"
+      />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            disabled={disabled}
+            aria-label="Chọn phòng họp"
+            className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+          >
+            <Building2 className="h-4 w-4" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="w-72 p-0"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <div className="border-b px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Phòng họp
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            {rooms.isLoading ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground">
+                Đang tải…
+              </p>
+            ) : !rooms.data?.length ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground">
+                Chưa có phòng họp nào.
+              </p>
+            ) : (
+              rooms.data.map((r) => {
+                const picked = pickedResourceIds.includes(r.id);
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => {
+                      onPickRoom({
+                        id: r.id,
+                        name: r.name,
+                        location: r.location,
+                      });
+                      setOpen(false);
+                    }}
+                    className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent/50"
+                  >
+                    <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{r.name}</div>
+                      {r.location && (
+                        <div className="truncate text-[11px] text-muted-foreground">
+                          {r.location}
+                        </div>
+                      )}
+                    </div>
+                    {picked && (
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        đã chọn
+                      </span>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }

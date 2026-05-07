@@ -28,9 +28,7 @@ export class RequestAcl extends BaseAcl<RequestAclSubject, RequestAclView> {
 
   canEdit(): boolean {
     // Requester may amend the payload only while still PENDING.
-    return (
-      this.obj.requesterId === this.ctx.employeeId && this.obj.status === 'PENDING'
-    );
+    return this.obj.requesterId === this.ctx.employeeId && this.obj.status === 'PENDING';
   }
 
   canDelete(): boolean {
@@ -39,15 +37,11 @@ export class RequestAcl extends BaseAcl<RequestAclSubject, RequestAclView> {
   }
 
   canApprove(): boolean {
-    return (
-      this.obj.approverId === this.ctx.employeeId && this.obj.status === 'PENDING'
-    );
+    return this.obj.approverId === this.ctx.employeeId && this.obj.status === 'PENDING';
   }
 
   canCancel(): boolean {
-    return (
-      this.obj.requesterId === this.ctx.employeeId && this.obj.status === 'PENDING'
-    );
+    return this.obj.requesterId === this.ctx.employeeId && this.obj.status === 'PENDING';
   }
 
   async getAcl(): Promise<RequestAclView> {
