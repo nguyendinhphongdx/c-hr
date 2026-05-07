@@ -289,7 +289,14 @@ export class ZkClient {
     }
     const frame = buildPacket(cmd, this.sessionId, this.replyId, data);
     const wait = this.waitForPacket(timeoutMs);
-    this.socket.write(frame);
+    try {
+      this.socket.write(frame);
+    } catch (err) {
+      // Write failed before reply arrives → orphan waiter. Defuse so its
+      // 60s timer doesn't crash us as an unhandled rejection later.
+      this.cancelOrphanWaiter(wait);
+      throw err;
+    }
     const packet = await wait;
     return stripTcpMagic(packet);
   }
@@ -457,10 +464,12 @@ export class ZkClient {
   ): Promise<{ data: Buffer; err: string | null }> {
     let lastErr: string | null = null;
     for (let attempt = 0; attempt <= this.chunkRetries; attempt++) {
+      let wait1: Promise<Buffer> | null = null;
       try {
-        const wait1 = this.waitForPacket(this.chunkTimeoutMs);
+        wait1 = this.waitForPacket(this.chunkTimeoutMs);
         this.sendChunkRequest(start, size);
         const pkt1 = await wait1;
+        wait1 = null;
         const zk1 = stripTcpMagic(pkt1);
         const cmd1 = zk1.readUInt16LE(0);
 
@@ -484,9 +493,28 @@ export class ZkClient {
         this.log(
           `[zk] chunk ${index + 1} attempt ${attempt + 1}/${this.chunkRetries + 1} failed: ${lastErr}`,
         );
+        // If sendChunkRequest threw before we could await wait1, the waiter's
+        // 60s timer is still armed. Cancel it + swallow the late rejection
+        // so it doesn't surface as an unhandledRejection (process crash).
+        this.cancelOrphanWaiter(wait1);
       }
     }
     return { data: Buffer.alloc(0), err: lastErr ?? 'unknown chunk error' };
+  }
+
+  /**
+   * Defuse a waitForPacket promise that we created but never awaited (e.g.
+   * because sendChunkRequest threw synchronously). Clears the timer so it
+   * cannot reject 60s later, and attaches a noop catch so any in-flight
+   * rejection is treated as handled.
+   */
+  private cancelOrphanWaiter(p: Promise<Buffer> | null): void {
+    if (!p) return;
+    if (this.waiter) {
+      clearTimeout(this.waiter.timer);
+      this.waiter = null;
+    }
+    p.catch(() => {});
   }
 }
 

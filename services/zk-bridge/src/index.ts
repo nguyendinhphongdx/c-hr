@@ -6,6 +6,20 @@ import { closeDb, openDb } from './db/index';
 import { runOnce, startScheduler, stopScheduler } from './poll/scheduler';
 import { createServer } from './server/server';
 
+// Defensive top-level handlers. Bridge is a long-running daemon — a stray
+// promise rejection from the ZK protocol layer (e.g. a stale `waitForPacket`
+// timer firing after socket close) must NOT crash the process. We log it and
+// keep the scheduler running; the next cycle will reconnect and try again.
+process.on('unhandledRejection', (reason) => {
+  console.error(
+    '[zk-bridge] unhandled rejection — kept process alive:',
+    reason instanceof Error ? reason.stack ?? reason.message : reason,
+  );
+});
+process.on('uncaughtException', (err) => {
+  console.error('[zk-bridge] uncaught exception — kept process alive:', err.stack ?? err.message);
+});
+
 async function main(): Promise<void> {
   const boot = loadBootEnv();
   console.log(`[zk-bridge] data dir: ${boot.dataDir}`);
