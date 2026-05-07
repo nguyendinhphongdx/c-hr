@@ -22,13 +22,8 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-import type { ID } from "@/lib/types";
-
+import { CalendarTabs } from "./CalendarTabs";
 import { DateRangePickerPopover } from "./DateRangePickerPopover";
-import {
-  RoomModeSwitcher,
-  type CalendarMode,
-} from "./RoomModeSwitcher";
 
 const VIEW_LABELS: Partial<Record<View, string>> = {
   day: "Ngày",
@@ -42,10 +37,6 @@ interface CalendarToolbarProps<TEvent extends object>
   onCreate: () => void;
   feedTab: "events" | "tasks";
   onFeedTabChange: (v: "events" | "tasks") => void;
-  calendarMode: CalendarMode;
-  onCalendarModeChange: (next: CalendarMode) => void;
-  roomResourceId: ID | null;
-  onRoomResourceIdChange: (next: ID | null) => void;
 }
 
 /**
@@ -64,21 +55,12 @@ export function CalendarToolbar<TEvent extends object>(
     onCreate,
     feedTab,
     onFeedTabChange,
-    calendarMode,
-    onCalendarModeChange,
-    roomResourceId,
-    onRoomResourceIdChange,
   } = props;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-3">
       <div className="flex flex-wrap items-center gap-2">
-        <RoomModeSwitcher
-          mode={calendarMode}
-          onModeChange={onCalendarModeChange}
-          roomId={roomResourceId}
-          onRoomIdChange={onRoomResourceIdChange}
-        />
+        <CalendarTabs />
         <span className="mx-1 hidden h-6 w-px bg-border md:inline-block" />
         <Button
           variant="outline"

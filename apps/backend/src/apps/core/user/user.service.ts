@@ -6,7 +6,12 @@ import { RequestContextService } from '@/common/context';
 import { omit } from '@/common/utils';
 import { PrismaService } from '@libs/database/prisma.service';
 
-import { ChangePasswordDto, ListUsersDto, UpdateUserDto } from './dto';
+import {
+  ChangePasswordDto,
+  ListUsersDto,
+  UpdateCalendarSettingsDto,
+  UpdateUserDto,
+} from './dto';
 
 const SALT_ROUNDS = 10;
 
@@ -51,6 +56,14 @@ export class UserService {
     const user = await this.prisma.user.update({
       where: { id },
       data: dto,
+    });
+    return omit(user, ['password']);
+  }
+
+  async updateCalendarSettings(id: string, dto: UpdateCalendarSettingsDto) {
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: { calendarDefaultVisibility: dto.calendarDefaultVisibility },
     });
     return omit(user, ['password']);
   }

@@ -1,4 +1,4 @@
-import { Gender } from '@prisma/client';
+import { EventVisibility, Gender } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import { IsDateString, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 
@@ -40,4 +40,9 @@ export class UpdateUserDto {
   @IsString()
   @MaxLength(32)
   phone?: string | null;
+
+  /** Default visibility applied when creating an event without one. */
+  @IsOptional()
+  @IsEnum(EventVisibility)
+  calendarDefaultVisibility?: EventVisibility;
 }

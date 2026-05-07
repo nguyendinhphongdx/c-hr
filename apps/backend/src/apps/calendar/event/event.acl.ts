@@ -64,6 +64,8 @@ export class EventAcl extends BaseAcl<EventAclSubject, EventAclView> {
     if (this.isAttendee()) return true;
     if (this.obj.isPrivate) return false;
     if (this.obj.visibility === 'PRIVATE') return false;
+    // BUSY_ONLY (F7.3): non-attendees only see slot busy, never detail.
+    if (this.obj.visibility === 'BUSY_ONLY') return false;
     if (this.obj.visibility === 'PUBLIC') {
       return this.ctx.organizationId === this.obj.organizationId;
     }

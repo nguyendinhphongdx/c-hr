@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarClock,
   Calendar,
+  DoorOpen,
   Home,
   Inbox,
   Network,
@@ -61,7 +62,10 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: "Lịch",
-    items: [{ href: "/bookings", label: "Lịch", icon: CalendarClock }],
+    items: [
+      { href: "/bookings", label: "Lịch", icon: CalendarClock },
+      { href: "/rooms", label: "Phòng họp", icon: Building2 },
+    ],
   },
 ];
 
@@ -117,6 +121,20 @@ export function Sidebar({ collapsed }: SidebarProps) {
                 }
               />
             ))}
+            {section.label === "Lịch" && isHrmAdmin && (
+              <NavLink
+                item={{
+                  href: "/resources",
+                  label: "Tài nguyên",
+                  icon: DoorOpen,
+                }}
+                collapsed={collapsed}
+                active={
+                  pathname === "/resources" ||
+                  pathname.startsWith("/resources/")
+                }
+              />
+            )}
           </div>
         ))}
       </nav>

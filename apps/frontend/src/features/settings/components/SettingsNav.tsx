@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, User } from "lucide-react";
+import { CalendarDays, KeyRound, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -15,6 +15,7 @@ interface NavItem {
 const ITEMS: NavItem[] = [
   { href: "/settings/profile", label: "Hồ sơ", icon: User },
   { href: "/settings/security", label: "Bảo mật", icon: KeyRound },
+  { href: "/settings/calendar", label: "Lịch & Chia sẻ", icon: CalendarDays },
 ];
 
 export function SettingsNav() {

@@ -24,6 +24,11 @@ const VISIBILITY_OPTIONS: { value: EventVisibility; label: string; help: string 
     help: "Mọi người trong tổ chức xem được chi tiết",
   },
   {
+    value: "BUSY_ONLY",
+    label: "Bận/rảnh",
+    help: "Người theo dõi chỉ thấy slot bận, không thấy nội dung",
+  },
+  {
     value: "PRIVATE",
     label: "Riêng tư",
     help: "Chỉ chủ sở hữu và người được mời thấy chi tiết",

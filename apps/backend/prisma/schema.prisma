@@ -79,6 +79,10 @@ model User {
   gender         Gender?
   phone          String?
   role           Role      @default(user)
+  // Default visibility applied to new events created by this user when
+  // the create payload doesn't specify `visibility`. Per-user setting —
+  // surfaced via /settings/calendar (F7.3).
+  calendarDefaultVisibility EventVisibility @default(PUBLIC) @map("calendar_default_visibility")
   // Null for sysowner (no Org). Required for role=admin/user — enforced in app code.
   organizationId String?   @map("organization_id")
   // 1-1 link to Employee. Null until HR provisions the employee record.
@@ -196,6 +200,9 @@ model Employee {
 
   requestsAsRequester Request[] @relation("RequestRequester")
   requestsAsApprover  Request[] @relation("RequestApprover")
+
+  calendarFollowers CalendarFollow[] @relation("CalendarFollowFollower")
+  calendarFollowing CalendarFollow[] @relation("CalendarFollowFollowed")
 
   @@unique([organizationId, code])
   @@index([organizationId, departmentId])
@@ -445,6 +452,8 @@ enum EventVisibility {
   DEFAULT
   PUBLIC
   PRIVATE
+  /// Người theo dõi chỉ thấy slot bận, không thấy nội dung.
+  BUSY_ONLY
 }
 
 enum AttendeeResponse {
@@ -585,6 +594,29 @@ model Resource {
   @@unique([organizationId, name])
   @@index([organizationId, kind, isActive])
   @@map("resources")
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// F7.3 — Calendar follow (per-user "who I'm watching")
+//
+// Asymmetric subscription between Employees: follower opts-in to see
+// followed's events on their calendar. ExternalCalendarLink (Google /
+// Microsoft sync) is deferred to F7.4 — see plans/features.md.
+// ──────────────────────────────────────────────────────────────────────
+
+model CalendarFollow {
+  id         String   @id @default(uuid())
+  followerId String   @map("follower_id")
+  followedId String   @map("followed_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  follower Employee @relation("CalendarFollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  followed Employee @relation("CalendarFollowFollowed", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followedId])
+  @@index([followerId])
+  @@index([followedId])
+  @@map("calendar_follows")
 }
 
 // N:M join — 1 event ↔ N resources. Conflict guard: same resource +

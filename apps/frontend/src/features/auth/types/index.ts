@@ -7,6 +7,11 @@ import type { ID, ISODate, Nullable } from "@/lib/types";
 export type Role = "sysowner" | "admin" | "user";
 export type AppCode = "HRM";
 export type Gender = "MALE" | "FEMALE" | "OTHER";
+export type CalendarDefaultVisibility =
+  | "DEFAULT"
+  | "PUBLIC"
+  | "PRIVATE"
+  | "BUSY_ONLY";
 
 export interface User {
   id: ID;
@@ -21,6 +26,9 @@ export interface User {
   gender: Nullable<Gender>;
   phone: Nullable<string>;
   role: Role;
+  /** Default visibility applied to new events created by this user when the
+   *  create payload doesn't specify one. Set on /settings/calendar (F7.3). */
+  calendarDefaultVisibility?: CalendarDefaultVisibility;
   /** Null for sysowner. */
   organizationId: Nullable<ID>;
   /** Null until HR provisions the Employee record for this user. */
@@ -101,6 +109,10 @@ export interface UpdateProfileInput {
   dob?: Nullable<string>;
   gender?: Nullable<Gender>;
   phone?: Nullable<string>;
+}
+
+export interface UpdateCalendarSettingsInput {
+  calendarDefaultVisibility: CalendarDefaultVisibility;
 }
 
 // ──────────────────────────────────────────────────────────────────────

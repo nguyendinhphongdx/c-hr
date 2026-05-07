@@ -3,7 +3,6 @@
 import {
   Building2,
   CalendarClock,
-  DoorOpen,
   Radio,
   Shield,
 } from "lucide-react";
@@ -28,7 +27,6 @@ const ITEMS: NavItem[] = [
   { href: "/admin/app-admins", label: "Quản trị app", icon: Shield, adminOnly: true },
   { href: "/admin/work-schedule", label: "Ca làm chuẩn", icon: CalendarClock, hrmOnly: true },
   { href: "/admin/attendance-devices", label: "Máy chấm công", icon: Radio, hrmOnly: true },
-  { href: "/admin/resources", label: "Tài nguyên", icon: DoorOpen, hrmOnly: true },
 ];
 
 export function AdminNav() {

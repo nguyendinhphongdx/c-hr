@@ -10,6 +10,7 @@ import type {
   OrgSignupResponse,
   RegisterInput,
   ResetPasswordInput,
+  UpdateCalendarSettingsInput,
   UpdateProfileInput,
   User,
   VerifyEmailConfirmInput,
@@ -93,6 +94,13 @@ export const authService = {
 
   updateProfile: async (data: UpdateProfileInput): Promise<User> => {
     const res = await apiClient.patch<User>("/users/me", data);
+    return res.data;
+  },
+
+  updateCalendarSettings: async (
+    data: UpdateCalendarSettingsInput,
+  ): Promise<User> => {
+    const res = await apiClient.patch<User>("/users/me/calendar-settings", data);
     return res.data;
   },
 };

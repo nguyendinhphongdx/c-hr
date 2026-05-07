@@ -21,6 +21,7 @@ export {
   useResendOtp,
   useChangePassword,
   useUpdateProfile,
+  useUpdateCalendarSettings,
   authKeys,
 } from "./hooks/useAuth";
 export { authService, oauthStartUrl } from "./services/authService";
@@ -28,6 +29,7 @@ export type {
   AppAdminGrant,
   AppCode,
   AuthResponse,
+  CalendarDefaultVisibility,
   ChangePasswordInput,
   ForgotPasswordInput,
   LoginInput,
@@ -39,6 +41,7 @@ export type {
   RegisterInput,
   ResetPasswordInput,
   Role,
+  UpdateCalendarSettingsInput,
   UpdateProfileInput,
   User,
   VerifyEmailConfirmInput,

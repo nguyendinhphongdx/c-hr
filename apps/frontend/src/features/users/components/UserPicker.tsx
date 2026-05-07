@@ -105,10 +105,17 @@ export function UserPicker({
         <div className="max-h-64 overflow-y-auto">
           {list.isLoading ? (
             <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+              <Loader2 className="h-3 w-3 animate-spin" /> Đang tải…
             </div>
+          ) : list.error ? (
+            <p className="p-3 text-xs text-destructive">
+              Không tải được danh sách:{" "}
+              {(list.error as Error).message ?? "lỗi không xác định"}
+            </p>
           ) : !list.data?.length ? (
-            <p className="p-3 text-xs text-muted-foreground">No users match.</p>
+            <p className="p-3 text-xs text-muted-foreground">
+              Không có người dùng nào.
+            </p>
           ) : (
             <ul className="py-1">
               {list.data.map((u) => {

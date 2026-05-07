@@ -7,6 +7,7 @@ import {
   Loader2,
   Pencil,
   Plus,
+  ShieldOff,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -14,6 +15,13 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { useIsAppAdmin } from "@/features/auth";
 
 import { ResourceCreateDialog } from "../components/ResourceCreateDialog";
@@ -41,7 +49,28 @@ const KIND_LABEL: Record<ResourceKind, string> = {
  * actually free a resource).
  */
 export function ResourcesAdminView() {
-  const canManage = useIsAppAdmin("HRM");
+  const isHrmAdmin = useIsAppAdmin("HRM");
+
+  if (!isHrmAdmin) {
+    return (
+      <Empty className="border">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <ShieldOff />
+          </EmptyMedia>
+          <EmptyTitle>Không có quyền truy cập</EmptyTitle>
+          <EmptyDescription>
+            Chỉ HRM admin xem được tài nguyên.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
+
+  return <ResourcesAdminViewInner />;
+}
+
+function ResourcesAdminViewInner() {
   const list = useResources({});
   const remove = useDeleteResource();
 
@@ -61,14 +90,6 @@ export function ResourcesAdminView() {
       });
     }
   };
-
-  if (!canManage) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Chỉ HRM admin mới quản lý được tài nguyên.
-      </p>
-    );
-  }
 
   return (
     <div className="space-y-6">

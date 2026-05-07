@@ -1,7 +1,7 @@
 import type { ID, ISODate, Nullable } from "@/lib/types";
 
 export type EventStatus = "CONFIRMED" | "TENTATIVE" | "CANCELLED";
-export type EventVisibility = "DEFAULT" | "PUBLIC" | "PRIVATE";
+export type EventVisibility = "DEFAULT" | "PUBLIC" | "PRIVATE" | "BUSY_ONLY";
 export type EventProvider = "LOCAL" | "GOOGLE" | "MICROSOFT";
 export type AttendeeResponse =
   | "PENDING"

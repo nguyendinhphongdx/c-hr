@@ -3,10 +3,10 @@ import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
   title: "Tài nguyên",
-  path: "/admin/resources",
+  path: "/resources",
   noIndex: true,
 });
 
-export default function ResourcesAdminPage() {
+export default function ResourcesPage() {
   return <ResourcesAdminView />;
 }

@@ -74,6 +74,8 @@ interface EventCreateDialogProps {
   /** ISO datetime to pre-fill startAt — e.g. clicked slot. */
   initialStart?: string;
   initialEnd?: string;
+  /** Pre-select these resources (e.g. dragging on a room row in /rooms). */
+  initialResourceIds?: string[];
   /** Edit mode — if set, dialog updates instead of creates. */
   editing?: EventDetail | null;
 }
@@ -114,6 +116,7 @@ export function EventCreateDialog({
   onClose,
   initialStart,
   initialEnd,
+  initialResourceIds,
   editing,
 }: EventCreateDialogProps) {
   const create = useCreateEvent();
@@ -202,11 +205,11 @@ export function EventCreateDialog({
       setInvitees([]);
       setVisibility("DEFAULT");
       setIsPrivate(false);
-      setResourceIds([]);
+      setResourceIds(initialResourceIds ?? []);
       setAttachments([]);
       setAdvancedOpen(false);
     }
-  }, [open, editing, initialStart, initialEnd, form]);
+  }, [open, editing, initialStart, initialEnd, initialResourceIds, form]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const onSubmit = async (values: FormValues) => {

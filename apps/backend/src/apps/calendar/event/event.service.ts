@@ -129,6 +129,17 @@ export class EventService {
       endAt,
     );
 
+    // F7.3 — when the DTO doesn't specify visibility, fall back to the
+    // caller's per-user default (settings → /settings/calendar).
+    let visibility = dto.visibility;
+    if (visibility === undefined) {
+      const caller = await this.prisma.user.findUnique({
+        where: { id: callerId },
+        select: { calendarDefaultVisibility: true },
+      });
+      visibility = caller?.calendarDefaultVisibility ?? 'DEFAULT';
+    }
+
     const created = await this.repo.create({
       organizationId: orgId,
       ownerId,
@@ -140,7 +151,7 @@ export class EventService {
       isAllDay: dto.isAllDay ?? false,
       startAt,
       endAt,
-      visibility: dto.visibility ?? 'DEFAULT',
+      visibility,
       isPrivate: dto.isPrivate ?? false,
       color: dto.color ?? null,
       attendees: attendeeRows.length
