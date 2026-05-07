@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -53,7 +54,12 @@ export class EventService {
     const isHrm = this.ctx.isAppAdmin('HRM', orgId);
     const where: Prisma.EventWhereInput = {};
 
-    if (query.scope === 'all' && isHrm) {
+    if (query.resourceId) {
+      // "Phòng họp" tab: every event booked on a single resource. Same-
+      // org gate is enforced by `findRangeByOrg`; viewers who can't see
+      // detail still see the busy slot via shapeRow().
+      where.resources = { some: { resourceId: query.resourceId } };
+    } else if (query.scope === 'all' && isHrm) {
       // org-wide — leave where empty
     } else if (query.scope === 'invited') {
       where.attendees = { some: { userId } };
@@ -116,6 +122,12 @@ export class EventService {
     }
 
     const attendeeRows = await this.resolveAttendees(orgId, dto.attendees);
+    const resourceRows = await this.resolveResources(
+      orgId,
+      dto.resourceIds,
+      startAt,
+      endAt,
+    );
 
     const created = await this.repo.create({
       organizationId: orgId,
@@ -133,6 +145,9 @@ export class EventService {
       color: dto.color ?? null,
       attendees: attendeeRows.length
         ? { create: attendeeRows }
+        : undefined,
+      resources: resourceRows.length
+        ? { create: resourceRows }
         : undefined,
     });
 
@@ -176,7 +191,37 @@ export class EventService {
       throw new BadRequestException('"endAt" must be after "startAt"');
     }
 
-    const updated = await this.repo.update(id, data);
+    // Resource update — replace strategy. Validate + conflict-check
+    // against the (possibly-new) time range first; if it passes, run
+    // delete+create+update inside one tx so nothing partial sticks.
+    let resourceCreate:
+      | Prisma.EventResourceUncheckedCreateWithoutEventInput[]
+      | undefined;
+    if (dto.resourceIds !== undefined) {
+      resourceCreate = await this.resolveResources(
+        orgId,
+        dto.resourceIds,
+        newStart,
+        newEnd,
+        id,
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (dto.resourceIds !== undefined) {
+        await tx.eventResource.deleteMany({ where: { eventId: id } });
+        if (resourceCreate && resourceCreate.length > 0) {
+          await tx.eventResource.createMany({
+            data: resourceCreate.map((r) => ({ ...r, eventId: id })),
+          });
+        }
+      }
+      await tx.event.update({ where: { id }, data });
+    });
+
+    // Re-fetch through the repo so the response shape (FULL_INCLUDE)
+    // matches the rest of the API.
+    const updated = (await this.repo.findByIdByOrg(orgId, id))!;
 
     this.activities.log({
       organizationId: orgId,
@@ -365,5 +410,78 @@ export class EventService {
     }
     // Strip the placeholder eventId — Prisma nested create will fill it.
     return rows.map(({ eventId: _ignored, ...rest }) => rest as Prisma.EventAttendeeUncheckedCreateInput);
+  }
+
+  /**
+   * Validate resource ids: belong to org, active, not soft-deleted, AND
+   * not already booked in [startAt, endAt). Hard-blocks on overlap —
+   * 1 phòng / xe không thể bị đặt song song. Returns nested-create rows
+   * with a name snapshot for audit.
+   */
+  private async resolveResources(
+    orgId: string,
+    ids: string[] | undefined,
+    startAt: Date,
+    endAt: Date,
+    excludeEventId?: string,
+  ): Promise<Prisma.EventResourceUncheckedCreateWithoutEventInput[]> {
+    if (!ids || ids.length === 0) return [];
+
+    const resources = await this.prisma.resource.findMany({
+      where: {
+        id: { in: ids },
+        organizationId: orgId,
+        deletedAt: null,
+        isActive: true,
+      },
+      select: { id: true, name: true },
+    });
+
+    if (resources.length !== ids.length) {
+      const found = new Set(resources.map((r) => r.id));
+      const missing = ids.filter((id) => !found.has(id));
+      throw new BadRequestException(
+        `Resource(s) không tồn tại / đã ngừng dùng: ${missing.join(', ')}`,
+      );
+    }
+
+    // Find any other event that overlaps [startAt, endAt) and shares
+    // a resource with us. Exclude the event being edited (excludeEventId).
+    const conflicts = await this.prisma.event.findMany({
+      where: {
+        organizationId: orgId,
+        deletedAt: null,
+        status: { not: 'CANCELLED' },
+        startAt: { lt: endAt },
+        endAt: { gt: startAt },
+        ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
+        resources: { some: { resourceId: { in: ids } } },
+      },
+      select: {
+        id: true,
+        title: true,
+        startAt: true,
+        endAt: true,
+        resources: {
+          where: { resourceId: { in: ids } },
+          select: { resourceId: true },
+        },
+      },
+      take: 5,
+    });
+
+    if (conflicts.length > 0) {
+      const c = conflicts[0];
+      const dupId = c.resources[0]?.resourceId;
+      const dupName = resources.find((r) => r.id === dupId)?.name ?? 'Tài nguyên';
+      throw new ConflictException(
+        `${dupName} đã được đặt trong khoảng thời gian này (sự kiện "${c.title}").`,
+      );
+    }
+
+    return resources.map((r) => ({
+      resourceId: r.id,
+      resourceNameSnapshot: r.name,
+    }));
   }
 }

@@ -42,4 +42,11 @@ export class ListEventsDto {
   @IsArray()
   @IsUUID('4', { each: true })
   userIds?: string[];
+
+  /** Filter by resource id — used by the "Phòng họp" tab to render a
+   *  single room's calendar. Mutually exclusive with userIds in the
+   *  service (resource scope wins). */
+  @IsOptional()
+  @IsUUID('4')
+  resourceId?: string;
 }

@@ -11,10 +11,17 @@ const ATTENDEE_INCLUDE = {
   user: USER_SUMMARY,
 } as const;
 
+const RESOURCE_INCLUDE = {
+  resource: {
+    select: { id: true, kind: true, name: true, color: true, location: true },
+  },
+} as const;
+
 const FULL_INCLUDE = {
   owner: USER_SUMMARY,
   createdBy: USER_SUMMARY,
   attendees: { include: ATTENDEE_INCLUDE },
+  resources: { include: RESOURCE_INCLUDE },
 } as const;
 
 @Injectable()

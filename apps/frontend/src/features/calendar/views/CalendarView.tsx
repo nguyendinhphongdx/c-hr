@@ -50,6 +50,14 @@ export function CalendarView() {
     user ? [user.id] : [],
   );
 
+  // "Lịch" (personal events) ↔ "Phòng họp" (single room context).
+  // When `calendarMode === 'rooms'`, the events query is keyed on the
+  // selected room id and filters out personal events.
+  const [calendarMode, setCalendarMode] = useState<"calendar" | "rooms">(
+    "calendar",
+  );
+  const [roomResourceId, setRoomResourceId] = useState<string | null>(null);
+
   // Bumped to force RBC's `scrollToTime` prop reference change. Recomputes
   // on view switch (auto via [view] dep) + on "Hôm nay" — other nav
   // (prev/next, mini-cal click) preserves the user's manual scroll.
@@ -67,10 +75,15 @@ export function CalendarView() {
     [view, date],
   );
 
+  const isRoomsMode = calendarMode === "rooms";
   const { data: rows, isLoading, isFetching } = useEvents({
     from: from.toISOString(),
     to: to.toISOString(),
-    userIds: visibleUserIds.length > 0 ? visibleUserIds : undefined,
+    // Rooms mode: filter all events booked on the selected room (overrides
+    // user scoping in BE). When no room picked, query short-circuits.
+    resourceId: isRoomsMode ? roomResourceId ?? undefined : undefined,
+    userIds:
+      !isRoomsMode && visibleUserIds.length > 0 ? visibleUserIds : undefined,
   });
 
   const detail = useEvent(selectedId);
@@ -161,9 +174,18 @@ export function CalendarView() {
         onCreate={onCreateClick}
         feedTab={feedTab}
         onFeedTabChange={setFeedTab}
+        calendarMode={calendarMode}
+        onCalendarModeChange={setCalendarMode}
+        roomResourceId={roomResourceId}
+        onRoomResourceIdChange={setRoomResourceId}
       />
     ),
-    [feedTab, onCreateClick],
+    [
+      feedTab,
+      onCreateClick,
+      calendarMode,
+      roomResourceId,
+    ],
   );
 
   // ── View dispatch ────────────────────────────────────────────────

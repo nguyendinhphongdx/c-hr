@@ -1,10 +1,13 @@
 import { EventStatus, EventVisibility } from '@prisma/client';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsDateString,
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 
@@ -60,4 +63,13 @@ export class UpdateEventDto {
   @IsString()
   @MaxLength(7)
   color?: string | null;
+
+  /** Replace the full resource booking set. Pass `[]` to clear all
+   *  current bookings; omit (undefined) to leave them unchanged.
+   *  Conflict check + ownership validation runs in the service. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID(undefined, { each: true })
+  resourceIds?: string[];
 }

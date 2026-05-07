@@ -159,6 +159,8 @@ model Department {
   manager   Employee?    @relation("DepartmentManager", fields: [managerId], references: [id])
   employees Employee[]   @relation("EmployeeDepartment")
 
+  managedResources Resource[] @relation("ResourceDepartment")
+
   @@unique([organizationId, code])
   @@index([organizationId, parentId])
   @@index([organizationId, managerId])
@@ -495,6 +497,7 @@ model Event {
   createdBy User @relation("EventCreatedBy", fields: [createdById], references: [id])
 
   attendees EventAttendee[]
+  resources EventResource[]
 
   @@index([organizationId, startAt, endAt])
   @@index([ownerId, startAt])
@@ -530,4 +533,70 @@ model EventAttendee {
   @@unique([eventId, email])
   @@index([userId, response])
   @@map("event_attendees")
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// F7.2 — Resources & booking
+//
+// Resource = phòng họp / thiết bị / xe etc. Booking = N:M join từ Event
+// sang Resource (1 event book được nhiều resource cùng lúc, vd phòng +
+// máy chiếu). Conflict trên cùng resource là HARD (block) — khác với
+// conflict trên người (soft warn) vì 1 phòng không thể chiếm song song.
+// ──────────────────────────────────────────────────────────────────────
+
+enum ResourceKind {
+  ROOM
+  EQUIPMENT
+  VEHICLE
+}
+
+model Resource {
+  id             String @id @default(uuid())
+  organizationId String @map("organization_id")
+
+  kind        ResourceKind
+  name        String       @db.VarChar(127)
+  description String?      @db.Text
+  /// Floor/building cho ROOM, garage cho VEHICLE...
+  location    String?      @db.VarChar(255)
+  /// Chỉ ý nghĩa với ROOM.
+  capacity    Int?
+  color       String?      @db.VarChar(7)
+  isActive    Boolean      @default(true) @map("is_active")
+
+  /// Phòng ban quản lý (cấp/thu hồi quyền book). Optional.
+  managingDepartmentId String? @map("managing_department_id")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  managingDepartment Department?     @relation("ResourceDepartment", fields: [managingDepartmentId], references: [id], onDelete: SetNull)
+  bookings           EventResource[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, kind, isActive])
+  @@map("resources")
+}
+
+// N:M join — 1 event ↔ N resources. Conflict guard: same resource +
+// overlapping [start, end) at the service layer (event.service.ts).
+model EventResource {
+  id         String @id @default(uuid())
+  eventId    String @map("event_id")
+  resourceId String @map("resource_id")
+
+  /// Snapshot lúc book — phục vụ audit khi resource đổi tên / soft-delete.
+  resourceNameSnapshot String? @map("resource_name_snapshot") @db.VarChar(127)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  /// RESTRICT: không xoá resource khi còn booking — caller phải cancel
+  /// booking trước (tránh dangling refs).
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+
+  @@unique([eventId, resourceId])
+  @@index([resourceId])
+  @@map("event_resources")
 }

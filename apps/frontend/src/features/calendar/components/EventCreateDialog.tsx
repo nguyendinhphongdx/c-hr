@@ -39,6 +39,7 @@ import {
 import { EventAttachmentsField } from "./EventAttachmentsField";
 import { EventDateTimeRow } from "./EventDateTimeRow";
 import { EventVisibilityField } from "./EventVisibilityField";
+import { ResourcePicker } from "./ResourcePicker";
 import { RichTextDescriptionField } from "./RichTextDescriptionField";
 
 const schema = z
@@ -131,6 +132,7 @@ export function EventCreateDialog({
   const [invitees, setInvitees] = useState<AttendeeDraft[]>([]);
   const [visibility, setVisibility] = useState<EventVisibility>("DEFAULT");
   const [isPrivate, setIsPrivate] = useState(false);
+  const [resourceIds, setResourceIds] = useState<string[]>([]);
   // UI-only — attachments aren't persisted yet (backend storage wire-in
   // is a follow-up). State lets the user see what they've selected and
   // remove items before submit.
@@ -180,6 +182,9 @@ export function EventCreateDialog({
             email: a.user!.email,
           })),
       );
+      setResourceIds(
+        (editing.resources ?? []).map((r) => r.resourceId),
+      );
       setAttachments([]);
       setAdvancedOpen(false);
     } else {
@@ -197,6 +202,7 @@ export function EventCreateDialog({
       setInvitees([]);
       setVisibility("DEFAULT");
       setIsPrivate(false);
+      setResourceIds([]);
       setAttachments([]);
       setAdvancedOpen(false);
     }
@@ -239,15 +245,20 @@ export function EventCreateDialog({
 
     try {
       if (editing) {
-        // Update doesn't accept attendees array — those flow via dedicated
-        // /attendees endpoints. We only patch the editable scalar fields.
+        // Attendee list edits flow via dedicated /attendees endpoints —
+        // we only patch the editable scalar fields here. Resource set
+        // IS replaceable on update (`UpdateEventDto.resourceIds`).
         await update.mutateAsync({
           id: editing.id,
-          data: basePayload,
+          data: { ...basePayload, resourceIds },
         });
         toast.success("Đã cập nhật sự kiện");
       } else {
-        await create.mutateAsync({ ...basePayload, attendees });
+        await create.mutateAsync({
+          ...basePayload,
+          attendees,
+          resourceIds: resourceIds.length > 0 ? resourceIds : undefined,
+        });
         toast.success("Đã tạo sự kiện");
       }
       onClose();
@@ -347,6 +358,12 @@ export function EventCreateDialog({
                 disabled={submitting}
               />
             )}
+
+            <ResourcePicker
+              value={resourceIds}
+              onChange={setResourceIds}
+              disabled={submitting}
+            />
 
             <div className="grid gap-2">
               <FormLabel>Mô tả</FormLabel>

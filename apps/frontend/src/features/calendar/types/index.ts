@@ -55,6 +55,69 @@ export interface EventRow {
   owner: UserSummary;
   createdBy: UserSummary;
   attendees: EventAttendeeRow[];
+  resources?: EventResourceRow[];
+}
+
+// ── F7.2 Resources ─────────────────────────────────────────────────
+
+export type ResourceKind = "ROOM" | "EQUIPMENT" | "VEHICLE";
+
+export interface ResourceRow {
+  id: ID;
+  organizationId: ID;
+  kind: ResourceKind;
+  name: string;
+  description: Nullable<string>;
+  location: Nullable<string>;
+  capacity: Nullable<number>;
+  color: Nullable<string>;
+  isActive: boolean;
+  managingDepartmentId: Nullable<ID>;
+  managingDepartment: Nullable<{ id: ID; name: string }>;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface CreateResourceInput {
+  kind: ResourceKind;
+  name: string;
+  description?: string;
+  location?: string;
+  capacity?: number;
+  color?: string;
+  isActive?: boolean;
+  managingDepartmentId?: ID;
+}
+
+export interface UpdateResourceInput {
+  kind?: ResourceKind;
+  name?: string;
+  description?: Nullable<string>;
+  location?: Nullable<string>;
+  capacity?: Nullable<number>;
+  color?: Nullable<string>;
+  isActive?: boolean;
+  managingDepartmentId?: Nullable<ID>;
+}
+
+export interface ListResourcesQuery {
+  kind?: ResourceKind;
+  q?: string;
+  activeOnly?: boolean;
+}
+
+export interface EventResourceRow {
+  id: ID;
+  eventId: ID;
+  resourceId: ID;
+  resourceNameSnapshot: Nullable<string>;
+  resource: {
+    id: ID;
+    kind: ResourceKind;
+    name: string;
+    color: Nullable<string>;
+    location: Nullable<string>;
+  };
 }
 
 export interface EventDetail extends EventRow {
@@ -74,6 +137,8 @@ export interface ListEventsQuery {
   to: string;   // ISO
   scope?: EventScope;
   userIds?: string[];
+  /** Show only events booked on this resource (Phòng họp tab). */
+  resourceId?: ID;
 }
 
 export interface CreateEventAttendeeInput {
@@ -96,6 +161,7 @@ export interface CreateEventInput {
   color?: string;
   ownerId?: ID;
   attendees?: CreateEventAttendeeInput[];
+  resourceIds?: ID[];
 }
 
 export interface UpdateEventInput {
@@ -110,6 +176,8 @@ export interface UpdateEventInput {
   visibility?: EventVisibility;
   isPrivate?: boolean;
   color?: Nullable<string>;
+  /** Replace the full resource booking set; pass `[]` to clear. */
+  resourceIds?: ID[];
 }
 
 /**

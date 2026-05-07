@@ -18,6 +18,7 @@ export const eventService = {
     };
     if (query.scope) params.scope = query.scope;
     if (query.userIds?.length) params.userIds = query.userIds.join(",");
+    if (query.resourceId) params.resourceId = query.resourceId;
     const res = await apiClient.get<EventRow[]>("/events", { params });
     return res.data;
   },

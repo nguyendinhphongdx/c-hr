@@ -90,4 +90,13 @@ export class CreateEventDto {
   @Type(() => CreateEventAttendeeDto)
   @ValidateIf((_, v) => Array.isArray(v))
   attendees?: CreateEventAttendeeDto[];
+
+  /** Resource ids to book together with this event (rooms, equipment,
+   *  vehicles). Service hard-blocks on overlap with another booking
+   *  for the same resource. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID(undefined, { each: true })
+  resourceIds?: string[];
 }
