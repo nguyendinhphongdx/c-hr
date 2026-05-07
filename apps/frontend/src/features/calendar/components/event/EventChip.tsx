@@ -23,12 +23,18 @@ export function EventChip({ event }: EventProps<CalEvent>) {
   const status = event.resource.status;
   const cancelled = status === "CANCELLED";
   const tentative = status === "TENTATIVE";
-  // Color priority: explicit event color → first resource color →
-  // deterministic per-owner color (so follower overlays are tellable
-  // apart by hue).
+  // Color priority:
+  // 1. paletteColor — precomputed at the data-transform stage from
+  //    follow.color (stored on BE) + SELF_COLOR for self lane. Stable,
+  //    distinct, no hash collisions on adjacent userIds.
+  // 2. explicit per-event color
+  // 3. first resource color
+  // 4. fallback hash from ownerId (incidental attendees not in your
+  //    follow list, etc.).
   const palette =
-    event.resource.color ??
-    event.resource.resources?.[0]?.resource.color ??
+    event.paletteColor ||
+    event.resource.color ||
+    event.resource.resources?.[0]?.resource.color ||
     userColorFromId(event.resource.ownerId);
   const location = event.resource.location;
   const startStr = format(event.start, "HH:mm");

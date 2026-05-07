@@ -7,7 +7,6 @@ import {
 import { PreferenceScope, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
-import { requireAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
 import { omit } from '@/common/utils';
 import { PrismaService } from '@libs/database/prisma.service';
@@ -106,17 +105,18 @@ export class UserService {
   }
 
   /**
-   * Tenant-scoped list used by the Employee form's user picker. Returns
-   * only fields the picker needs (id/email/name/employeeId), with optional
-   * search by name/email and an "available for link" filter. HRM appadmin
-   * only — exposes Org members' emails.
+   * Tenant-scoped list used by org-wide pickers (Employee form, Event
+   * attendee picker, Calendar follow picker, …). Returns only id / email /
+   * name / employeeId — same-org members need to address each other to
+   * invite, follow, or assign work, so this stays open to any logged-in
+   * user in the Org. Tenant scope is the security boundary; sensitive
+   * fields (password hash, audit, etc.) never appear in the projection.
    */
   async listForOrg(query: ListUsersDto) {
     const orgId = this.ctx.organizationId;
     if (!orgId) {
       throw new ForbiddenException('Current user is not attached to an organization');
     }
-    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const limit = query.limit ?? 200;
     const where: Prisma.UserWhereInput = { organizationId: orgId };

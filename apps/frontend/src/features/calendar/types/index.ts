@@ -56,6 +56,13 @@ export interface EventRow {
   createdBy: UserSummary;
   attendees: EventAttendeeRow[];
   resources?: EventResourceRow[];
+  /**
+   * BE echoes back which queried `userIds` this row matches (owner or
+   * attendee). Set only when the request used `userIds`. FE uses it to
+   * render one chip per (event × attributed user) on the main calendar.
+   * Not present in detail/create/update responses.
+   */
+  _userIds?: ID[];
 }
 
 // ── F7.2 Resources ─────────────────────────────────────────────────
@@ -212,9 +219,26 @@ export interface UpdateEventInput {
  * Shape react-big-calendar consumes for each rendered event. We keep the
  * full `EventRow` on `resource` so chip + detail components can read
  * status/color/etc. without losing data after RBC's internal mapping.
+ *
+ * Multi-attribution: when several toggled users are involved in the same
+ * event, the FE expands one row into N `CalEvent`s — one per attributed
+ * user, each colored by that user. `id` is suffixed for React key
+ * uniqueness; `eventId` is the real Event id used for detail / mutate.
  */
 export interface CalEvent {
+  /** Unique React key — `${eventId}` or `${eventId}::${userId}`. */
   id: ID;
+  /** Real Event id — use this for detail fetch / open dialog. */
+  eventId: ID;
+  /** UserId this chip is attributed to (owner or attendee). */
+  userId?: ID;
+  /**
+   * Final color for this chip — precomputed at the data-transform stage
+   * so the chip stays a pure renderer. Pulls from follow.color (followed
+   * lane), SELF_COLOR (self lane), or falls back to event.color / hashed
+   * userColorFromId.
+   */
+  paletteColor?: string;
   title: string;
   start: Date;
   end: Date;

@@ -9,6 +9,7 @@ import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { CreateFollowDto } from './dto';
+import { pickNextFollowColor } from './follow-palette';
 import { FollowRepository } from './follow.repository';
 
 @Injectable()
@@ -56,9 +57,19 @@ export class FollowService {
     const existing = await this.repo.findByPair(followerId, dto.followedId);
     if (existing) return existing;
 
+    // Auto-assign a stable palette color, skipping ones already used by
+    // this follower's other follows so adjacent rows in the sidebar /
+    // overlapping chips on the timeline stay visually distinct.
+    const others = await this.repo.findFollowingByFollower(followerId);
+    const color = pickNextFollowColor(
+      others.map((f) => f.color),
+      others.length,
+    );
+
     return this.repo.create({
       followerId,
       followedId: dto.followedId,
+      color,
     });
   }
 

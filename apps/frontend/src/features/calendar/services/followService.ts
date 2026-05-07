@@ -17,6 +17,8 @@ export interface CalendarFollowRow {
   id: ID;
   followerId: ID;
   followedId: ID;
+  /** Hex color picked from the BE palette at follow-create. */
+  color: string;
   createdAt: ISODate;
   followed?: FollowEmployeeSummary;
   follower?: FollowEmployeeSummary;

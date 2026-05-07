@@ -11,6 +11,7 @@ import { EventCreateDialog } from "../components/event/EventCreateDialog";
 import { EventDetailDialog } from "../components/event/EventDetailDialog";
 import { CalendarSidebar } from "../components/shell/CalendarSidebar";
 import { CalendarToolbar } from "../components/shell/CalendarToolbar";
+import { useCalendarFollows } from "../hooks/useCalendarFollows";
 import { useCalendarUrlState } from "../hooks/useCalendarUrlState";
 import { useTickingNow } from "../hooks/useTickingNow";
 import {
@@ -19,6 +20,7 @@ import {
   useEvents,
 } from "../hooks/useEvents";
 import { expandRangeForView } from "../lib/range";
+import { SELF_COLOR } from "../lib/user-color";
 import type { CalEvent } from "../types";
 
 import { CalendarViewDay } from "./CalendarViewDay";
@@ -46,9 +48,26 @@ export function CalendarView() {
     end: string;
   } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [visibleUserIds, setVisibleUserIds] = useState<string[]>(
-    user ? [user.id] : [],
+
+  // Visibility is *derived* from `follows`: anyone you follow is visible
+  // by default, plus self. F5 → re-fetch follows → same derived set, no
+  // localStorage needed. `hiddenUserIds` is a session-only "untick" layer
+  // for temporarily hiding without unfollowing — resets on reload.
+  const followsQuery = useCalendarFollows();
+  const followedUserIds = useMemo(
+    () =>
+      (followsQuery.data ?? [])
+        .map((f) => f.followed?.user?.id)
+        .filter((u): u is string => !!u),
+    [followsQuery.data],
   );
+  const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
+  const visibleUserIds = useMemo(() => {
+    if (!user) return [];
+    const all = [user.id, ...followedUserIds];
+    const hidden = new Set(hiddenUserIds);
+    return all.filter((u) => !hidden.has(u));
+  }, [user, followedUserIds, hiddenUserIds]);
 
   // Bumped to force RBC's `scrollToTime` prop reference change. Recomputes
   // on view switch (auto via [view] dep) + on "Hôm nay" — other nav
@@ -76,18 +95,57 @@ export function CalendarView() {
   const detail = useEvent(selectedId);
   const deleteEvent = useDeleteEvent();
 
-  const events: CalEvent[] = useMemo(
-    () =>
-      (rows ?? []).map((r) => ({
-        id: r.id,
-        title: r.title,
-        start: new Date(r.startAt),
-        end: new Date(r.endAt),
-        resource: r,
-        allDay: r.isAllDay,
-      })),
-    [rows],
-  );
+  // userId → color, sourced from BE-stored follow.color (stable, distinct
+  // per follow). Self gets a fixed brand color outside the follow palette.
+  const colorByUserId = useMemo(() => {
+    const map = new Map<string, string>();
+    if (user) map.set(user.id, SELF_COLOR);
+    for (const f of followsQuery.data ?? []) {
+      const uid = f.followed?.user?.id;
+      if (uid) map.set(uid, f.color);
+    }
+    return map;
+  }, [user, followsQuery.data]);
+
+  const events: CalEvent[] = useMemo(() => {
+    const list = rows ?? [];
+    const out: CalEvent[] = [];
+    for (const r of list) {
+      const start = new Date(r.startAt);
+      const end = new Date(r.endAt);
+      // BE echoes _userIds when the request used userIds. Expand into one
+      // chip per attributed user so each toggled user gets their own
+      // color/lane. If empty, render once with no attribution.
+      const attribution = r._userIds ?? [];
+      if (attribution.length === 0) {
+        out.push({
+          id: r.id,
+          eventId: r.id,
+          paletteColor: colorByUserId.get(r.ownerId),
+          title: r.title,
+          start,
+          end,
+          resource: r,
+          allDay: r.isAllDay,
+        });
+        continue;
+      }
+      for (const uid of attribution) {
+        out.push({
+          id: `${r.id}::${uid}`,
+          eventId: r.id,
+          userId: uid,
+          paletteColor: colorByUserId.get(uid),
+          title: r.title,
+          start,
+          end,
+          resource: r,
+          allDay: r.isAllDay,
+        });
+      }
+    }
+    return out;
+  }, [rows, colorByUserId]);
 
   // ── Handlers ─────────────────────────────────────────────────────
   const onSelectSlot = useCallback((slot: { start: Date; end: Date }) => {
@@ -100,7 +158,9 @@ export function CalendarView() {
   }, []);
 
   const onSelectEvent = useCallback((ev: CalEvent) => {
-    setSelectedId(ev.id);
+    // Use eventId — multi-attribution chips carry a suffixed `id` for React
+    // keys but share the same underlying Event for detail / mutate.
+    setSelectedId(ev.eventId);
     setCreateSlot(null);
   }, []);
 
@@ -146,11 +206,13 @@ export function CalendarView() {
     [setDate],
   );
 
+  // Toggle = add/remove from session-hidden set. Visible state derives
+  // from follows, so untick adds to hidden, retick removes from hidden.
   const toggleUser = useCallback((userId: string, on: boolean) => {
-    setVisibleUserIds((prev) =>
+    setHiddenUserIds((prev) =>
       on
-        ? Array.from(new Set([...prev, userId]))
-        : prev.filter((u) => u !== userId),
+        ? prev.filter((u) => u !== userId)
+        : Array.from(new Set([...prev, userId])),
     );
   }, []);
 

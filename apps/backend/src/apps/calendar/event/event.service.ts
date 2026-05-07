@@ -82,12 +82,13 @@ export class EventService {
     } else if (query.scope === 'invited') {
       where.attendees = { some: { userId } };
     } else if (Array.isArray(query.userIds) && query.userIds.length > 0) {
-      // Explicit user list (e.g. colleague calendar). Only HRM admin can
-      // peek at any user; others can only request themselves.
-      const allowed = isHrm ? query.userIds : query.userIds.filter((u) => u === userId);
+      // Explicit user list (e.g. colleague calendar via "Theo dõi"). Same-
+      // org access — privacy gating happens via releaseForViewer/shapeRow,
+      // which strips title/description/attendees when canViewDetail=false.
+      // No need to pre-filter userIds; the ACL is the boundary.
       where.OR = [
-        { ownerId: { in: allowed } },
-        { attendees: { some: { userId: { in: allowed } } } },
+        { ownerId: { in: query.userIds } },
+        { attendees: { some: { userId: { in: query.userIds } } } },
       ];
     } else {
       // Default "mine" — owned OR invited.
@@ -95,7 +96,16 @@ export class EventService {
     }
 
     const rows = await this.repo.findRangeByOrg(orgId, from, to, where);
-    return rows.map((row) => this.releaseForViewer(row));
+
+    // Attribution scope — when caller queried by userIds (e.g. "Theo dõi"
+    // sidebar with self + colleagues toggled on), echo back which of those
+    // ids each row matches. FE uses it to render one chip per (event ×
+    // attributed user). Privacy: this only reflects ids the caller already
+    // requested, so no leak of other attendees.
+    const hasUserIds = Array.isArray(query.userIds) && query.userIds.length > 0;
+    const attributionScope = hasUserIds ? new Set(query.userIds) : null;
+
+    return rows.map((row) => this.releaseForViewer(row, attributionScope));
   }
 
   async findOne(id: string) {
@@ -452,7 +462,7 @@ export class EventService {
     if (detail) return row;
     return {
       ...row,
-      title: 'Busy',
+      title: 'Bận',
       description: null,
       location: null,
       conferenceUrl: null,
@@ -462,7 +472,22 @@ export class EventService {
 
   private releaseForViewer(
     row: NonNullable<Awaited<ReturnType<EventRepository['findByIdByOrg']>>>,
+    attributionScope: Set<string> | null = null,
   ) {
+    // Compute attribution from the ORIGINAL row (before shapeRow strips
+    // attendees for non-detail viewers).
+    let attributionUserIds: string[] | undefined;
+    if (attributionScope) {
+      const involved: string[] = [];
+      if (attributionScope.has(row.ownerId)) involved.push(row.ownerId);
+      for (const a of row.attendees) {
+        if (a.userId && attributionScope.has(a.userId) && !involved.includes(a.userId)) {
+          involved.push(a.userId);
+        }
+      }
+      attributionUserIds = involved;
+    }
+
     const acl = new EventAcl({
       id: row.id,
       organizationId: row.organizationId,
@@ -472,7 +497,10 @@ export class EventService {
       visibility: row.visibility,
       _attendeeUserIds: row.attendees.map((a) => a.userId).filter((u): u is string => !!u),
     });
-    return this.shapeRow(row, acl.canViewDetail());
+    const shaped = this.shapeRow(row, acl.canViewDetail());
+    return attributionUserIds !== undefined
+      ? { ...shaped, _userIds: attributionUserIds }
+      : shaped;
   }
 
   private async resolveAttendees(

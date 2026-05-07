@@ -627,6 +627,11 @@ model CalendarFollow {
   id         String   @id @default(uuid())
   followerId String   @map("follower_id")
   followedId String   @map("followed_id")
+  /// Hex color picked from a fixed palette at follow-create. Stable across
+  /// sessions so a colleague always shows the same color in your sidebar +
+  /// events. Service rotates through the palette to avoid repeats per
+  /// follower.
+  color      String   @default("#3b82f6") @db.VarChar(9)
   createdAt  DateTime @default(now()) @map("created_at")
 
   follower Employee @relation("CalendarFollowFollower", fields: [followerId], references: [id], onDelete: Cascade)

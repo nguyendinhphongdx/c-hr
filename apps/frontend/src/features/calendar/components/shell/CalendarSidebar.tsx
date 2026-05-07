@@ -11,7 +11,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/features/auth";
 import { EmployeePicker } from "@/features/employees";
-import { cn } from "@/lib/utils";
 
 import { useActiveWeekRange } from "../../hooks/useActiveWeekRange";
 import {
@@ -19,7 +18,7 @@ import {
   useCreateCalendarFollow,
   useDeleteCalendarFollow,
 } from "../../hooks/useCalendarFollows";
-import { userColorFromId } from "../../lib/user-color";
+import { SELF_COLOR } from "../../lib/user-color";
 
 interface CalendarSidebarProps {
   selectedDate: Date;
@@ -59,14 +58,6 @@ function Section({ label, children, defaultOpen = true, rightSlot }: SectionProp
       </button>
       {open && <div className="px-3 pb-3">{children}</div>}
     </div>
-  );
-}
-
-function ColorDot({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn("inline-block h-2.5 w-2.5 rounded-sm border", className)}
-    />
   );
 }
 
@@ -114,6 +105,10 @@ export function CalendarSidebar({
             createFollow.mutate(
               { followedId: id },
               {
+                // No manual auto-tick: visibility is derived from the
+                // follows list. Once the follows query invalidates +
+                // refetches, the parent's `visibleUserIds` re-derives
+                // with the new userId and `useEvents` refetches.
                 onSuccess: () => toast.success("Đã theo dõi"),
                 onError: (err) =>
                   toast.error(
@@ -135,7 +130,14 @@ export function CalendarSidebar({
                 checked={visibleUserIds.includes(meId)}
                 onCheckedChange={(v) => onToggleUser(meId, v === true)}
               />
-              <ColorDot className="border-primary/40 bg-primary/15" />
+              <span
+                aria-hidden
+                className="inline-block h-2.5 w-2.5 rounded-sm border"
+                style={{
+                  backgroundColor: `${SELF_COLOR}40`,
+                  borderColor: SELF_COLOR,
+                }}
+              />
               <span className="truncate">{meName}</span>
             </label>
           ) : (
@@ -173,12 +175,8 @@ export function CalendarSidebar({
                       aria-hidden
                       className="inline-block h-2.5 w-2.5 rounded-sm border"
                       style={{
-                        backgroundColor: userId
-                          ? `${userColorFromId(userId)}40`
-                          : undefined,
-                        borderColor: userId
-                          ? userColorFromId(userId)
-                          : undefined,
+                        backgroundColor: `${f.color}40`,
+                        borderColor: f.color,
                       }}
                     />
                     <span className="min-w-0 flex-1 truncate">{name}</span>
