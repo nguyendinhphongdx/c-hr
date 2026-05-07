@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { resetSession } from "@/lib/api/client";
 import { authService } from "../services/authService";
+import { readNextFromLocation } from "../utils/safeNext";
 import type {
   AppCode,
   ChangePasswordInput,
@@ -76,7 +77,7 @@ export function useLogin() {
       resetSession();
       // Re-fetch /users/me — login response only carries the bare user.
       queryClient.invalidateQueries({ queryKey: authKeys.me });
-      router.push("/home");
+      router.push(readNextFromLocation());
     },
   });
 }
@@ -90,7 +91,7 @@ export function useRegister() {
     onSuccess: () => {
       resetSession();
       queryClient.invalidateQueries({ queryKey: authKeys.me });
-      router.push("/home");
+      router.push(readNextFromLocation());
     },
   });
 }
@@ -110,7 +111,7 @@ export function useSignupOrg() {
       resetSession();
       // Force /users/me re-fetch so organization + appAdmins land in the cache.
       queryClient.invalidateQueries({ queryKey: authKeys.me });
-      router.push("/home");
+      router.push(readNextFromLocation());
     },
   });
 }
@@ -165,7 +166,7 @@ export function useVerifyOtp() {
     onSuccess: () => {
       resetSession();
       queryClient.invalidateQueries({ queryKey: authKeys.me });
-      router.push("/home");
+      router.push(readNextFromLocation());
     },
   });
 }

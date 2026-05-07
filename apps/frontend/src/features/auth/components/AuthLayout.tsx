@@ -8,6 +8,7 @@ import { Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { SITE } from "@/lib/seo";
 import { useAuth } from "../hooks/useAuth";
+import { readNextFromLocation } from "../utils/safeNext";
 import { BrandPanel } from "./BrandPanel";
 
 interface AuthLayoutProps {
@@ -29,7 +30,7 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
 
   useEffect(() => {
     if (isLoading || !isAuthenticated) return;
-    router.replace("/home");
+    router.replace(readNextFromLocation());
   }, [isLoading, isAuthenticated, router]);
 
   return (

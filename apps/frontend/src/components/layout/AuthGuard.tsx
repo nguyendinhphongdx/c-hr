@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth";
@@ -11,18 +11,25 @@ interface AuthGuardProps {
 }
 
 /**
- * Client-side guard for the (dashboard) group. The edge middleware in
- * src/middleware.ts is the primary auth gate; this guard is the snappier
- * UX backstop while the me query resolves on the client.
+ * Client-side guard for the (dashboard) group. While the BE/FE live on
+ * different domains and the edge middleware is disabled, this is the only
+ * auth gate. Captures the current path as `?next=` so the user lands back
+ * where they were after login.
  */
 export function AuthGuard({ children }: AuthGuardProps) {
   const { isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (isLoading) return;
-    if (!isAuthenticated) router.replace("/login");
-  }, [isLoading, isAuthenticated, router]);
+    if (isAuthenticated) return;
+    const search = searchParams.toString();
+    const here = search ? `${pathname}?${search}` : pathname;
+    const url = `/login?next=${encodeURIComponent(here)}`;
+    router.replace(url);
+  }, [isLoading, isAuthenticated, pathname, router, searchParams]);
 
   if (isLoading || !isAuthenticated) {
     return (

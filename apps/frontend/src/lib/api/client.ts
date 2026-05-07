@@ -50,7 +50,9 @@ function performRefresh(): Promise<void> {
 function redirectToLogin(): void {
   if (typeof window === "undefined") return;
   if (window.location.pathname.startsWith("/login")) return;
-  window.location.href = "/login";
+  // Preserve where the user was heading so login can bounce them back.
+  const here = window.location.pathname + window.location.search;
+  window.location.href = `/login?next=${encodeURIComponent(here)}`;
 }
 
 type RetryableConfig = AxiosRequestConfig & { _retry?: boolean };
