@@ -270,7 +270,14 @@ model AttendanceDevice {
 model AttendanceLog {
   id             String           @id @default(uuid())
   organizationId String           @map("organization_id")
-  employeeId     String           @map("employee_id")
+  /// Nullable: events từ device có employeeCode chưa map được Employee row
+  /// (HR chưa tạo) sẽ được lưu với employeeId=null + employeeCode=<raw>.
+  /// Khi Employee được tạo/update với code đó → reconcile gán employeeId.
+  employeeId     String?          @map("employee_id")
+  /// Raw employee code từ device payload. Lưu cho mọi row có nguồn từ device,
+  /// để reconcile được orphan logs sau khi Employee tạo (Postgres NULL trong
+  /// unique không chặn → nhiều orphan rows / day cùng tồn tại OK).
+  employeeCode   String?          @map("employee_code")
   date           DateTime         @db.Date
   checkInAt      DateTime?        @map("check_in_at")
   checkOutAt     DateTime?        @map("check_out_at")
@@ -283,12 +290,13 @@ model AttendanceLog {
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
-  employee Employee          @relation(fields: [employeeId], references: [id])
+  employee Employee?         @relation(fields: [employeeId], references: [id])
   device   AttendanceDevice? @relation(fields: [deviceId], references: [id])
 
   @@unique([employeeId, date])
   @@unique([deviceId, eventLogId])
   @@index([organizationId, date])
+  @@index([organizationId, employeeCode])
   @@map("attendance_logs")
 }
 

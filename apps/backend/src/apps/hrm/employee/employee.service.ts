@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -24,11 +25,73 @@ const MAX_LIMIT = 100;
 
 @Injectable()
 export class EmployeeService {
+  private readonly logger = new Logger(EmployeeService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly ctx: RequestContextService,
     private readonly repo: EmployeeRepository,
   ) {}
+
+  /**
+   * Claim every orphan AttendanceLog (employeeId=null + employeeCode=code)
+   * for this Org and link them to the new Employee. Multiple orphan rows on
+   * the same date get merged into a single (employeeId, date) row with
+   * MIN/MAX check-in/out — the rest are deleted to satisfy the
+   * @@unique([employeeId, date]) constraint. Idempotent: re-running yields 0.
+   */
+  private async linkPendingAttendance(
+    tx: PrismaService | Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
+    orgId: string,
+    employeeId: string,
+    code: string,
+  ): Promise<number> {
+    const orphans = await tx.attendanceLog.findMany({
+      where: {
+        organizationId: orgId,
+        employeeId: null,
+        employeeCode: code,
+      },
+      orderBy: [{ date: 'asc' }, { checkInAt: 'asc' }],
+    });
+    if (orphans.length === 0) return 0;
+
+    // Group by date string to merge same-day rows.
+    const byDate = new Map<string, typeof orphans>();
+    for (const row of orphans) {
+      const key = row.date.toISOString();
+      const arr = byDate.get(key) ?? [];
+      arr.push(row);
+      byDate.set(key, arr);
+    }
+
+    for (const group of byDate.values()) {
+      const checkIns = group.map((r) => r.checkInAt).filter(Boolean) as Date[];
+      const checkOuts = group.map((r) => r.checkOutAt).filter(Boolean) as Date[];
+      const checkInAt = checkIns.length
+        ? new Date(Math.min(...checkIns.map((d) => d.getTime())))
+        : null;
+      const checkOutAt = checkOuts.length
+        ? new Date(Math.max(...checkOuts.map((d) => d.getTime())))
+        : null;
+
+      const [first, ...rest] = group;
+      await tx.attendanceLog.update({
+        where: { id: first.id },
+        data: { employeeId, checkInAt, checkOutAt },
+      });
+      if (rest.length > 0) {
+        await tx.attendanceLog.deleteMany({
+          where: { id: { in: rest.map((r) => r.id) } },
+        });
+      }
+    }
+
+    this.logger.log(
+      `[employee=${employeeId}] linked ${orphans.length} orphan attendance event(s) (code=${code})`,
+    );
+    return orphans.length;
+  }
 
   async list(query: ListEmployeesDto) {
     const orgId = this.ctx.requireOrg();
@@ -82,6 +145,7 @@ export class EmployeeService {
           where: { id: dto.userId },
           data: { employeeId: employee.id },
         });
+        await this.linkPendingAttendance(tx, orgId, employee.id, dto.code);
         return employee;
       });
     }
@@ -127,6 +191,7 @@ export class EmployeeService {
           employeeId: employee.id,
         },
       });
+      await this.linkPendingAttendance(tx, orgId, employee.id, dto.code);
       return employee;
     });
   }
@@ -192,6 +257,11 @@ export class EmployeeService {
           where: { id: dto.userId },
           data: { employeeId: id },
         });
+      }
+      // If the code changed (or was just set), retry orphan reconcile —
+      // pending attendance events keyed by the new code claim this row.
+      if (dto.code !== undefined && dto.code !== existing.code) {
+        await this.linkPendingAttendance(tx, orgId, id, dto.code);
       }
       return employee;
     });

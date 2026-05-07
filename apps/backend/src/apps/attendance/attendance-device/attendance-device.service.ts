@@ -30,8 +30,14 @@ interface DeviceTokenPayload {
 }
 
 export interface PushSummary {
+  /** Events stored with a known employee row. */
   accepted: number;
+  /** Events skipped because (deviceId, eventLogId) was already stored. */
   duplicates: number;
+  /** Events stored as orphan (employeeId=null) — pending reconcile when HR
+   *  creates the Employee with that code. */
+  pending: number;
+  /** Distinct employee codes that didn't match a current Employee row. */
   unknownEmployees: string[];
 }
 
@@ -150,6 +156,10 @@ export class AttendanceDeviceService {
    * Verify token, resolve employees by code within the device's Org, and
    * upsert AttendanceLog rows day-by-day. Idempotent via unique
    * (deviceId, eventLogId): a replayed push of the same event is a no-op.
+   *
+   * Events whose employeeCode does NOT match an existing Employee row are
+   * still persisted (employeeId=null, employeeCode=<raw>). Reconciled
+   * automatically when HR creates the Employee — see linkPendingAttendance.
    */
   async push(dto: PushAttendanceDto): Promise<PushSummary> {
     const device = await this.verifyToken(dto.token);
@@ -169,27 +179,27 @@ export class AttendanceDeviceService {
     const summary: PushSummary = {
       accepted: 0,
       duplicates: 0,
+      pending: 0,
       unknownEmployees: [],
     };
 
     for (const event of dto.events) {
       const empId = codeToId.get(event.employeeCode);
-      if (!empId) {
-        if (!summary.unknownEmployees.includes(event.employeeCode)) {
-          summary.unknownEmployees.push(event.employeeCode);
-        }
-        continue;
-      }
-
       const result = await this.applyEvent(device.id, device.organizationId, empId, event);
       if (result === 'accepted') summary.accepted++;
       else if (result === 'duplicate') summary.duplicates++;
+      else if (result === 'pending') {
+        summary.pending++;
+        if (!summary.unknownEmployees.includes(event.employeeCode)) {
+          summary.unknownEmployees.push(event.employeeCode);
+        }
+      }
     }
 
     await this.repo.update(device.id, { lastSeenAt: new Date() });
     if (summary.unknownEmployees.length > 0) {
-      this.logger.warn(
-        `[device=${device.id}] dropped events for unknown employee codes: ${summary.unknownEmployees.join(', ')}`,
+      this.logger.log(
+        `[device=${device.id}] stored ${summary.pending} orphan event(s) for unknown employee codes: ${summary.unknownEmployees.join(', ')} — will be linked when those employees are created`,
       );
     }
     return summary;
@@ -233,15 +243,19 @@ export class AttendanceDeviceService {
   }
 
   /**
-   * One event = one row update for that (employee, date). On replay (same
-   * deviceId+eventLogId) returns 'duplicate' and leaves the row alone.
+   * Apply one event:
+   *   - Replay (same deviceId+eventLogId) → 'duplicate', no-op
+   *   - Known employeeId → merge into the (employee, date) row (MIN/MAX
+   *     window) → 'accepted'
+   *   - Unknown employeeId → standalone orphan row with employeeCode set
+   *     for later reconcile → 'pending'
    */
   private async applyEvent(
     deviceId: string,
     organizationId: string,
-    employeeId: string,
+    employeeId: string | undefined,
     event: AttendanceEventDto,
-  ): Promise<'accepted' | 'duplicate'> {
+  ): Promise<'accepted' | 'duplicate' | 'pending'> {
     const ts = new Date(event.timestamp);
     const dateOnly = new Date(Date.UTC(ts.getUTCFullYear(), ts.getUTCMonth(), ts.getUTCDate()));
 
@@ -257,6 +271,28 @@ export class AttendanceDeviceService {
       });
       if (replay) return 'duplicate';
 
+      if (!employeeId) {
+        // Orphan event — Postgres treats NULL employeeId as distinct in the
+        // unique constraint, so multiple orphan rows can coexist on the same
+        // date. They get merged into a single (employee, date) row at
+        // reconcile time.
+        await tx.attendanceLog.create({
+          data: {
+            organizationId,
+            employeeId: null,
+            employeeCode: event.employeeCode,
+            date: dateOnly,
+            checkInAt: ts,
+            checkOutAt: ts,
+            source: 'DEVICE',
+            deviceId,
+            eventLogId: event.eventLogId,
+            note: event.note,
+          },
+        });
+        return 'pending';
+      }
+
       const existing = await tx.attendanceLog.findUnique({
         where: { employeeId_date: { employeeId, date: dateOnly } },
       });
@@ -266,6 +302,7 @@ export class AttendanceDeviceService {
           data: {
             organizationId,
             employeeId,
+            employeeCode: event.employeeCode,
             date: dateOnly,
             checkInAt: ts,
             checkOutAt: ts,
