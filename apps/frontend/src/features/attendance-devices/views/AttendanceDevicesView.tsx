@@ -86,7 +86,9 @@ export function AttendanceDevicesView() {
   const [createOpen, setCreateOpen] = useState(false);
   const [tokenDialog, setTokenDialog] = useState<TokenDialogState | null>(null);
 
-  const apiEndpoint = String(apiClient.defaults.baseURL ?? "");
+  const apiBase = String(apiClient.defaults.baseURL ?? "").replace(/\/$/, "");
+  const pushUrl = `${apiBase}/attendance-devices/push`;
+  const pingUrl = `${apiBase}/attendance-devices/ping`;
 
   const onCopy = async (token: string) => {
     try {
@@ -97,10 +99,10 @@ export function AttendanceDevicesView() {
     }
   };
 
-  const onCopyEndpoint = async () => {
+  const onCopyText = async (text: string, label: string) => {
     try {
-      await navigator.clipboard.writeText(apiEndpoint);
-      toast.success("Đã copy endpoint");
+      await navigator.clipboard.writeText(text);
+      toast.success(`Đã copy ${label}`);
     } catch {
       toast.error("Copy thất bại — copy thủ công.");
     }
@@ -225,48 +227,69 @@ export function AttendanceDevicesView() {
 
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertTitle>Cách dùng token</AlertTitle>
-        <AlertDescription className="space-y-3 text-sm">
-          <div className="space-y-1.5">
+        <AlertTitle>Cấu hình ZK-Bridge</AlertTitle>
+        <AlertDescription className="space-y-4 text-sm">
+          <p>
+            Cài <code className="rounded bg-muted px-1">npm i -g @hanoilab/zk-bridge</code> trên máy
+            ở văn phòng (LAN cùng đầu đọc) → chạy <code className="rounded bg-muted px-1">zk-bridge start</code> →
+            mở <code>http://localhost:7000</code>. Trên trang <strong>API</strong> của bridge, paste 2 URL bên
+            dưới + token của từng máy.
+          </p>
+
+          <div className="space-y-2">
             <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              C-HR API endpoint
+              Push URL (bắt buộc)
             </div>
             <div className="flex items-center gap-2">
               <code className="flex-1 rounded-md bg-muted px-3 py-2 font-mono text-xs break-all">
-                {apiEndpoint}
+                {pushUrl}
               </code>
               <Button
                 size="sm"
                 variant="outline"
                 className="gap-1.5"
-                onClick={onCopyEndpoint}
+                onClick={() => onCopyText(pushUrl, "Push URL")}
               >
                 <Copy className="h-3.5 w-3.5" /> Copy
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Paste vào field <strong>API base URL</strong> ở trang{" "}
-              <code>/config/chr</code> của ZK-Bridge.
-            </p>
           </div>
 
-          <ol className="list-decimal space-y-1 pl-5">
+          <div className="space-y-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Ping URL (tuỳ chọn — để bấm Connect xác nhận token)
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 rounded-md bg-muted px-3 py-2 font-mono text-xs break-all">
+                {pingUrl}
+              </code>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => onCopyText(pingUrl, "Ping URL")}
+              >
+                <Copy className="h-3.5 w-3.5" /> Copy
+              </Button>
+            </div>
+          </div>
+
+          <ol className="list-decimal space-y-1 pl-5 pt-1">
             <li>
-              Bấm <strong>Thêm máy</strong> để đăng ký 1 đầu đọc — server
-              sinh ra 1 token JWT đại diện cho device đó.
+              Bấm <strong>Thêm máy</strong> ở đây để đăng ký 1 đầu đọc — server sinh JWT đại diện
+              cho máy đó.
             </li>
             <li>
-              Mở <strong>menu ⋯</strong> ở mỗi dòng → <strong>Copy token</strong>
-              {" "}để lấy token vào clipboard, paste vào ZK-Bridge (trang{" "}
-              <code>/devices</code> của bridge).
+              Trên ZK-Bridge: trang <strong>Devices</strong> → <strong>Add device</strong> →
+              dán <strong>Device token</strong> vừa lấy.
             </li>
             <li>
-              Token có thể xem lại / copy lại bất cứ lúc nào — không còn giới
-              hạn &quot;chỉ hiển thị 1 lần&quot;.
+              Token xem lại bất cứ lúc nào qua menu <strong>⋯</strong> → <strong>Copy token</strong>{" "}
+              hoặc <strong>View token</strong>.
             </li>
             <li>
-              Nghi ngờ token bị lộ → <strong>Regenerate token</strong> — token
-              cũ ngừng hoạt động ngay, bridge phải paste token mới.
+              Nghi ngờ token bị lộ → <strong>Regenerate token</strong> — JWT cũ ngừng hoạt động ngay,
+              bridge phải paste token mới.
             </li>
           </ol>
         </AlertDescription>
