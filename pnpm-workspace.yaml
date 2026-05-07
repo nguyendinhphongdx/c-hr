@@ -1,12 +1,11 @@
 packages:
   - 'apps/*'
   - 'mcp/*'
-  - 'services/zk-bridge'
+  # services/zk-bridge intentionally NOT in workspace — it's a standalone
+  # publishable package (see services/zk-bridge/README.md). Install + build
+  # it from inside its own dir: `cd services/zk-bridge && pnpm install`.
 
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
   - bcrypt
-
-onlyBuiltDependencies:
-  - sqlite3
