@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 
-import { RbcCalendar } from "../components/RbcCalendar";
+import { RbcCalendar } from "../components/shell/RbcCalendar";
 
 import type { CommonViewProps } from "./types";
 

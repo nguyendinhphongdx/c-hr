@@ -36,8 +36,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   useCreateResource,
   useUpdateResource,
-} from "../hooks/useResources";
-import type { ResourceKind, ResourceRow } from "../types";
+} from "../../hooks/useResources";
+import type { ResourceKind, ResourceRow } from "../../types";
 
 const KIND_OPTIONS: { value: ResourceKind; label: string }[] = [
   { value: "ROOM", label: "Phòng họp" },

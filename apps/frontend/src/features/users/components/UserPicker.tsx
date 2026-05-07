@@ -75,14 +75,16 @@ export function UserPicker({
           className="w-full justify-between font-normal"
         >
           {selected ? (
-            <span className="truncate">
+            <span className="min-w-0 flex-1 truncate text-left">
               {selected.name ?? "(no name)"}
               <span className="ml-2 text-xs text-muted-foreground">
                 {selected.email}
               </span>
             </span>
           ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
+            <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">
+              {placeholder}
+            </span>
           )}
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

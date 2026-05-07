@@ -6,8 +6,8 @@ import type { EventProps } from "react-big-calendar";
 
 import { cn } from "@/lib/utils";
 
-import { userColorFromId } from "../lib/user-color";
-import type { CalEvent } from "../types";
+import { userColorFromId } from "../../lib/user-color";
+import type { CalEvent } from "../../types";
 
 /**
  * Event chip — the only visible card per event. RBC's `.rbc-event`

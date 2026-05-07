@@ -25,7 +25,7 @@ import {
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useIsAppAdmin } from "@/features/auth";
 
-import { ResourceCreateDialog } from "../components/ResourceCreateDialog";
+import { ResourceCreateDialog } from "../components/resource/ResourceCreateDialog";
 import {
   useDeleteResource,
   useResources,

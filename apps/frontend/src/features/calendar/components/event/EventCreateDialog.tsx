@@ -1,13 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { Building2, ChevronDown, ChevronRight, Clock, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,22 +31,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-import { useCreateEvent, useUpdateEvent } from "../hooks/useEvents";
-import { useResources } from "../hooks/useResources";
-import type {
-  CreateEventAttendeeInput,
-  EventDetail,
-  EventVisibility,
-} from "../types";
+import { useCreateEvent, useUpdateEvent } from "../../hooks/useEvents";
+import { useResources } from "../../hooks/useResources";
+import { useEventDraftStore } from "../../store/eventDraftStore";
+import type { CreateEventAttendeeInput, EventDetail } from "../../types";
+import { ResourcePicker } from "../resource/ResourcePicker";
 
-import {
-  EventAttendeesPicker,
-  type AttendeeDraft,
-} from "./EventAttendeesPicker";
+import { EventAttendeesPicker } from "./EventAttendeesPicker";
 import { EventAttachmentsField } from "./EventAttachmentsField";
 import { EventDateTimeRow } from "./EventDateTimeRow";
 import { EventVisibilityField } from "./EventVisibilityField";
-import { ResourcePicker } from "./ResourcePicker";
 import { RichTextDescriptionField } from "./RichTextDescriptionField";
 
 const schema = z
@@ -94,30 +88,6 @@ function stitchDateTime(date: string, time: string | undefined): Date | null {
   return Number.isNaN(dt.getTime()) ? null : dt;
 }
 
-function pad(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
-function splitIso(iso: string): { date: string; time: string } {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return { date: "", time: "" };
-  return {
-    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-  };
-}
-
-const EMPTY_FORM: FormValues = {
-  title: "",
-  startDate: "",
-  startTime: "",
-  endDate: "",
-  endTime: "",
-  location: "",
-  conferenceUrl: "",
-  description: "",
-};
-
 export function EventCreateDialog({
   open,
   onClose,
@@ -126,120 +96,109 @@ export function EventCreateDialog({
   initialResourceIds,
   editing,
 }: EventCreateDialogProps) {
+  const router = useRouter();
   const create = useCreateEvent();
   const update = useUpdateEvent();
   const submitting = create.isPending || update.isPending;
 
+  const draft = useEventDraftStore((s) => s.draft);
+  const hydrationToken = useEventDraftStore((s) => s.hydrationToken);
+  const setField = useEventDraftStore((s) => s.setField);
+  const setOrganizer = useEventDraftStore((s) => s.setOrganizer);
+  const setResourceIds = useEventDraftStore((s) => s.setResourceIds);
+  const hydrateDefaults = useEventDraftStore((s) => s.hydrateDefaults);
+  const hydrateFromEvent = useEventDraftStore((s) => s.hydrateFromEvent);
+  const reset = useEventDraftStore((s) => s.reset);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: EMPTY_FORM,
+    defaultValues: {
+      title: draft.title,
+      startDate: draft.startDate,
+      startTime: draft.startTime,
+      endDate: draft.endDate,
+      endTime: draft.endTime,
+      location: draft.location,
+      conferenceUrl: draft.conferenceUrl,
+      description: draft.description,
+    },
   });
 
-  // Non-RHF state — these don't need full form integration; the submit
-  // handler reads them when stitching the API payload.
-  const [isAllDay, setIsAllDay] = useState(false);
-  const [organizer, setOrganizer] = useState<AttendeeDraft | null>(null);
-  const [invitees, setInvitees] = useState<AttendeeDraft[]>([]);
-  const [visibility, setVisibility] = useState<EventVisibility>("DEFAULT");
-  const [isPrivate, setIsPrivate] = useState(false);
-  const [resourceIds, setResourceIds] = useState<string[]>([]);
-  // UI-only — attachments aren't persisted yet (backend storage wire-in
-  // is a follow-up). State lets the user see what they've selected and
-  // remove items before submit.
+  // UI-only — attachments aren't persisted yet.
   const [attachments, setAttachments] = useState<File[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  // Sync open / editing changes into the form. The setState calls below
-  // are intentional — we mirror external props into local form state on
-  // re-open, which matches RHF's `reset()` pattern in the same effect.
+  // Hydrate store on open. We re-run on dependency changes so that
+  // re-opening with a different `editing` prop swaps the draft cleanly.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
-
     if (editing) {
-      const s = splitIso(editing.startAt);
-      const e = splitIso(editing.endAt);
-      form.reset({
-        title: editing.title,
-        startDate: s.date,
-        startTime: s.time,
-        endDate: e.date,
-        endTime: e.time,
-        location: editing.location ?? "",
-        conferenceUrl: editing.conferenceUrl ?? "",
-        description: editing.description ?? "",
-      });
-      setIsAllDay(editing.isAllDay);
-      setVisibility(editing.visibility);
-      setIsPrivate(editing.isPrivate);
-
-      const orgAttendee = editing.attendees.find((a) => a.isOrganizer);
-      setOrganizer(
-        orgAttendee && orgAttendee.user
-          ? {
-              userId: orgAttendee.user.id,
-              name: orgAttendee.user.name,
-              email: orgAttendee.user.email,
-            }
-          : null,
-      );
-      setInvitees(
-        editing.attendees
-          .filter((a) => !a.isOrganizer && a.user)
-          .map((a) => ({
-            userId: a.user!.id,
-            name: a.user!.name,
-            email: a.user!.email,
-          })),
-      );
-      setResourceIds(
-        (editing.resources ?? []).map((r) => r.resourceId),
-      );
-      setAttachments([]);
-      setAdvancedOpen(false);
+      hydrateFromEvent(editing);
     } else {
-      const s = initialStart ? splitIso(initialStart) : { date: "", time: "" };
-      const e = initialEnd ? splitIso(initialEnd) : { date: "", time: "" };
-      form.reset({
-        ...EMPTY_FORM,
-        startDate: s.date,
-        startTime: s.time,
-        endDate: e.date,
-        endTime: e.time,
+      hydrateDefaults({
+        start: initialStart,
+        end: initialEnd,
+        resourceIds: initialResourceIds,
       });
-      setIsAllDay(false);
-      setOrganizer(null);
-      setInvitees([]);
-      setVisibility("DEFAULT");
-      setIsPrivate(false);
-      setResourceIds(initialResourceIds ?? []);
-      setAttachments([]);
-      setAdvancedOpen(false);
     }
-  }, [open, editing, initialStart, initialEnd, initialResourceIds, form]);
+    setAttachments([]);
+    setAdvancedOpen(false);
+  }, [
+    open,
+    editing,
+    initialStart,
+    initialEnd,
+    initialResourceIds,
+    hydrateFromEvent,
+    hydrateDefaults,
+  ]);
+
+  // Sync RHF when the store is hydrated (open / reset / edit-swap).
+  useEffect(() => {
+    form.reset({
+      title: draft.title,
+      startDate: draft.startDate,
+      startTime: draft.startTime,
+      endDate: draft.endDate,
+      endTime: draft.endTime,
+      location: draft.location,
+      conferenceUrl: draft.conferenceUrl,
+      description: draft.description,
+    });
+    // We intentionally only re-run on hydrationToken so user typing
+    // doesn't loop back into RHF.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrationToken]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
   const onSubmit = async (values: FormValues) => {
-    const start = stitchDateTime(values.startDate, isAllDay ? "00:00" : values.startTime);
-    let end = stitchDateTime(values.endDate, isAllDay ? "00:00" : values.endTime);
+    const isAllDay = draft.isAllDay;
+    const start = stitchDateTime(
+      values.startDate,
+      isAllDay ? "00:00" : values.startTime,
+    );
+    let end = stitchDateTime(
+      values.endDate,
+      isAllDay ? "00:00" : values.endTime,
+    );
     if (!start || !end) {
       toast.error("Thời gian không hợp lệ");
       return;
     }
     if (isAllDay) {
-      // All-day uses [startOfDay, endOfNextDay) — RBC + Google convention.
       end = new Date(end);
       end.setDate(end.getDate() + 1);
     }
 
-    // Stitch attendees: organizer first (with isOrganizer flag), then invitees.
     const attendees: CreateEventAttendeeInput[] = [];
-    if (organizer) {
-      attendees.push({ userId: organizer.userId });
-    }
-    for (const a of invitees) {
-      attendees.push({ userId: a.userId });
-    }
+    if (draft.organizer) attendees.push({ userId: draft.organizer.userId });
+    for (const a of draft.invitees) attendees.push({ userId: a.userId });
 
     const basePayload = {
       title: values.title,
@@ -249,29 +208,27 @@ export function EventCreateDialog({
       location: values.location || undefined,
       conferenceUrl: values.conferenceUrl || undefined,
       description: values.description || undefined,
-      visibility,
-      isPrivate,
+      visibility: draft.visibility,
+      isPrivate: draft.isPrivate,
     };
 
     try {
       if (editing) {
-        // Attendee list edits flow via dedicated /attendees endpoints —
-        // we only patch the editable scalar fields here. Resource set
-        // IS replaceable on update (`UpdateEventDto.resourceIds`).
         await update.mutateAsync({
           id: editing.id,
-          data: { ...basePayload, resourceIds },
+          data: { ...basePayload, resourceIds: draft.resourceIds },
         });
         toast.success("Đã cập nhật sự kiện");
       } else {
         await create.mutateAsync({
           ...basePayload,
           attendees,
-          resourceIds: resourceIds.length > 0 ? resourceIds : undefined,
+          resourceIds:
+            draft.resourceIds.length > 0 ? draft.resourceIds : undefined,
         });
         toast.success("Đã tạo sự kiện");
       }
-      onClose();
+      handleClose();
     } catch (err) {
       toast.error(
         editing ? "Không cập nhật được" : "Không tạo được sự kiện",
@@ -283,8 +240,24 @@ export function EventCreateDialog({
     }
   };
 
+  // Capture form changes back into the store so the assistant page sees
+  // the same values when the user switches tabs.
+  const captureField = <K extends keyof FormValues>(
+    key: K,
+    value: FormValues[K],
+  ) => {
+    if (key === "title") setField("title", (value ?? "") as string);
+    else if (key === "startDate") setField("startDate", (value ?? "") as string);
+    else if (key === "startTime") setField("startTime", (value ?? "") as string);
+    else if (key === "endDate") setField("endDate", (value ?? "") as string);
+    else if (key === "endTime") setField("endTime", (value ?? "") as string);
+    else if (key === "location") setField("location", (value ?? "") as string);
+    else if (key === "conferenceUrl") setField("conferenceUrl", (value ?? "") as string);
+    else if (key === "description") setField("description", (value ?? "") as string);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
         <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle>
@@ -310,7 +283,14 @@ export function EventCreateDialog({
                 <FormItem>
                   <FormLabel>Tên cuộc họp</FormLabel>
                   <FormControl>
-                    <Input placeholder="Họp dự án X" {...field} />
+                    <Input
+                      placeholder="Họp dự án X"
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        captureField("title", e.target.value);
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -323,8 +303,8 @@ export function EventCreateDialog({
               startTimeName="startTime"
               endDateName="endDate"
               endTimeName="endTime"
-              isAllDay={isAllDay}
-              onAllDayChange={setIsAllDay}
+              isAllDay={draft.isAllDay}
+              onAllDayChange={(v) => setField("isAllDay", v)}
             />
 
             <FormField
@@ -336,12 +316,16 @@ export function EventCreateDialog({
                   <FormControl>
                     <LocationInputWithRoomPicker
                       value={field.value ?? ""}
-                      onChange={field.onChange}
-                      pickedResourceIds={resourceIds}
+                      onChange={(v) => {
+                        field.onChange(v);
+                        captureField("location", v);
+                      }}
+                      pickedResourceIds={draft.resourceIds}
                       onPickRoom={(room) => {
                         field.onChange(room.name);
-                        if (!resourceIds.includes(room.id)) {
-                          setResourceIds([...resourceIds, room.id]);
+                        captureField("location", room.name);
+                        if (!draft.resourceIds.includes(room.id)) {
+                          setResourceIds([...draft.resourceIds, room.id]);
                         }
                       }}
                       disabled={submitting}
@@ -363,6 +347,10 @@ export function EventCreateDialog({
                       type="url"
                       placeholder="https://meet.google.com/..."
                       {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        captureField("conferenceUrl", e.target.value);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -371,17 +359,44 @@ export function EventCreateDialog({
             />
 
             {!editing && (
-              <EventAttendeesPicker
-                organizer={organizer}
-                onOrganizerChange={setOrganizer}
-                invitees={invitees}
-                onInviteesChange={setInvitees}
-                disabled={submitting}
-              />
+              <div className="space-y-2">
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push("/calendar/schedule")}
+                  >
+                    <Clock className="mr-1 h-3.5 w-3.5" />
+                    Tìm khung trống
+                  </Button>
+                </div>
+                <EventAttendeesPicker
+                  organizer={draft.organizer}
+                  onOrganizerChange={setOrganizer}
+                  invitees={draft.invitees}
+                  onInviteesChange={(next) =>
+                    setField("invitees", next)
+                  }
+                  disabled={submitting}
+                  slotStart={
+                    stitchDateTime(
+                      draft.startDate,
+                      draft.isAllDay ? "00:00" : draft.startTime,
+                    )?.toISOString()
+                  }
+                  slotEnd={
+                    stitchDateTime(
+                      draft.endDate,
+                      draft.isAllDay ? "00:00" : draft.endTime,
+                    )?.toISOString()
+                  }
+                />
+              </div>
             )}
 
             <ResourcePicker
-              value={resourceIds}
+              value={draft.resourceIds}
               onChange={setResourceIds}
               disabled={submitting}
             />
@@ -394,14 +409,16 @@ export function EventCreateDialog({
                 render={({ field }) => (
                   <RichTextDescriptionField
                     value={field.value ?? ""}
-                    onChange={field.onChange}
+                    onChange={(html) => {
+                      field.onChange(html);
+                      captureField("description", html);
+                    }}
                     disabled={submitting}
                   />
                 )}
               />
             </div>
 
-            {/* Advanced — collapsed by default to keep dialog compact. */}
             <div className="rounded-md border bg-muted/20">
               <button
                 type="button"
@@ -423,10 +440,10 @@ export function EventCreateDialog({
                     disabled={submitting}
                   />
                   <EventVisibilityField
-                    visibility={visibility}
-                    onVisibilityChange={setVisibility}
-                    isPrivate={isPrivate}
-                    onIsPrivateChange={setIsPrivate}
+                    visibility={draft.visibility}
+                    onVisibilityChange={(v) => setField("visibility", v)}
+                    isPrivate={draft.isPrivate}
+                    onIsPrivateChange={(v) => setField("isPrivate", v)}
                     disabled={submitting}
                   />
                 </div>
@@ -434,11 +451,8 @@ export function EventCreateDialog({
             </div>
             </div>
 
-            {/* Plain div instead of <DialogFooter> — the shadcn primitive
-                applies negative margins meant to cancel a default p-4 on
-                Dialog, which we've removed. */}
             <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-background px-6 py-3">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={handleClose}>
                 Huỷ
               </Button>
               <Button type="submit" disabled={submitting}>
@@ -469,9 +483,6 @@ interface LocationInputWithRoomPickerProps {
   disabled?: boolean;
 }
 
-/** Free-text location input with a trailing icon that pops a list of
- *  rooms. Picking a room fills the text + adds it to the resource
- *  booking list (so the slot is reserved, not just labelled). */
 function LocationInputWithRoomPicker({
   value,
   onChange,

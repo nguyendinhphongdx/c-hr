@@ -7,13 +7,13 @@ import {
   type View,
 } from "react-big-calendar";
 
-import { rbcFormats, rbcLocalizer, rbcMessages } from "../lib/rbc-config";
-import type { CalEvent } from "../types";
+import { rbcFormats, rbcLocalizer, rbcMessages } from "../../lib/rbc-config";
+import type { CalEvent } from "../../types";
 
-import { EventChip } from "./EventChip";
+import { EventChip } from "../event/EventChip";
 
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import "../styles/calendar.css";
+import "../../styles/calendar.css";
 
 interface RbcCalendarProps {
   view: View;

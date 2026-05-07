@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { EventVisibility } from "../types";
+import type { EventVisibility } from "../../types";
 
 const VISIBILITY_OPTIONS: { value: EventVisibility; label: string; help: string }[] = [
   {

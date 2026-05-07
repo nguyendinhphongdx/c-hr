@@ -13,13 +13,13 @@ import { useAuth } from "@/features/auth";
 import { EmployeePicker } from "@/features/employees";
 import { cn } from "@/lib/utils";
 
-import { useActiveWeekRange } from "../hooks/useActiveWeekRange";
+import { useActiveWeekRange } from "../../hooks/useActiveWeekRange";
 import {
   useCalendarFollows,
   useCreateCalendarFollow,
   useDeleteCalendarFollow,
-} from "../hooks/useCalendarFollows";
-import { userColorFromId } from "../lib/user-color";
+} from "../../hooks/useCalendarFollows";
+import { userColorFromId } from "../../lib/user-color";
 
 interface CalendarSidebarProps {
   selectedDate: Date;

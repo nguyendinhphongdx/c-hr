@@ -22,8 +22,8 @@ import {
 import type { ID } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-import { useResources } from "../hooks/useResources";
-import type { ResourceKind, ResourceRow } from "../types";
+import { useResources } from "../../hooks/useResources";
+import type { ResourceKind, ResourceRow } from "../../types";
 
 const KIND_ICON: Record<ResourceKind, typeof Building2> = {
   ROOM: Building2,

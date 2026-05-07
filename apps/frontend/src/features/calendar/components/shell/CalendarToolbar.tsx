@@ -29,9 +29,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-import { CalendarSettingsDialog } from "./CalendarSettingsDialog";
+import { DateRangePickerPopover } from "../event/DateRangePickerPopover";
+import { CalendarSettingsDialog } from "../settings/CalendarSettingsDialog";
+
 import { CalendarTabs } from "./CalendarTabs";
-import { DateRangePickerPopover } from "./DateRangePickerPopover";
 
 const VIEW_LABELS: Partial<Record<View, string>> = {
   day: "Ngày",

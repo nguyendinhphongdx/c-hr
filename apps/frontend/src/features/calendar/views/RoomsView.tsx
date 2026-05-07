@@ -22,9 +22,9 @@ import { useDepartments } from "@/features/departments";
 import type { ID } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-import { CalendarTabs } from "../components/CalendarTabs";
-import { EventCreateDialog } from "../components/EventCreateDialog";
-import { EventDetailDialog } from "../components/EventDetailDialog";
+import { EventCreateDialog } from "../components/event/EventCreateDialog";
+import { EventDetailDialog } from "../components/event/EventDetailDialog";
+import { CalendarTabs } from "../components/shell/CalendarTabs";
 import { useEvent, useEvents, useDeleteEvent } from "../hooks/useEvents";
 import { useResources } from "../hooks/useResources";
 import { useTickingNow } from "../hooks/useTickingNow";

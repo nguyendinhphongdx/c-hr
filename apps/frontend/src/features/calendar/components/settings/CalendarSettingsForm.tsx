@@ -28,9 +28,9 @@ import {
   useCalendarFollows,
   useCreateCalendarFollow,
   useDeleteCalendarFollow,
-} from "../hooks/useCalendarFollows";
-import { userColorFromId } from "../lib/user-color";
-import type { CalendarFollowRow } from "../services/followService";
+} from "../../hooks/useCalendarFollows";
+import { userColorFromId } from "../../lib/user-color";
+import type { CalendarFollowRow } from "../../services/followService";
 
 const CALENDAR_VISIBILITY_KEY = "calendar.visibility";
 

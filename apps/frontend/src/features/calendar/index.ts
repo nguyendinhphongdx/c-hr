@@ -1,9 +1,12 @@
 export { CalendarView } from "./views/CalendarView";
 export { ResourcesAdminView } from "./views/ResourcesAdminView";
 export { RoomsView } from "./views/RoomsView";
-export { EventCreateDialog } from "./components/EventCreateDialog";
-export { ResourceCreateDialog } from "./components/ResourceCreateDialog";
-export { ResourcePicker } from "./components/ResourcePicker";
+export { SchedulingAssistantView } from "./views/SchedulingAssistantView";
+export { useEventDraftStore } from "./store/eventDraftStore";
+export type { EventDraft } from "./store/eventDraftStore";
+export { EventCreateDialog } from "./components/event/EventCreateDialog";
+export { ResourceCreateDialog } from "./components/resource/ResourceCreateDialog";
+export { ResourcePicker } from "./components/resource/ResourcePicker";
 export {
   eventKeys,
   useCancelEvent,
@@ -28,9 +31,11 @@ export {
   useCreateCalendarFollow,
   useDeleteCalendarFollow,
 } from "./hooks/useCalendarFollows";
+export { freeBusyKeys, useFreeBusy } from "./hooks/useFreeBusy";
 export { eventService } from "./services/eventService";
 export { resourceService } from "./services/resourceService";
 export { followService } from "./services/followService";
+export { freeBusyService } from "./services/freeBusyService";
 export type {
   CalendarFollowRow,
   CreateCalendarFollowInput,
@@ -50,6 +55,10 @@ export type {
   EventScope,
   EventStatus,
   EventVisibility,
+  FreeBusyConflict,
+  FreeBusyQuery,
+  FreeBusyRow,
+  FreeBusyStatus,
   ListEventsQuery,
   ListResourcesQuery,
   ResourceKind,

@@ -32,7 +32,7 @@ import type {
   EventAttendeeRow,
   EventDetail,
   EventStatus,
-} from "../types";
+} from "../../types";
 
 interface EventDetailDialogProps {
   event: EventDetail | null;

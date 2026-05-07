@@ -12,8 +12,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-import { useActiveWeekRange } from "../hooks/useActiveWeekRange";
-import { formatHeaderRange } from "../lib/format";
+import { useActiveWeekRange } from "../../hooks/useActiveWeekRange";
+import { formatHeaderRange } from "../../lib/format";
 
 interface DateRangePickerPopoverProps {
   view: View;

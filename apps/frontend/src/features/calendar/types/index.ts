@@ -130,6 +130,34 @@ export interface EventDetail extends EventRow {
   };
 }
 
+// ── Free/busy ──────────────────────────────────────────────────────
+//
+// BE keys results by `userId` (Event.ownerId / EventAttendee.userId
+// reference User, not Employee). FE attendee drafts already carry a
+// `userId`, so no extra mapping is needed.
+
+export type FreeBusyStatus = "BUSY" | "FREE";
+
+export interface FreeBusyConflict {
+  id: ID;
+  title: string;
+  startAt: ISODate;
+  endAt: ISODate;
+  visibility: EventVisibility;
+}
+
+export interface FreeBusyRow {
+  userId: ID;
+  status: FreeBusyStatus;
+  conflicts: FreeBusyConflict[];
+}
+
+export interface FreeBusyQuery {
+  userIds: ID[];
+  from: string;
+  to: string;
+}
+
 export type EventScope = "mine" | "invited" | "all";
 
 export interface ListEventsQuery {

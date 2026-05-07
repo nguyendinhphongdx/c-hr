@@ -17,7 +17,13 @@ import { Auditable } from '@/common/audit';
 import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
 
-import { CreateEventDto, ListEventsDto, RespondAttendeeDto, UpdateEventDto } from './dto';
+import {
+  CreateEventDto,
+  FreeBusyQueryDto,
+  ListEventsDto,
+  RespondAttendeeDto,
+  UpdateEventDto,
+} from './dto';
 import { EventService } from './event.service';
 
 @ApiTags('events')
@@ -30,6 +36,12 @@ export class EventController {
   @Get()
   list(@Query() query: ListEventsDto) {
     return this.service.list(query);
+  }
+
+  /** Scheduling assistant — Bận/Rảnh badge per user for a given slot. */
+  @Get('free-busy')
+  freeBusy(@Query() query: FreeBusyQueryDto) {
+    return this.service.freeBusy(query);
   }
 
   @Get(':id')

@@ -7,10 +7,10 @@ import { toast } from "sonner";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useAuth } from "@/features/auth";
 
-import { CalendarSidebar } from "../components/CalendarSidebar";
-import { CalendarToolbar } from "../components/CalendarToolbar";
-import { EventCreateDialog } from "../components/EventCreateDialog";
-import { EventDetailDialog } from "../components/EventDetailDialog";
+import { EventCreateDialog } from "../components/event/EventCreateDialog";
+import { EventDetailDialog } from "../components/event/EventDetailDialog";
+import { CalendarSidebar } from "../components/shell/CalendarSidebar";
+import { CalendarToolbar } from "../components/shell/CalendarToolbar";
 import { useCalendarUrlState } from "../hooks/useCalendarUrlState";
 import { useTickingNow } from "../hooks/useTickingNow";
 import {

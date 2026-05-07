@@ -2,8 +2,8 @@
 
 import { Loader2 } from "lucide-react";
 
-import { AgendaEmptyState } from "../components/AgendaEmptyState";
-import { RbcCalendar } from "../components/RbcCalendar";
+import { AgendaEmptyState } from "../components/shell/AgendaEmptyState";
+import { RbcCalendar } from "../components/shell/RbcCalendar";
 
 import type { CommonViewProps } from "./types";
 

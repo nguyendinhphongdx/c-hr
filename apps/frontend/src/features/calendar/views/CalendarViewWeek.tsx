@@ -3,8 +3,8 @@
 import { Loader2 } from "lucide-react";
 import { useRef } from "react";
 
-import { NowLine } from "../components/NowLine";
-import { RbcCalendar } from "../components/RbcCalendar";
+import { NowLine } from "../components/shell/NowLine";
+import { RbcCalendar } from "../components/shell/RbcCalendar";
 
 import type { CommonViewProps } from "./types";
 

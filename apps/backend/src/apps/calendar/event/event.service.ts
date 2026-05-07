@@ -12,11 +12,32 @@ import { PreferenceService } from '@/apps/core/preference';
 import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
-import { CreateEventDto, ListEventsDto, RespondAttendeeDto, UpdateEventDto } from './dto';
+import {
+  CreateEventDto,
+  FreeBusyQueryDto,
+  ListEventsDto,
+  RespondAttendeeDto,
+  UpdateEventDto,
+} from './dto';
 import { EventAcl, EventAclSubject } from './event.acl';
 import { EventRepository } from './event.repository';
 
 const MAX_RANGE_DAYS = 92; // ~3 months — enough for month/quarter views
+const FREE_BUSY_MAX_RANGE_DAYS = 7;
+
+export interface FreeBusyConflict {
+  id: string;
+  title: string;
+  startAt: Date;
+  endAt: Date;
+  visibility: EventVisibility;
+}
+
+export interface FreeBusyRow {
+  userId: string;
+  status: 'BUSY' | 'FREE';
+  conflicts: FreeBusyConflict[];
+}
 
 @Injectable()
 export class EventService {
@@ -264,6 +285,112 @@ export class EventService {
       userId: this.ctx.userId,
     });
     return { id, success: true };
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  // Free/busy — scheduling assistant
+  // ──────────────────────────────────────────────────────────────────
+  async freeBusy(query: FreeBusyQueryDto): Promise<FreeBusyRow[]> {
+    const orgId = this.ctx.requireOrg();
+
+    const from = new Date(query.from);
+    const to = new Date(query.to);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+      throw new BadRequestException('Invalid date range');
+    }
+    if (to <= from) {
+      throw new BadRequestException('"to" must be after "from"');
+    }
+    const span = (to.getTime() - from.getTime()) / 86_400_000;
+    if (span > FREE_BUSY_MAX_RANGE_DAYS) {
+      throw new BadRequestException(
+        `Range too wide (max ${FREE_BUSY_MAX_RANGE_DAYS} days)`,
+      );
+    }
+
+    // Tenant gate — keep only ids that belong to caller's org. Silently
+    // drop strangers (no leak about their existence).
+    const orgUsers = await this.prisma.user.findMany({
+      where: { id: { in: query.userIds }, organizationId: orgId },
+      select: { id: true },
+    });
+    const allowedIds = orgUsers.map((u) => u.id);
+    if (allowedIds.length === 0) {
+      return query.userIds.map((id) => ({ userId: id, status: 'FREE', conflicts: [] }));
+    }
+
+    const events = await this.prisma.event.findMany({
+      where: {
+        organizationId: orgId,
+        deletedAt: null,
+        status: { not: 'CANCELLED' },
+        startAt: { lt: to },
+        endAt: { gt: from },
+        OR: [
+          { ownerId: { in: allowedIds } },
+          { attendees: { some: { userId: { in: allowedIds } } } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        startAt: true,
+        endAt: true,
+        visibility: true,
+        isPrivate: true,
+        ownerId: true,
+        createdById: true,
+        organizationId: true,
+        attendees: { select: { userId: true } },
+      },
+      orderBy: { startAt: 'asc' },
+    });
+
+    const buckets = new Map<string, FreeBusyConflict[]>();
+    for (const id of query.userIds) buckets.set(id, []);
+
+    for (const ev of events) {
+      const acl = new EventAcl({
+        id: ev.id,
+        organizationId: ev.organizationId,
+        ownerId: ev.ownerId,
+        createdById: ev.createdById,
+        isPrivate: ev.isPrivate,
+        visibility: ev.visibility,
+        _attendeeUserIds: ev.attendees
+          .map((a) => a.userId)
+          .filter((u): u is string => !!u),
+      });
+      const detail = acl.canViewDetail();
+      const safeTitle = detail ? ev.title : '(Bận)';
+
+      const involved = new Set<string>();
+      if (allowedIds.includes(ev.ownerId)) involved.add(ev.ownerId);
+      for (const a of ev.attendees) {
+        if (a.userId && allowedIds.includes(a.userId)) involved.add(a.userId);
+      }
+
+      for (const uid of involved) {
+        const list = buckets.get(uid);
+        if (!list) continue;
+        list.push({
+          id: ev.id,
+          title: safeTitle,
+          startAt: ev.startAt,
+          endAt: ev.endAt,
+          visibility: ev.visibility,
+        });
+      }
+    }
+
+    return query.userIds.map((uid) => {
+      const conflicts = buckets.get(uid) ?? [];
+      return {
+        userId: uid,
+        status: conflicts.length > 0 ? 'BUSY' : 'FREE',
+        conflicts,
+      };
+    });
   }
 
   // ──────────────────────────────────────────────────────────────────
