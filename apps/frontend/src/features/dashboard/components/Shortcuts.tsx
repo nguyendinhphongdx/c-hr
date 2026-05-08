@@ -48,7 +48,7 @@ const SHORTCUTS: Shortcut[] = [
   {
     href: "/timesheet",
     icon: Calendar,
-    label: "Bảng giờ làm",
+    label: "Bảng chấm công",
     description: "Xem chấm công theo tháng — tổng hợp từ máy chấm công.",
   },
   {

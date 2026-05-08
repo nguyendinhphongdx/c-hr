@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BarChart3,
   Building2,
   CalendarClock,
   Calendar,
@@ -32,6 +33,12 @@ interface NavItem {
   icon: LucideIcon;
   /** Render as non-clickable placeholder until the feature lands. */
   disabled?: boolean;
+  /**
+   * Match active state by exact equality only — skip the prefix check.
+   * Use when a sibling route would otherwise trigger this item too.
+   * E.g. `/timesheet/reports` shouldn't light `/timesheet`.
+   */
+  exact?: boolean;
 }
 
 interface NavSection {
@@ -53,8 +60,10 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: "Chấm công",
-    items: [{ href: "/timesheet", label: "Bảng giờ làm", icon: Calendar }],
+    label: "Thời gian làm việc",
+    items: [
+      { href: "/timesheet", label: "Bảng chấm công", icon: Calendar, exact: true },
+    ],
   },
   {
     label: "Đơn từ",
@@ -117,7 +126,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
                 active={
                   !item.disabled &&
                   (pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`))
+                    (!item.exact && pathname.startsWith(`${item.href}/`)))
                 }
               />
             ))}
@@ -132,6 +141,20 @@ export function Sidebar({ collapsed }: SidebarProps) {
                 active={
                   pathname === "/resources" ||
                   pathname.startsWith("/resources/")
+                }
+              />
+            )}
+            {section.label === "Thời gian làm việc" && showAdmin && (
+              <NavLink
+                item={{
+                  href: "/timesheet/reports",
+                  label: "Báo cáo",
+                  icon: BarChart3,
+                }}
+                collapsed={collapsed}
+                active={
+                  pathname === "/timesheet/reports" ||
+                  pathname.startsWith("/timesheet/reports/")
                 }
               />
             )}

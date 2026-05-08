@@ -43,24 +43,22 @@ export function EventChip({ event }: EventProps<CalEvent>) {
   return (
     <div
       className={cn(
-        "group relative flex h-full w-full flex-col overflow-hidden rounded-md border text-left text-[11px] leading-tight transition-shadow hover:shadow-md",
+        "group relative flex h-full w-full flex-col overflow-hidden rounded-md border border-l-4 text-left text-[11px] leading-tight transition-shadow hover:shadow-md",
         cancelled && "opacity-60",
       )}
       style={{
         // Opaque pastel: blend palette with theme bg so events fully
-        // hide grid + NowLine, while staying readable.
+        // hide grid + NowLine, while staying readable. Left accent
+        // stripe is the chip's own thicker left border — it follows the
+        // rounded corners naturally instead of an inner pseudo-element
+        // that fights the parent's border-radius.
         backgroundColor: `color-mix(in oklab, ${palette} 22%, var(--background))`,
         borderColor: palette,
       }}
       title={`${event.title}${location ? ` · ${location}` : ""}`}
       data-status={status}
     >
-      <span
-        aria-hidden
-        className="absolute inset-y-0 left-0 w-1 rounded-l-md"
-        style={{ backgroundColor: palette }}
-      />
-      <div className="flex min-h-0 flex-1 flex-col gap-px overflow-hidden px-2 py-1 pl-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-px overflow-hidden px-2 py-1">
         <span
           className={cn(
             "truncate font-semibold text-foreground",
