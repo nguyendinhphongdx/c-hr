@@ -20,18 +20,21 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 6. **1 feature = 1 PR** (BE module + Prisma migration + FE feature + test). Không trộn.
 7. **Audit log** ([ADR 0002](../decisions/0002-audit-log.md)) cho mọi action thay đổi org structure / appadmin / approve workflow.
 
-## Trạng thái hiện tại (cập nhật 2026-05-06)
+## Trạng thái hiện tại (cập nhật 2026-05-10)
 
 | # | Feature | Status | Ghi chú |
 | --- | --- | --- | --- |
-| 0 | Foundation | ✅ done | Folder migration, ESLint flat config, audit infra deferred → F1 |
-| 1 | Auth + Org + AppAdmin | ✅ done | Signup Org / me / admin grant/revoke, audit log, isAdmin/isAppAdmin helpers |
-| 2 | HRM core: Department + Employee + OrgChart | ✅ done | CRUD đủ, OrgChart CTE + approver candidates, EmployeePicker, dept manager auto-link, soft-delete, edit pages |
-| 3 | Attendance | ✅ done | BE 4 modules + 3 FE features. Migration f3_user_personal_info applied. API smoke 7/7 verify items pass (curl). FE typecheck/lint sạch. UI render manual smoke pending khi user demo. |
-| 4 | Requests (per-type) | ⛔ superseded | F4 đã build LeaveRequest + AttendanceCorrection riêng — refactor sang F5 universal engine vì cần mở rộng (out-of-office, OT, …). Tables drop trong migration `f5_universal_requests`. |
-| 5 | Requests (universal engine) | ✅ done | RequestGroup + Request polymorphic, `data: Json` validated theo `group.fieldsSchema`. 3 group seed: `leave`, `checkin`, `checkout`. Side-effect registry dispatch theo group code (checkin/checkout upsert AttendanceLog, leave no-op MVP). FE: master-detail UI + DynamicForm render theo schema. ADR 0006. |
-| 6 | Collaboration: Comments + Activities | 📋 planned | Generic comment (richtext, polymorphic `objectType + objectId`) + activity feed append-only. Pilot wire-in cho Request (timeline panel + comment richtext + ApprovalFlow component). ACL pattern (AclCalculator + view interface, không BaseEntity wrap) deferred — implement song song hoặc PR riêng. |
-| 7 | Calendar + Booking | 📋 planned | Calendar app với 4 view (day/week/month/list), event/meeting + resource booking (phòng họp / thiết bị / xe), follow đồng nghiệp xem lịch, sync 1-way từ Google + Microsoft. Sidebar trái: mini-calendar + tìm người + danh sách theo dõi + account links. Hiện trạng `/bookings` là placeholder thuần — F7 thay thế. |
+| 0 | Foundation | ✅ done | Folder migration, ESLint flat config, audit infra deferred → F1. Sidebar nav slot enable theo từng feature ship (không còn disabled). |
+| 1 | Auth + Org + AppAdmin | ✅ done | Signup Org / me / admin grant/revoke, audit log, isAdmin/isAppAdmin helpers. Login redirect preserve original path (`47e6475`), hydration-safe greeting. |
+| 2 | HRM core: Department + Employee + OrgChart | ✅ done | CRUD đủ, OrgChart CTE + approver candidates, EmployeePicker, dept manager auto-link, soft-delete, edit pages. **Mở rộng**: bulk import CSV/XLSX (`employee-import.service.ts`), role column + change-role gated by HRM admin (`e0a230d`), edit code (`8bfe320`), orgchart minimap (`0a16ab1`). |
+| 3 | Attendance | ✅ done | BE 4 modules + FE features. **Mở rộng**: month stats row trên calendar (`20c8853`), org-wide attendance report + Excel export + drill-down (`3012048`), orphan device events store + auto-link on Employee create (`fc61858`), JWT device token (migration `f3_jwt_device_token`). |
+| 4 | Requests (per-type) | ⛔ superseded | F4 đã build LeaveRequest + AttendanceCorrection riêng — refactor sang F5 universal engine. Tables drop trong migration `f5_universal_requests`. |
+| 5 | Requests (universal engine) | ✅ done | RequestGroup + Request polymorphic, `data: Json` validated theo `group.fieldsSchema`. 3 group seed: `leave`, `checkin`, `checkout`. Side-effect registry. ADR 0006. **Mở rộng**: title field (migration `add_request_title`), 3-pane Outlook layout, RequestCreateDialog 2-step thay `/requests/new`, edit/clone/cancel actions, ApprovalFlow compact (`3098838`, `0d553f4`, `e92ea14`). |
+| 6 | Collaboration: Comments + Activities | ✅ done | Migration `add_comments_and_activities` applied. BE: `comment` + `activity` modules `@Global`, sanitize-html, fire-and-forget activity log, Request pilot 3 endpoints. FE: Tiptap editor + UnifiedTimeline + ApprovalFlow. **F6.2 ACL refactor**: BaseAcl pattern (`common/acl/base-acl.ts`) + 5 entity ACLs (Department, Employee, Request, Event, Resource) — đã port từ "rework-talent" view interface, không wrap BaseEntity. Commits `12e9da5`, `e39f1d3`, `87b85b1`. |
+| 7 | Calendar + Booking | 🚧 partial (7.1–7.3 done, 7.4+ defer) | **Done**: F7.1 events 4-view (week/day/month/agenda với react-big-calendar) + EventCreateDialog 2-step + visibility/isPrivate + attendees + comments wire-in. F7.2 resources (ROOM/EQUIPMENT/VEHICLE) + RoomsView + booking conflict check. F7.3 follow + per-attendee chips + stored follow colors (migration `calendar_follow_color`) + visibility filter. **Bonus**: scheduling assistant + free/busy badges (`aa7ff1e`), CalendarSettingsForm, Preference module ([apps/backend/src/apps/core/preference](../../apps/backend/src/apps/core/preference/)) cho follow defaults. **Chưa làm**: F7.4 OAuth Google/Microsoft sync (không có `external-sync/`, `googleapis`/`microsoft-graph-client` deps), recurrence/rrule (schema comment line 460: "MVP: single events only"), F7.5 Tasks. |
+| — | Dashboard data-driven home | ✅ done (ngoài plan gốc) | Today status + approvals queue + birthdays. Commit `0167cd0`. |
+| — | Preference module | ✅ done (ngoài plan gốc) | `Preference` model với `PreferenceScope` enum, registry pattern. Hỗ trợ user-level config (vd calendar follow defaults). Migration `add_preferences_drop_calendar_default`. |
+| — | ZK-Bridge standalone | ✅ done (chuyển từ roadmap → ship) | [services/zk-bridge](../../services/zk-bridge/) là pnpm package độc lập publishable, có CLI entry, env reload, defuse orphan ZK waiters. Commits `4328c48`, `fbb721a`, `92b6a0f`. |
 
 ### F3 verify checklist (đã chạy 2026-05-04 qua curl, BE :8000 + DB Docker)
 
@@ -57,6 +60,33 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 - `/timesheet` — calendar grid render đúng, today highlight, hover popover (admin time picker)
 - `/settings/profile` — patch User dob/gender/phone OK
 - `/employees/new` + `[id]/edit` — UserPicker hoạt động, name hiển thị từ User
+
+## Gap còn lại sau sync 2026-05-10
+
+Liệt kê các item đã ghi defer trong plan + phát sinh trong quá trình ship — chưa làm, ưu tiên giảm dần.
+
+### Cao — đáng làm sớm (mỗi mục có plan riêng)
+
+- [ ] **F7.4 — External calendar sync** (Google + Microsoft, 1-way pull) → [f7-4-external-sync.md](f7-4-external-sync.md)
+- [ ] **F7 — Recurrence (RRULE)** → [f7-recurrence.md](f7-recurrence.md)
+- [ ] **F5.2 — Form-builder UI** cho RequestGroup → [f5-2-form-builder.md](f5-2-form-builder.md)
+- [ ] **F5 — Email notifications** cho Request lifecycle → [f5-email-notifications.md](f5-email-notifications.md)
+- [ ] **F5 — Sidebar pending-count badge** → [f5-pending-badge.md](f5-pending-badge.md)
+- [ ] **F3 — Multi-event push idempotency** (tách `attendance_events`) → [f3-multi-event-idempotency.md](f3-multi-event-idempotency.md)
+
+### Trung bình — khi mở rộng (mỗi mục có plan riêng)
+
+- [ ] **F6.3 — Mention picker + notifications** → [f6-3-mentions.md](f6-3-mentions.md)
+- [ ] **F6.4 — Comment moderation** (HRM appadmin xoá comment người khác) → [f6-4-comment-moderation.md](f6-4-comment-moderation.md)
+- [ ] **F6.5 — Comment rollout** sang Event / Employee / Department → [f6-5-comment-rollout.md](f6-5-comment-rollout.md)
+- [ ] **F6.6 — Activity feed dashboard** (`/activities` cho HR) → [f6-6-activity-feed.md](f6-6-activity-feed.md)
+- [ ] **F7.5 — Tasks** ("Việc cần làm") tab → [f7-5-tasks.md](f7-5-tasks.md)
+- [ ] **F5 — Leave-balance** entity + accrual + deduct on approve → [f5-leave-balance.md](f5-leave-balance.md)
+- [ ] **F5 — Resizable master-detail panel** cho `/requests` → [f5-resizable-panel.md](f5-resizable-panel.md)
+
+### Thấp — roadmap dài hơi (gộp 1 file)
+
+17 mục defer (F7.6 2-way sync, F7.7 real-time WS + reminders, F7.8 floor plan, F7.9 multi-TZ, F7.10 recurring UX, F7.11 booking approval, F7-leave conflict, audit viewer, performance reviews, documents upload, mobile, WORK app, payroll, multi-currency, multi-step approval, OOO delegate, accrual detail) → xem [roadmap.md](roadmap.md).
 
 ## Thứ tự implement
 
@@ -101,7 +131,7 @@ Dọn nền **không đụng schema**. Mọi việc cần model mới (BaseRepos
 - [x] Fix [`apps/frontend/src/features/auth/views/VerifyOtpView.tsx:47`](apps/frontend/src/features/auth/views/VerifyOtpView.tsx#L47) — bỏ `setShake/setCode` ra khỏi useEffect body. (Resolved by F1-F5 work.)
 - [x] Fix [`apps/frontend/src/features/dashboard/views/HomeView.tsx:15`](apps/frontend/src/features/dashboard/views/HomeView.tsx#L15) — bỏ import `Button` không dùng. (Resolved by F1-F5 work.)
 - [x] `pnpm --filter @c-hr/frontend check` xanh. (Verified 2026-05-06: 0 errors, 1 unrelated `react-hooks/incompatible-library` warning on `EmployeeCreateDialog.tsx` re `form.watch()` — not in F0 scope.)
-- [ ] `<DashboardShell>` sidebar — thêm slot nav cho HRM (Employees, Departments, OrgChart), Attendance (Timesheet, Devices, Schedules), Requests (Leave, Corrections), Settings (Organization, AppAdmins). Disabled link đến khi feature implement, enable qua flag.
+- [x] `<DashboardShell>` sidebar — slot nav HRM/Attendance/Requests/Calendar/Settings, enable theo feature ship. Hiện không còn link disabled (mọi context F1–F7.3 đã ship).
 
 ### Done-when
 

@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-07T07:03:24.559Z",
+  "generatedAt": "2026-05-10T17:34:41.213Z",
   "repoRelativeRoot": ".",
-  "count": 50,
+  "count": 64,
   "entries": [
     {
       "id": "AGENTS",
@@ -306,6 +306,328 @@
       "summary": "Single source of truth cho cả monorepo. Không nhân bản theo app — `apps/<name>/CLAUDE.md` chỉ là entry point trỏ về đây."
     },
     {
+      "id": "docs:plans:f3-multi-event-idempotency",
+      "path": "docs/plans/f3-multi-event-idempotency.md",
+      "title": "F3 — Multi-event push idempotency fix",
+      "description": "Tách bảng attendance_events raw, aggregate sang attendance_logs để replay IN+OUT cùng ngày trả counter đúng.",
+      "tags": [
+        "plan",
+        "attendance",
+        "idempotency",
+        "fix"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Vấn đề hiện tại",
+        "Fix — tách `attendance_events` raw",
+        "Schema diff",
+        "Service logic mới",
+        "Done-when",
+        "Smoke E2E",
+        "Risks",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 edge bug, non-blocking. Ghi nhận trong [features.md §F3 edge findings](features.md#edge-findings-non-blocking-ghi-chú-để-fix-sau). **Trigger**: trước khi vào prod thật với thiết bị push 2 event/ngày (IN + OUT). **Blocked-by**: F3 ✅ done."
+    },
+    {
+      "id": "docs:plans:f5-2-form-builder",
+      "path": "docs/plans/f5-2-form-builder.md",
+      "title": "F5.2 — RequestGroup form-builder UI",
+      "description": "Admin Org tự thêm/sửa group đơn (OT, OOO, WFH, …) qua drag-drop builder thay vì code release. Sửa fieldsSchema JSON.",
+      "tags": [
+        "plan",
+        "requests",
+        "admin",
+        "post-mvp"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Phạm vi",
+        "Schema diff",
+        "BE — Endpoints",
+        "FE — Module layout",
+        "Smoke E2E",
+        "Done-when",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 chưa làm. MVP đang seed cứng 3 group `leave/checkin/checkout` qua [groups.config.ts](../../apps/backend/src/apps/requests/groups.config.ts). **Trigger**: admin Org muốn thêm group \"OT\", \"WFH\", \"Out-of-office\" mà không cần code release. **Blocked-by**: F5 ✅ done."
+    },
+    {
+      "id": "docs:plans:f5-email-notifications",
+      "path": "docs/plans/f5-email-notifications.md",
+      "title": "F5 — Email notifications cho Request lifecycle",
+      "description": "Listener nối event emit hiện có (request.<group>.created/approved/rejected/cancelled) → MailService gửi email tới requester/approver.",
+      "tags": [
+        "plan",
+        "requests",
+        "notifications",
+        "mail"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Phạm vi",
+        "BE — MailService check",
+        "BE — Listener module",
+        "BE — Wire-in",
+        "FE deliverables",
+        "Smoke E2E",
+        "Done-when",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 chưa làm. Events đã emit trong F5 ([request.service.ts](../../apps/backend/src/apps/requests/request/request.service.ts)) nhưng chưa có listener. **Trigger**: yêu cầu UX cơ bản — không thể trông chờ user mở app check approval. **Blocked-by**: F5 ✅ done."
+    },
+    {
+      "id": "docs:plans:f5-leave-balance",
+      "path": "docs/plans/f5-leave-balance.md",
+      "title": "F5 — Leave-balance entity + deduct on approve",
+      "description": "Cộng dồn phép theo policy + deduct khi approve leave request. Thay no-op handler trong side-effects/registry.",
+      "tags": [
+        "plan",
+        "requests",
+        "leave",
+        "accrual"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Phạm vi MVP",
+        "Schema",
+        "BE — Logic",
+        "Accrual job",
+        "Side-effect handler `leave`",
+        "Endpoints",
+        "FE deliverables",
+        "Smoke E2E",
+        "Done-when",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 chưa làm. Side-effect `leave` hiện no-op (xem [registry.ts](../../apps/backend/src/apps/requests/side-effects/registry.ts)). **Trigger**: business cần track quota phép. Quan trọng cho compliance. **Blocked-by**: F5 ✅ done."
+    },
+    {
+      "id": "docs:plans:f5-pending-badge",
+      "path": "docs/plans/f5-pending-badge.md",
+      "title": "F5 — Sidebar pending-count badge",
+      "description": "Hiển thị số đơn cần duyệt cạnh menu \"Requests\" trong sidebar. BE đã có endpoint, FE polling + render badge.",
+      "tags": [
+        "plan",
+        "requests",
+        "ui",
+        "polish"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "BE deliverables",
+        "FE deliverables",
+        "Smoke",
+        "Done-when",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 chưa làm. BE [`request.repository.countPendingByApprover`](../../apps/backend/src/apps/requests/request/request.repository.ts) đã có; FE chưa nối. **Trigger**: nhỏ — UX polish. ~½ ngày. **Blocked-by**: F5 ✅ done."
+    },
+    {
+      "id": "docs:plans:f5-resizable-panel",
+      "path": "docs/plans/f5-resizable-panel.md",
+      "title": "F5 — Resizable master-detail panel cho /requests",
+      "description": "Drag-to-resize giữa list trái và preview phải. Fix type mismatch react-resizable-panels.",
+      "tags": [
+        "plan",
+        "requests",
+        "ui",
+        "polish"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Vấn đề hiện tại",
+        "Fix",
+        "Option A — Update `react-resizable-panels` (recommended)",
+        "Option B — Bỏ qua nếu lib bug",
+        "Done-when",
+        "Smoke",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 small polish. Defer ghi nhận trong [features.md F5 defers](features.md#defers-f52--future). **Trigger**: UX — list dài + preview wide đôi khi muốn user kéo phân chia. ~½ ngày. **Blocked-by**: F5 ✅ done."
+    },
+    {
+      "id": "docs:plans:f6-3-mentions",
+      "path": "docs/plans/f6-3-mentions.md",
+      "title": "F6.3 — Mention picker @user + notifications",
+      "description": "Tiptap mention extension + user search endpoint + notification khi được mention. V1 chỉ in-app (toast); email mention defer.",
+      "tags": [
+        "plan",
+        "collaboration",
+        "mentions",
+        "notifications"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "BE deliverables",
+        "Endpoint user search",
+        "Notification trigger",
+        "Notification entity (bảng mới)",
+        "Notification listener",
+        "Endpoint Notification",
+        "FE deliverables",
+        "Tiptap mention extension",
+        "Notification UI",
+        "Smoke E2E",
+        "Done-when",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 chưa làm. F6 hiện store `mentions: [{userId, name}]` snapshot từ FE nhưng không có picker UI hay notification. **Trigger**: user comment muốn ping cụ thể đồng nghiệp. **Blocked-by**: F6 ✅ done."
+    },
+    {
+      "id": "docs:plans:f6-4-comment-moderation",
+      "path": "docs/plans/f6-4-comment-moderation.md",
+      "title": "F6.4 — Comment moderation (HRM appadmin xoá comment người khác)",
+      "description": "Expose flag allowModeration đã có ở CommentService.softDelete qua endpoint + button UI cho HRM appadmin.",
+      "tags": [
+        "plan",
+        "collaboration",
+        "moderation",
+        "polish"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "BE deliverables",
+        "FE deliverables",
+        "Smoke E2E",
+        "Done-when",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 chưa làm. Service đã sẵn flag, FE chưa expose. **Trigger**: comment toxic/sensitive cần HR xoá. Ít gặp nhưng cần có. **Blocked-by**: F6 ✅ done."
+    },
+    {
+      "id": "docs:plans:f6-5-comment-rollout",
+      "path": "docs/plans/f6-5-comment-rollout.md",
+      "title": "F6.5 — Comment rollout sang Event / Employee / Department",
+      "description": "Mở rộng comment endpoint pilot Request sang 3 object khác. Pattern lặp — copy controller method + ACL inline.",
+      "tags": [
+        "plan",
+        "collaboration",
+        "rollout"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Pattern (copy từ Request)",
+        "Per-object detail",
+        "Event (calendar)",
+        "Employee (hrm)",
+        "Department (hrm)",
+        "FE deliverables",
+        "Smoke E2E",
+        "Done-when",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 partial. Event đã có **Activity** wire-in (5 chỗ trong [event.service.ts](../../apps/backend/src/apps/calendar/event/event.service.ts)) nhưng **chưa có Comment endpoint**. Employee/Department chưa có cả 2. **Trigger**: user note hồ sơ HR, manager note phòng ban, comment trên event. **Blocked-by**: F6 ✅ done."
+    },
+    {
+      "id": "docs:plans:f6-6-activity-feed",
+      "path": "docs/plans/f6-6-activity-feed.md",
+      "title": "F6.6 — Activity feed dashboard cho HRM appadmin",
+      "description": "Trang /activities cho HR xem stream toàn Org filter theo action / user / time range. Tận dụng index có sẵn.",
+      "tags": [
+        "plan",
+        "collaboration",
+        "dashboard",
+        "admin"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "BE deliverables",
+        "FE deliverables",
+        "Smoke E2E",
+        "Done-when",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 chưa làm. Activity log đã có từ F6, index `(organizationId, createdAt DESC)` có sẵn. **Trigger**: HR muốn xem nhanh \"Hôm qua công ty làm gì\" mà không click vào từng record. **Blocked-by**: F6 ✅ done."
+    },
+    {
+      "id": "docs:plans:f7-4-external-sync",
+      "path": "docs/plans/f7-4-external-sync.md",
+      "title": "F7.4 — External calendar sync (Google + Microsoft, 1-way pull)",
+      "description": "OAuth connect + cron pull lịch external về overlay vào C-HR. Phase cuối F7. 1 model + 2 service provider + scheduler + 4 endpoint OAuth.",
+      "tags": [
+        "plan",
+        "calendar",
+        "integration",
+        "oauth",
+        "post-mvp"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Schema (1 bảng + 1 enum)",
+        "BE — Module layout",
+        "BE — Endpoints",
+        "BE — Sync logic",
+        "FE deliverables",
+        "Smoke E2E",
+        "Done-when",
+        "Defers (F7.4.x)",
+        "Risks"
+      ],
+      "summary": "**Trạng thái**: 📋 chưa làm. Là phase cuối còn thiếu của F7. **Trigger**: user thật cần overlay lịch Google/Outlook lên C-HR. Không làm trước khi user yêu cầu. **Blocked-by**: F7.1 (event schema) ✅ done. **Decision D6** (đã chốt từ [features.md §F7](features.md#feature-7--calendar--booking)): 1-way pull v1, 2-way push deferred → [f7-6-2way-sync.md](roadmap.md#f76)."
+    },
+    {
+      "id": "docs:plans:f7-5-tasks",
+      "path": "docs/plans/f7-5-tasks.md",
+      "title": "F7.5 — Tasks (\"Việc cần làm\") tab trên calendar",
+      "description": "Tab thứ 2 trên header calendar bên cạnh \"Sự kiện\". Tạo Task entity riêng (không reuse Request) vì lifecycle khác.",
+      "tags": [
+        "plan",
+        "calendar",
+        "tasks",
+        "post-mvp"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Schema",
+        "BE — Module",
+        "FE deliverables",
+        "Smoke E2E",
+        "Done-when",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 chưa làm. Tab \"Việc cần làm\" có trong screenshot F7 nhưng defer khi build MVP. **Decision**: tạo `Task` entity riêng (KHÔNG reuse Request engine — lifecycle TODO/IN_PROGRESS/DONE không match PENDING/APPROVED/REJECTED, không cần approver). **Blocked-by**: F7 ✅ done."
+    },
+    {
+      "id": "docs:plans:f7-recurrence",
+      "path": "docs/plans/f7-recurrence.md",
+      "title": "F7 — Event recurrence (RRULE)",
+      "description": "Event lặp daily/weekly/monthly với RFC 5545 RRULE. Schema thêm 2 field, expand instances trong query range, override single instance qua parent-child.",
+      "tags": [
+        "plan",
+        "calendar",
+        "recurrence",
+        "post-mvp"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Schema diff",
+        "BE — Logic",
+        "`event.service.list({ from, to, ... })` mở rộng",
+        "`event.service.update(id, dto, { scope: 'instance' | 'series' })`",
+        "`event.service.remove(id, { scope })`",
+        "`recurrence.ts` — helper module",
+        "FE deliverables",
+        "Smoke E2E",
+        "Done-when",
+        "Defers"
+      ],
+      "summary": "**Trạng thái**: 📋 chưa làm. Schema [comment line 460](../../apps/backend/prisma/schema.prisma) ghi rõ \"MVP: single events only\". **Trigger**: user có meeting weekly/standup/monthly review. **Blocked-by**: F7.1 ✅ done."
+    },
+    {
       "id": "docs:plans:features",
       "path": "docs/plans/features.md",
       "title": "C-HR features plan",
@@ -321,10 +643,14 @@
       "category": "plans",
       "headings": [
         "Nguyên tắc (cứng — không đổi)",
-        "Trạng thái hiện tại (cập nhật 2026-05-06)",
+        "Trạng thái hiện tại (cập nhật 2026-05-10)",
         "F3 verify checklist (đã chạy 2026-05-04 qua curl, BE :8000 + DB Docker)",
         "Edge findings (non-blocking, ghi chú để fix sau)",
         "Manual UI smoke (chờ demo qua browser)",
+        "Gap còn lại sau sync 2026-05-10",
+        "Cao — đáng làm sớm (mỗi mục có plan riêng)",
+        "Trung bình — khi mở rộng (mỗi mục có plan riêng)",
+        "Thấp — roadmap dài hơi (gộp 1 file)",
         "Thứ tự implement",
         "Feature 0 — Foundation",
         "BE",
@@ -407,6 +733,40 @@
         "Sau Phase 4"
       ],
       "summary": "**Project**: C-HR (C-OpenAI Human Resource) — SaaS quản lý nhân sự cho doanh nghiệp. **Stack**: Next.js 16 (frontend) + NestJS 10 (backend) + Postgres 16 + Redis 7, monorepo."
+    },
+    {
+      "id": "docs:plans:roadmap",
+      "path": "docs/plans/roadmap.md",
+      "title": "Roadmap — 17 mục post-MVP chưa scope chi tiết",
+      "description": "Các tính năng mức \"Thấp\" trong gap analysis 2026-05-10. 1-liner scope + trigger + dependency. Lên plan chi tiết khi nào commit work.",
+      "tags": [
+        "project",
+        "roadmap",
+        "post-mvp"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "F7.6 — 2-way calendar sync {#f76}",
+        "F7.7 — Real-time notifications + reminders {#f77}",
+        "F7.8 — Resource floor plan {#f78}",
+        "F7.9 — Multi-timezone proper {#f79}",
+        "F7.10 — Recurring exceptions UX {#f710}",
+        "F7.11 — Booking approval workflow {#f711}",
+        "F7-leave conflict {#f7-leave}",
+        "Audit log viewer UI {#audit-viewer}",
+        "Performance reviews {#perf-reviews}",
+        "Documents/contracts upload {#docs}",
+        "Mobile app {#mobile}",
+        "WORK app {#work-app}",
+        "Payroll {#payroll}",
+        "Multi-currency cho Org {#multi-currency}",
+        "Multi-step approval workflow cho leave > N ngày {#multi-step}",
+        "Out-of-office delegate cho approver {#delegate}",
+        "Time-off accrual chi tiết hơn {#accrual-detail}",
+        "Quy trình promote 1 mục từ roadmap → plan riêng"
+      ],
+      "summary": "Liệt kê các tính năng đã ghi nhận trong [features.md \"Gap còn lại\"](features.md#gap-còn-lại-sau-sync-2026-05-10) **mức Thấp** — chưa cần plan chi tiết, chỉ note scope/trigger/dep để khi business confirm sẽ promote thành plan file riêng."
     },
     {
       "id": "docs:plans:verify",
