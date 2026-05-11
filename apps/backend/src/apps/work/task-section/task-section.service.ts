@@ -77,7 +77,15 @@ export class TaskSectionService {
     if (!section) throw new NotFoundException('Section not found');
     await this.assertProjectEditable(section.projectId);
 
-    // TODO Phase 2: reject if section has tasks (Task entity ships next).
+    const taskCount = await this.prisma.task.count({
+      where: { sectionId: id, deletedAt: null },
+    });
+    if (taskCount > 0) {
+      throw new BadRequestException(
+        'Không xoá được cột còn task. Hãy chuyển task sang cột khác trước.',
+      );
+    }
+
     await this.repo.remove(id);
     return { id, success: true as const };
   }

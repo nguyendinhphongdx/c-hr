@@ -11,6 +11,9 @@ const TASK_LIST_INCLUDE = {
   assignee: USER_SUMMARY,
   reporter: USER_SUMMARY,
   section: { select: { id: true, name: true, order: true } },
+  project: {
+    select: { id: true, name: true, slug: true, color: true, icon: true },
+  },
   _count: { select: { subtasks: { where: { deletedAt: null } }, watchers: true } },
 } as const satisfies Prisma.TaskInclude;
 

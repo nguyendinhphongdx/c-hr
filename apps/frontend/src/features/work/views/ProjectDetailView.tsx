@@ -8,7 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProject } from "../hooks/useProjects";
 import { ProjectHeader } from "../components/shell/ProjectHeader";
 import { ProjectSettingsDrawer } from "../components/project/ProjectSettingsDrawer";
+import { ProjectReportPanel } from "../components/reports/ProjectReportPanel";
 import { TaskListTab } from "../components/task/TaskListTab";
+import { TaskDetailDrawer } from "../components/task/TaskDetailDrawer";
+import { BoardView } from "../components/board/BoardView";
 
 interface ProjectDetailViewProps {
   slug: string;
@@ -17,6 +20,7 @@ interface ProjectDetailViewProps {
 export function ProjectDetailView({ slug }: ProjectDetailViewProps) {
   const { data: project, isLoading, error } = useProject(slug);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedTaskCode, setSelectedTaskCode] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -42,21 +46,35 @@ export function ProjectDetailView({ slug }: ProjectDetailViewProps) {
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <Tabs defaultValue="list" className="flex-1 overflow-hidden">
+      <Tabs defaultValue="list" className="flex flex-1 flex-col overflow-hidden">
         <TabsList className="mx-6 mt-3">
           <TabsTrigger value="list">Danh sách</TabsTrigger>
-          <TabsTrigger value="board" disabled>
-            Bảng (sắp có)
-          </TabsTrigger>
-          <TabsTrigger value="reports" disabled>
-            Báo cáo (sắp có)
-          </TabsTrigger>
+          <TabsTrigger value="board">Bảng</TabsTrigger>
+          <TabsTrigger value="reports">Báo cáo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="flex-1 overflow-y-auto p-6">
-          <TaskListTab projectId={project.id} />
+          <TaskListTab
+            projectId={project.id}
+            onOpenTask={setSelectedTaskCode}
+          />
+        </TabsContent>
+
+        <TabsContent value="board" className="flex-1 overflow-hidden p-0">
+          <BoardView projectId={project.id} onOpenTask={setSelectedTaskCode} />
+        </TabsContent>
+
+        <TabsContent value="reports" className="flex-1 overflow-y-auto p-6">
+          <ProjectReportPanel projectId={project.id} />
         </TabsContent>
       </Tabs>
+
+      <TaskDetailDrawer
+        open={selectedTaskCode !== null}
+        onClose={() => setSelectedTaskCode(null)}
+        idOrCode={selectedTaskCode}
+        projectId={project.id}
+      />
 
       <ProjectSettingsDrawer
         project={project}

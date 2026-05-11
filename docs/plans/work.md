@@ -87,14 +87,14 @@ Tenant isolation cứng (ADR 0001) — mọi query qua `*ByOrg` repo methods.
 | --- | --- | --- | --- |
 | 1A | Tag generic foundation (BE + FE + admin page) | 1-1.5 ngày | ✅ done |
 | 1B | Project + Member + Section CRUD + UI | 2-3 ngày | ✅ done |
-| 2 | Task CRUD + List view + Detail drawer (uses TagPicker, UserPicker) | 3-4 ngày | 📋 |
-| 3 | Board (Kanban) view + drag-drop (`@dnd-kit/core`) | 2-3 ngày | 📋 |
-| 4 | Comments + Watchers + Activity (reuse F6) + @mention auto-watch | 1-2 ngày | 📋 |
-| 5 | My Tasks cross-project view + filters | 1-2 ngày | 📋 |
-| 6 | Reports — per-project (KPI + burndown + workload) + org-wide | 2 ngày | 📋 |
+| 2 | Task CRUD + List view + Detail drawer (uses TagPicker, UserPicker) | 3-4 ngày | ✅ done |
+| 3 | Board (Kanban) view + drag-drop (`@dnd-kit/core`) | 2-3 ngày | ✅ done |
+| 4 | Comments + Watchers + Activity (reuse F6) + @mention auto-watch | 1-2 ngày | ✅ done |
+| 5 | My Tasks cross-project view + filters | 1-2 ngày | ✅ done |
+| 6 | Reports — per-project (KPI + burndown + workload) + org-wide | 2 ngày | ✅ done |
 | 7+ | **Moat — Time tracking timer** trên task → cộng dồn `actualMinutes` per employee × period → cột mới trong Báo cáo timesheet | 2-3 ngày | defer |
 
-**MVP demo bán hàng (Phase 1A + 1B + 2-5) ≈ 9-13 ngày**. Phase 1A + 1B đã consume 2-3 ngày bằng 2 agent song song.
+**MVP demo bán hàng — DONE**. Phase 1A → 6 hoàn tất qua 6 agent (chủ yếu worktree isolation, 1 song song cặp 1A/1B).
 
 ## Sidebar nav
 

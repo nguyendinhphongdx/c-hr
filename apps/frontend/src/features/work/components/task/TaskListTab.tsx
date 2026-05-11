@@ -31,16 +31,16 @@ import type {
   TaskStatus,
 } from "../../types";
 import { TaskCreateDialog } from "./TaskCreateDialog";
-import { TaskDetailDrawer } from "./TaskDetailDrawer";
 import { cycleStatus, TaskRow } from "./TaskRow";
 
 interface TaskListTabProps {
   projectId: ID;
+  onOpenTask: (code: string) => void;
 }
 
 type AssigneeFilter = "ALL" | "ME" | "USER";
 
-export function TaskListTab({ projectId }: TaskListTabProps) {
+export function TaskListTab({ projectId, onOpenTask }: TaskListTabProps) {
   const { user } = useAuth();
   const sections = useProjectSections(projectId);
 
@@ -88,7 +88,6 @@ export function TaskListTab({ projectId }: TaskListTabProps) {
     setCreateOpen(true);
   };
 
-  const [detailIdOrCode, setDetailIdOrCode] = useState<string | null>(null);
   const update = useUpdateTask();
 
   const handleCycleStatus = async (t: TaskListItem) => {
@@ -238,7 +237,7 @@ export function TaskListTab({ projectId }: TaskListTabProps) {
                           <TaskRow
                             key={t.id}
                             task={t}
-                            onOpen={(task) => setDetailIdOrCode(task.code)}
+                            onOpen={(task) => onOpenTask(task.code)}
                             onCycleStatus={handleCycleStatus}
                           />
                         ))}
@@ -278,7 +277,7 @@ export function TaskListTab({ projectId }: TaskListTabProps) {
                   <TaskRow
                     key={t.id}
                     task={t}
-                    onOpen={(task) => setDetailIdOrCode(task.code)}
+                    onOpen={(task) => onOpenTask(task.code)}
                     onCycleStatus={handleCycleStatus}
                   />
                 ))}
@@ -294,13 +293,6 @@ export function TaskListTab({ projectId }: TaskListTabProps) {
         projectId={projectId}
         defaultSectionId={createSection}
         sections={sectionList}
-      />
-
-      <TaskDetailDrawer
-        open={detailIdOrCode !== null}
-        onClose={() => setDetailIdOrCode(null)}
-        idOrCode={detailIdOrCode}
-        projectId={projectId}
       />
     </div>
   );

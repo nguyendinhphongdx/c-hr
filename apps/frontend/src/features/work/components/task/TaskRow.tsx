@@ -35,9 +35,11 @@ interface TaskRowProps {
   task: TaskListItem;
   onOpen: (task: TaskListItem) => void;
   onCycleStatus: (task: TaskListItem) => void;
+  /** Render a project chip before the title (used by cross-project My Tasks view). */
+  showProject?: boolean;
 }
 
-export function TaskRow({ task, onOpen, onCycleStatus }: TaskRowProps) {
+export function TaskRow({ task, onOpen, onCycleStatus, showProject }: TaskRowProps) {
   const { Icon, className: iconClass } = STATUS_ICON[task.status];
   const tagsShown = useMemo(() => task.tags.slice(0, 2), [task.tags]);
   const tagOverflow = task.tags.length - tagsShown.length;
@@ -66,6 +68,21 @@ export function TaskRow({ task, onOpen, onCycleStatus }: TaskRowProps) {
       <TableCell className="py-1.5 font-mono text-xs text-muted-foreground">
         {task.code}
       </TableCell>
+      {showProject && (
+        <TableCell className="py-1.5">
+          <span
+            className="inline-flex max-w-45 items-center gap-1 truncate rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+            title={task.project.name}
+          >
+            <span
+              aria-hidden
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: task.project.color ?? "#94a3b8" }}
+            />
+            <span className="truncate">{task.project.name}</span>
+          </span>
+        </TableCell>
+      )}
       <TableCell className="py-1.5">
         <span
           className={cn(

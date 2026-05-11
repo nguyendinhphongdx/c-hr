@@ -86,7 +86,6 @@ const NAV_SECTIONS: NavSection[] = [
         label: "Việc của tôi",
         icon: ListChecks,
         exact: true,
-        disabled: true,
       },
       { href: "/projects", label: "Dự án", icon: FolderKanban },
     ],
@@ -170,6 +169,20 @@ export function Sidebar({ collapsed }: SidebarProps) {
                 active={
                   pathname === "/timesheet/reports" ||
                   pathname.startsWith("/timesheet/reports/")
+                }
+              />
+            )}
+            {section.label === "Công việc" && showAdmin && (
+              <NavLink
+                item={{
+                  href: "/projects/reports",
+                  label: "Báo cáo",
+                  icon: BarChart3,
+                }}
+                collapsed={collapsed}
+                active={
+                  pathname === "/projects/reports" ||
+                  pathname.startsWith("/projects/reports/")
                 }
               />
             )}

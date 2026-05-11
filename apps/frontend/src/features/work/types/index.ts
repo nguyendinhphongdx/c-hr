@@ -150,6 +150,14 @@ export interface TaskAclView {
   canWatch: boolean;
 }
 
+export interface TaskProjectSummary {
+  id: ID;
+  name: string;
+  slug: string;
+  color: Nullable<string>;
+  icon: Nullable<string>;
+}
+
 /** Shape returned from list endpoint — no subtasks or watchers details. */
 export interface TaskListItem {
   id: ID;
@@ -174,6 +182,7 @@ export interface TaskListItem {
   assignee: Nullable<UserSummary>;
   reporter: UserSummary;
   section: Nullable<{ id: ID; name: string; order: number }>;
+  project: TaskProjectSummary;
   tags: TaskTagSummary[];
   _count: { subtasks: number; watchers: number };
 }

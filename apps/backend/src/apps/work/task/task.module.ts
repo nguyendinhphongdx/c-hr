@@ -3,13 +3,14 @@ import { Module } from '@nestjs/common';
 import { ProjectModule } from '../project/project.module';
 
 import { TaskController } from './task.controller';
+import { TaskCommentWatchListener } from './task-comment-watch.listener';
 import { TaskRepository } from './task.repository';
 import { TaskService } from './task.service';
 
 @Module({
   imports: [ProjectModule],
   controllers: [TaskController],
-  providers: [TaskService, TaskRepository],
+  providers: [TaskService, TaskRepository, TaskCommentWatchListener],
   exports: [TaskService, TaskRepository],
 })
 export class TaskModule {}

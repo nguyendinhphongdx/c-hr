@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Eye, EyeOff, Loader2, Plus, Trash2 } from "lucide-react";
@@ -23,12 +24,21 @@ import {
 } from "@/components/ui/sheet";
 import { useAuth } from "@/features/auth";
 import { RichTextDescriptionField } from "@/features/calendar/components/event/RichTextDescriptionField";
+import {
+  CommentEditor,
+  UnifiedTimeline,
+  useCreateComment,
+  useDeleteComment,
+  useUpdateComment,
+} from "@/features/collaboration";
 import { TagPicker } from "@/features/tags";
 import { UserPicker } from "@/features/users/components/UserPicker";
+import { encodeObjectRef } from "@/lib/object-ref";
 import type { ID } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import {
+  taskKeys,
   useCreateTask,
   useDeleteTask,
   useTask,
@@ -497,8 +507,12 @@ function TaskDetailBody({
           </ul>
         </section>
 
-        <section className="rounded border border-dashed bg-muted/20 p-4 text-xs text-muted-foreground">
-          Bình luận sẽ có ở Phase 4.
+        <section>
+          <SectionHeader>Hoạt động & bình luận</SectionHeader>
+          <TaskTimelineSection
+            taskId={task.id}
+            currentUserId={currentUserId}
+          />
         </section>
 
         <section className="text-[11px] text-muted-foreground">
@@ -510,6 +524,8 @@ function TaskDetailBody({
         </section>
       </div>
 
+      <TaskCommentComposer taskId={task.id} canComment={canEdit} />
+
       {canDelete && (
         <footer className="flex shrink-0 items-center justify-between border-t bg-background px-6 py-3">
           <Button variant="destructive" size="sm" onClick={onDelete}>
@@ -517,6 +533,75 @@ function TaskDetailBody({
           </Button>
         </footer>
       )}
+    </div>
+  );
+}
+
+function TaskTimelineSection({
+  taskId,
+  currentUserId,
+}: {
+  taskId: ID;
+  currentUserId: string | undefined;
+}) {
+  const objectRef = useMemo(
+    () => encodeObjectRef({ objectType: "Task", objectId: taskId }),
+    [taskId],
+  );
+  const updateComment = useUpdateComment(objectRef);
+  const deleteComment = useDeleteComment(objectRef);
+
+  return (
+    <UnifiedTimeline
+      objectRef={objectRef}
+      currentUserId={currentUserId}
+      onUpdateComment={(id, data) =>
+        updateComment.mutateAsync({ id, data }).then(() => undefined)
+      }
+      onDeleteComment={(id) =>
+        deleteComment.mutateAsync(id).then(() => undefined)
+      }
+    />
+  );
+}
+
+function TaskCommentComposer({
+  taskId,
+  canComment,
+}: {
+  taskId: ID;
+  canComment: boolean;
+}) {
+  const qc = useQueryClient();
+  const objectRef = useMemo(
+    () => encodeObjectRef({ objectType: "Task", objectId: taskId }),
+    [taskId],
+  );
+  const createComment = useCreateComment(objectRef);
+
+  if (!canComment) return null;
+
+  return (
+    <div className="shrink-0 border-t bg-background px-6 py-3">
+      <CommentEditor
+        onSubmit={async (bodyHtml) => {
+          try {
+            await createComment.mutateAsync({ bodyHtml });
+            // @mention auto-watch may have added watchers on BE — refetch
+            // the task detail so the Watchers section reflects the change.
+            qc.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+            toast.success("Đã gửi bình luận");
+          } catch (err) {
+            const msg =
+              (err as { response?: { data?: { error?: { message?: string } } } })
+                ?.response?.data?.error?.message ??
+              "Không gửi được bình luận";
+            toast.error(msg);
+            throw err;
+          }
+        }}
+        placeholder="Viết bình luận…"
+      />
     </div>
   );
 }
