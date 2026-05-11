@@ -81,10 +81,7 @@ export class OnboardingTemplateController {
 
   @Post('onboarding/templates/:id/tasks')
   @Auditable({ action: 'ONBOARDING_TEMPLATE_TASK_CREATE', entity: 'OnboardingTemplateTask' })
-  addTask(
-    @Param('id', ParseUUIDPipe) templateId: string,
-    @Body() dto: CreateTemplateTaskDto,
-  ) {
+  addTask(@Param('id', ParseUUIDPipe) templateId: string, @Body() dto: CreateTemplateTaskDto) {
     return this.service.addTask(templateId, dto);
   }
 
@@ -100,10 +97,7 @@ export class OnboardingTemplateController {
 
   @Patch('onboarding/template-tasks/:id')
   @Auditable({ action: 'ONBOARDING_TEMPLATE_TASK_UPDATE', entity: 'OnboardingTemplateTask' })
-  updateTask(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateTemplateTaskDto,
-  ) {
+  updateTask(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTemplateTaskDto) {
     return this.service.updateTask(id, dto);
   }
 

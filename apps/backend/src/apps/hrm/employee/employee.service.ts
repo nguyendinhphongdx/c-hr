@@ -6,7 +6,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EmployeeStatus, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import { requireAppAdmin } from '@/common/auth/access';
@@ -31,6 +32,7 @@ export class EmployeeService {
     private readonly prisma: PrismaService,
     private readonly ctx: RequestContextService,
     private readonly repo: EmployeeRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -128,10 +130,12 @@ export class EmployeeService {
 
     if (dto.departmentId) await this.assertDepartmentInOrg(orgId, dto.departmentId);
 
+    const callerUserId = this.ctx.requireUserId();
+
     // Link-existing-user path: skip user creation, just attach.
     if (dto.userId) {
       await this.assertUserAvailableForLink(orgId, dto.userId);
-      return this.prisma.$transaction(async (tx) => {
+      const created = await this.prisma.$transaction(async (tx) => {
         const employee = await tx.employee.create({
           data: {
             organizationId: orgId,
@@ -148,6 +152,11 @@ export class EmployeeService {
         await this.linkPendingAttendance(tx, orgId, employee.id, dto.code);
         return employee;
       });
+      this.eventEmitter.emit('employee.created', {
+        employeeId: created.id,
+        createdById: callerUserId,
+      });
+      return created;
     }
 
     // class-validator already rejects this branch when these are missing,
@@ -171,7 +180,7 @@ export class EmployeeService {
     const passwordHash = await bcrypt.hash(dto.password, PASSWORD_BCRYPT_ROUNDS);
     const { email, name } = dto;
 
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       const employee = await tx.employee.create({
         data: {
           organizationId: orgId,
@@ -194,6 +203,11 @@ export class EmployeeService {
       await this.linkPendingAttendance(tx, orgId, employee.id, dto.code);
       return employee;
     });
+    this.eventEmitter.emit('employee.created', {
+      employeeId: created.id,
+      createdById: callerUserId,
+    });
+    return created;
   }
 
   async update(id: string, dto: UpdateEmployeeDto) {
@@ -228,7 +242,8 @@ export class EmployeeService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const previousStatus = existing.status;
+    const updated = await this.prisma.$transaction(async (tx) => {
       const employee = await tx.employee.update({
         where: { id },
         data: {
@@ -271,6 +286,12 @@ export class EmployeeService {
       }
       return employee;
     });
+
+    if (dto.status === EmployeeStatus.TERMINATED && previousStatus !== EmployeeStatus.TERMINATED) {
+      this.eventEmitter.emit('employee.terminated', { employeeId: id });
+    }
+
+    return updated;
   }
 
   async softDelete(id: string) {

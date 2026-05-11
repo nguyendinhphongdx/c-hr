@@ -92,20 +92,8 @@ function buildSingleSheet(p: PayslipPayload): XLSX.WorkSheet {
 
   // Employee block
   pushRow(['Mã NV:', p.employee.code, '', 'Họ tên:', p.employee.name ?? '—']);
-  pushRow([
-    'Phòng ban:',
-    p.employee.department ?? '—',
-    '',
-    'Chức vụ:',
-    p.employee.title ?? '—',
-  ]);
-  pushRow([
-    'MST:',
-    p.employee.taxCode ?? '—',
-    '',
-    'Số sổ BHXH:',
-    p.employee.bhxhCode ?? '—',
-  ]);
+  pushRow(['Phòng ban:', p.employee.department ?? '—', '', 'Chức vụ:', p.employee.title ?? '—']);
+  pushRow(['MST:', p.employee.taxCode ?? '—', '', 'Số sổ BHXH:', p.employee.bhxhCode ?? '—']);
   pushRow([
     'Số người phụ thuộc:',
     p.employee.dependents,
@@ -192,14 +180,7 @@ function buildSingleSheet(p: PayslipPayload): XLSX.WorkSheet {
   }
 
   sheet['!merges'] = merges;
-  sheet['!cols'] = [
-    { wch: 30 },
-    { wch: 18 },
-    { wch: 2 },
-    { wch: 18 },
-    { wch: 18 },
-    { wch: 14 },
-  ];
+  sheet['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 2 }, { wch: 18 }, { wch: 18 }, { wch: 14 }];
 
   return sheet;
 }

@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AssigneeRole, Prisma } from '@prisma/client';
 
 import { RequestContextService } from '@/common/context';
