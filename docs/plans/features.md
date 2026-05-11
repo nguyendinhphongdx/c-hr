@@ -32,6 +32,7 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 5 | Requests (universal engine) | ✅ done | RequestGroup + Request polymorphic, `data: Json` validated theo `group.fieldsSchema`. 3 group seed: `leave`, `checkin`, `checkout`. Side-effect registry. ADR 0006. **Mở rộng**: title field (migration `add_request_title`), 3-pane Outlook layout, RequestCreateDialog 2-step thay `/requests/new`, edit/clone/cancel actions, ApprovalFlow compact (`3098838`, `0d553f4`, `e92ea14`). |
 | 6 | Collaboration: Comments + Activities | ✅ done | Migration `add_comments_and_activities` applied. BE: `comment` + `activity` modules `@Global`, sanitize-html, fire-and-forget activity log, Request pilot 3 endpoints. FE: Tiptap editor + UnifiedTimeline + ApprovalFlow. **F6.2 ACL refactor**: BaseAcl pattern (`common/acl/base-acl.ts`) + 5 entity ACLs (Department, Employee, Request, Event, Resource) — đã port từ "rework-talent" view interface, không wrap BaseEntity. Commits `12e9da5`, `e39f1d3`, `87b85b1`. |
 | 7 | Calendar + Booking | 🚧 partial (7.1–7.3 done, 7.4+ defer) | **Done**: F7.1 events 4-view (week/day/month/agenda với react-big-calendar) + EventCreateDialog 2-step + visibility/isPrivate + attendees + comments wire-in. F7.2 resources (ROOM/EQUIPMENT/VEHICLE) + RoomsView + booking conflict check. F7.3 follow + per-attendee chips + stored follow colors (migration `calendar_follow_color`) + visibility filter. **Bonus**: scheduling assistant + free/busy badges (`aa7ff1e`), CalendarSettingsForm, Preference module ([apps/backend/src/apps/core/preference](../../apps/backend/src/apps/core/preference/)) cho follow defaults. **Chưa làm**: F7.4 OAuth Google/Microsoft sync (không có `external-sync/`, `googleapis`/`microsoft-graph-client` deps), recurrence/rrule (schema comment line 460: "MVP: single events only"), F7.5 Tasks. |
+| 8 | Work — Project + Task + Tag generic | ✅ done | App quản lý dự án + task cho team (Linear-class UX + tích hợp HRM). Phase 1A–6 hoàn tất: Tag polymorphic + Project + Task + Kanban Board (@dnd-kit) + Comments/Activity (reuse F6) + My Tasks cross-project + Reports per-project & org-wide. Spec: [work.md](work.md). |
 | — | Dashboard data-driven home | ✅ done (ngoài plan gốc) | Today status + approvals queue + birthdays. Commit `0167cd0`. |
 | — | Preference module | ✅ done (ngoài plan gốc) | `Preference` model với `PreferenceScope` enum, registry pattern. Hỗ trợ user-level config (vd calendar follow defaults). Migration `add_preferences_drop_calendar_default`. |
 | — | ZK-Bridge standalone | ✅ done (chuyển từ roadmap → ship) | [services/zk-bridge](../../services/zk-bridge/) là pnpm package độc lập publishable, có CLI entry, env reload, defuse orphan ZK waiters. Commits `4328c48`, `fbb721a`, `92b6a0f`. |
@@ -1436,7 +1437,6 @@ Optional, không scope MVP:
 - **Documents/contracts upload** (đã có `libs/storage`).
 - **Mobile app** (React Native) — share types với FE qua `packages/`.
 - **Payroll** (sau khi business confirm — đã defer ở quyết định hiện tại).
-- **WORK app** (`src/apps/work/`) — quản lý công việc, task, deadline.
 
 ## Workflow mỗi feature (template)
 

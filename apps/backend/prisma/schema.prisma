@@ -119,6 +119,13 @@ model User {
   eventsCreated    Event[]         @relation("EventCreatedBy")
   eventAttendances EventAttendee[] @relation("EventAttendee")
 
+  projectsOwned      Project[]       @relation("ProjectOwner")
+  projectMemberships ProjectMember[] @relation("ProjectMember")
+
+  tasksAssigned Task[]        @relation("TaskAssignee")
+  tasksReported Task[]        @relation("TaskReporter")
+  taskWatching  TaskWatcher[] @relation("TaskWatcher")
+
   @@map("users")
 }
 
@@ -424,6 +431,48 @@ model Comment {
   @@map("comments")
 }
 
+// Generic tag — gắn vào bất kỳ object nào (Task, Project, Employee, Event,
+// Resource, ...). objectType + objectId là pointer thuần (không FK) để giữ
+// generic — pattern giống Comment/Activity. MVP: tag thuộc về Org, scope=null
+// (gắn được vào mọi loại object). Phase 1A — Tag library.
+model Tag {
+  id             String  @id @default(uuid())
+  organizationId String  @map("organization_id")
+  name           String  @db.VarChar(63)
+  color          String  @db.VarChar(9)
+  /// `null` = global tag (gắn được vào mọi objectType). Giá trị (vd "Task")
+  /// để giới hạn 1 loại object. MVP dùng null cho mọi tag.
+  scope          String? @db.VarChar(31)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  assignments TagAssignment[]
+
+  @@unique([organizationId, scope, name])
+  @@index([organizationId, deletedAt])
+  @@map("tags")
+}
+
+model TagAssignment {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  tagId          String   @map("tag_id")
+  /// "Task" | "Project" | "Employee" | "Event" | "Resource" | ...
+  /// Pointer thuần — không FK (giống Comment.objectType/objectId).
+  objectType     String   @db.VarChar(31) @map("object_type")
+  objectId       String   @map("object_id")
+  createdById    String   @map("created_by_id")
+  createdAt      DateTime @default(now())  @map("created_at")
+
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, objectType, objectId])
+  @@index([organizationId, objectType, objectId])
+  @@index([organizationId, tagId])
+  @@map("tag_assignments")
+}
+
 // Generic activity — append-only event log per object. Naming:
 // "<object>.<verb>" (e.g. "request.commented", "request.approved").
 // Side-effects nest under "<object>.side_effect.<name>". Distinct from
@@ -663,4 +712,169 @@ model EventResource {
   @@unique([eventId, resourceId])
   @@index([resourceId])
   @@map("event_resources")
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Work app (Phase 1B) — Project + ProjectMember + TaskSection.
+//
+// Project = container cho task. Member roles: OWNER (1+), EDITOR (sửa
+// task), COMMENTER (bình luận), VIEWER (chỉ xem). TaskSection là cột
+// Kanban — tạo mặc định 3 cột "Cần làm / Đang làm / Hoàn thành" khi
+// project được tạo. Task entity sẽ ship Phase 2.
+// ──────────────────────────────────────────────────────────────────────
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  PAUSED
+  DONE
+}
+
+enum ProjectVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum ProjectRole {
+  OWNER
+  EDITOR
+  COMMENTER
+  VIEWER
+}
+
+model Project {
+  id             String            @id @default(uuid())
+  organizationId String            @map("organization_id")
+  ownerId        String            @map("owner_id")
+  name           String            @db.VarChar(127)
+  description    String?           @db.Text
+  status         ProjectStatus     @default(ACTIVE)
+  visibility     ProjectVisibility @default(PRIVATE)
+  color          String?           @db.VarChar(9)
+  icon           String?           @db.VarChar(31)
+  /// Counter for human-friendly task code "PRJ-1", "PRJ-2", ...
+  /// Used by Task module (built later) — atomic increment in service.
+  taskCounter    Int               @default(0) @map("task_counter")
+  /// 3-8 chars in hoa, unique trong org. VD "WORK", "MKT".
+  slug           String            @db.VarChar(8)
+  startDate      DateTime?         @map("start_date") @db.Date
+  dueDate        DateTime?         @map("due_date") @db.Date
+  archivedAt     DateTime?         @map("archived_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  deletedAt      DateTime?         @map("deleted_at")
+
+  owner    User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members  ProjectMember[]
+  sections TaskSection[]
+  tasks    Task[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, status, archivedAt])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String      @id @default(uuid())
+  projectId String      @map("project_id")
+  userId    String      @map("user_id")
+  role      ProjectRole @default(EDITOR)
+  joinedAt  DateTime    @default(now()) @map("joined_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation("ProjectMember", fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+model TaskSection {
+  id        String @id @default(uuid())
+  projectId String @map("project_id")
+  name      String @db.VarChar(63)
+  order     Int    @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@index([projectId, order])
+  @@map("task_sections")
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Work app (Phase 2) — Task + TaskWatcher.
+//
+// Task = đơn vị công việc trong Project. Code "PRJ-15" sinh atomically
+// qua Project.taskCounter. Subtask 1-level (parentTaskId). Watcher = User
+// follow task (auto-add reporter + assignee). assigneeId/reporterId →
+// User (NOT Employee) — entity trung tâm per F8 decision #17.
+// ──────────────────────────────────────────────────────────────────────
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id              String       @id @default(uuid())
+  organizationId  String       @map("organization_id")
+  projectId       String       @map("project_id")
+  sectionId       String?      @map("section_id")
+  parentTaskId    String?      @map("parent_task_id")
+  /// "PRJ-15" — slug + sequential. Unique trong org. Service generates
+  /// by atomically incrementing Project.taskCounter.
+  code            String       @db.VarChar(15)
+  title           String       @db.VarChar(255)
+  description     String?      @db.Text
+  status          TaskStatus   @default(TODO)
+  priority        TaskPriority @default(MEDIUM)
+  assigneeId      String?      @map("assignee_id")
+  reporterId      String       @map("reporter_id")
+  startDate       DateTime?    @map("start_date") @db.Date
+  dueDate         DateTime?    @map("due_date")   @db.Date
+  estimateMinutes Int?         @map("estimate_minutes")
+  actualMinutes   Int?         @map("actual_minutes")
+  /// Drag-sort trong section. Float midpoint → insert-between không reindex.
+  order           Float        @default(0)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  deletedAt       DateTime?    @map("deleted_at")
+
+  project  Project       @relation(fields: [projectId], references: [id])
+  section  TaskSection?  @relation(fields: [sectionId], references: [id])
+  parent   Task?         @relation("TaskSubtasks", fields: [parentTaskId], references: [id])
+  subtasks Task[]        @relation("TaskSubtasks")
+  assignee User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  reporter User          @relation("TaskReporter", fields: [reporterId], references: [id])
+  watchers TaskWatcher[]
+
+  @@unique([organizationId, code])
+  @@index([projectId, status, deletedAt])
+  @@index([assigneeId, status, deletedAt])
+  @@index([projectId, sectionId, order])
+  @@map("tasks")
+}
+
+model TaskWatcher {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation("TaskWatcher", fields: [userId], references: [id])
+
+  @@unique([taskId, userId])
+  @@map("task_watchers")
 }

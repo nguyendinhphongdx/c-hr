@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-10T17:34:41.213Z",
+  "generatedAt": "2026-05-11T03:43:34.124Z",
   "repoRelativeRoot": ".",
-  "count": 64,
+  "count": 65,
   "entries": [
     {
       "id": "AGENTS",
@@ -787,6 +787,36 @@
         "Known gaps (won't fix in F2)"
       ],
       "summary": "Backlog of things shipped through commits since 2026-05-04 that have **only** been verified at compile time (`pnpm build` / `pnpm typecheck`). Each entry gives the smallest set of clicks / curl calls that prove the path works end-to-end."
+    },
+    {
+      "id": "docs:plans:work",
+      "path": "docs/plans/work.md",
+      "title": "F8 — Work app (Project + Task)",
+      "description": "Quản lý dự án + task cho team. Project + Member + Task + Section + Tag generic. Phase 1A (Tag) + 1B (Project) đã đóng; Phase 2–6 là MVP demo bán hàng (~9–13 ngày).",
+      "tags": [
+        "project",
+        "plan",
+        "work",
+        "task-management",
+        "mvp"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Vì sao cần",
+        "Domain model",
+        "ACL (BaseAcl pattern, ADR 0008)",
+        "UX inventory & priority",
+        "Phase plan",
+        "Sidebar nav",
+        "Decisions đã chốt",
+        "Files đã tạo (Phase 1A + 1B)",
+        "BE",
+        "FE",
+        "Defers / future",
+        "Workflow check (mỗi phase)"
+      ],
+      "summary": "> **Trạng thái**: Phase 1A (Tag generic) + Phase 1B (Project foundation) — ✅ done. Phase 2 (Task) → Phase 6 (Reports) — 📋 planned. > > **Vị trí**: BE bounded context `apps/backend/src/apps/work/`. FE `apps/frontend/src/features/work/`. Tag generic ở `apps/collaboration/tag/` + `features/tags/`. > > **Routes**: `/projects` (list) · `/projects/[slug]` (detail) · `/my-tasks` (Phase 5) · `/settings/tags` (admin library)."
     },
     {
       "id": "docs:plans:zk-bridge",

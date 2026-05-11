@@ -21,6 +21,7 @@ import { CollaborationModule } from './apps/collaboration/collaboration.module';
 import { CoreModule } from './apps/core/core.module';
 import { HrmModule } from './apps/hrm/hrm.module';
 import { RequestsModule } from './apps/requests/requests.module';
+import { WorkModule } from './apps/work/work.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { RequestsModule } from './apps/requests/requests.module';
     RequestsModule,
     CollaborationModule,
     CalendarModule,
+    WorkModule,
   ],
 })
 export class AppModule {}

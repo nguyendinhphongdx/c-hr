@@ -6,8 +6,10 @@ import {
   CalendarClock,
   Calendar,
   DoorOpen,
+  FolderKanban,
   Home,
   Inbox,
+  ListChecks,
   Network,
   Settings,
   Shield,
@@ -74,6 +76,19 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/bookings", label: "Lịch", icon: CalendarClock },
       { href: "/rooms", label: "Phòng họp", icon: Building2 },
+    ],
+  },
+  {
+    label: "Công việc",
+    items: [
+      {
+        href: "/my-tasks",
+        label: "Việc của tôi",
+        icon: ListChecks,
+        exact: true,
+        disabled: true,
+      },
+      { href: "/projects", label: "Dự án", icon: FolderKanban },
     ],
   },
 ];
