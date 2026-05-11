@@ -40,7 +40,7 @@ model Preference {
   key       String
   value     Json
   createdAt DateTime        @default(now()) @map("created_at")
-  updatedAt DateTime        @updatedAt      @map("updated_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
 
   @@unique([scope, scopeId, key])
   @@index([scope, scopeId])
@@ -217,15 +217,15 @@ model Employee {
   status          EmployeeStatus @default(ACTIVE)
   /// Lương cơ bản theo hợp đồng — VND. HR set khi onboard / raise.
   /// Có thể override per PayrollItem nếu tháng đó đặc biệt.
-  baseSalary      Decimal?       @db.Decimal(15, 2) @map("base_salary")
+  baseSalary      Decimal?       @map("base_salary") @db.Decimal(15, 2)
   /// Số người phụ thuộc cho giảm trừ gia cảnh thuế TNCN.
   dependents      Int            @default(0)
   /// Vùng I/II/III/IV — quyết định mức trần đóng BHXH/BHYT/BHTN.
   region          RegionTier     @default(REGION_I)
   /// Mã số thuế cá nhân (10 chữ số).
-  taxCode         String?        @db.VarChar(10) @map("tax_code")
+  taxCode         String?        @map("tax_code") @db.VarChar(10)
   /// Số sổ BHXH.
-  bhxhCode        String?        @db.VarChar(20) @map("bhxh_code")
+  bhxhCode        String?        @map("bhxh_code") @db.VarChar(20)
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
   deletedAt       DateTime?      @map("deleted_at")
@@ -243,6 +243,9 @@ model Employee {
   calendarFollowing CalendarFollow[] @relation("CalendarFollowFollowed")
 
   payrollItems PayrollItem[] @relation("EmployeePayroll")
+
+  /// 1-1 back-relation. FK is on OnboardingPlan.employeeId (unique).
+  onboardingPlan OnboardingPlan?
 
   @@unique([organizationId, code])
   @@index([organizationId, departmentId])
@@ -450,13 +453,13 @@ model Comment {
 // generic — pattern giống Comment/Activity. MVP: tag thuộc về Org, scope=null
 // (gắn được vào mọi loại object). Phase 1A — Tag library.
 model Tag {
-  id             String  @id @default(uuid())
-  organizationId String  @map("organization_id")
-  name           String  @db.VarChar(63)
-  color          String  @db.VarChar(9)
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  name           String    @db.VarChar(63)
+  color          String    @db.VarChar(9)
   /// `null` = global tag (gắn được vào mọi objectType). Giá trị (vd "Task")
   /// để giới hạn 1 loại object. MVP dùng null cho mọi tag.
-  scope          String? @db.VarChar(31)
+  scope          String?   @db.VarChar(31)
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
@@ -474,10 +477,10 @@ model TagAssignment {
   tagId          String   @map("tag_id")
   /// "Task" | "Project" | "Employee" | "Event" | "Resource" | ...
   /// Pointer thuần — không FK (giống Comment.objectType/objectId).
-  objectType     String   @db.VarChar(31) @map("object_type")
+  objectType     String   @map("object_type") @db.VarChar(31)
   objectId       String   @map("object_id")
   createdById    String   @map("created_by_id")
-  createdAt      DateTime @default(now())  @map("created_at")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
@@ -856,7 +859,7 @@ model Task {
   assigneeId      String?      @map("assignee_id")
   reporterId      String       @map("reporter_id")
   startDate       DateTime?    @map("start_date") @db.Date
-  dueDate         DateTime?    @map("due_date")   @db.Date
+  dueDate         DateTime?    @map("due_date") @db.Date
   estimateMinutes Int?         @map("estimate_minutes")
   actualMinutes   Int?         @map("actual_minutes")
   /// Drag-sort trong section. Float midpoint → insert-between không reindex.
@@ -951,29 +954,29 @@ enum PayrollStatus {
 /// Config per Org per year cho payroll. Mọi mức cứng / hệ số / bậc thuế
 /// lưu ở đây — HR update khi luật thay đổi, không cần redeploy.
 model PayrollConfig {
-  id              String   @id @default(uuid())
-  organizationId  String   @map("organization_id")
-  year            Int
+  id                     String   @id @default(uuid())
+  organizationId         String   @map("organization_id")
+  year                   Int
   /// Mức giảm trừ bản thân (VND/tháng). 2024 = 11_000_000.
-  personalDeduction       Decimal @db.Decimal(15, 2) @map("personal_deduction")
+  personalDeduction      Decimal  @map("personal_deduction") @db.Decimal(15, 2)
   /// Mức giảm trừ người phụ thuộc (VND/người/tháng). 2024 = 4_400_000.
-  dependentDeduction      Decimal @db.Decimal(15, 2) @map("dependent_deduction")
+  dependentDeduction     Decimal  @map("dependent_deduction") @db.Decimal(15, 2)
   /// Mức lương tối thiểu vùng (VND/tháng). JSON: { I, II, III, IV }.
-  regionMinWageJson       Json    @map("region_min_wage_json")
+  regionMinWageJson      Json     @map("region_min_wage_json")
   /// Hệ số trần đóng BH (BHXH/BHYT/BHTN) = N × regionMinWage. Default 20.
-  insuranceCapMultiplier  Decimal @default("20") @db.Decimal(5, 2) @map("insurance_cap_multiplier")
+  insuranceCapMultiplier Decimal  @default("20") @map("insurance_cap_multiplier") @db.Decimal(5, 2)
   /// Tỷ lệ % NLĐ trừ. Default 8/1.5/1 = 10.5%.
-  bhxhRate                Decimal @default("8") @db.Decimal(5, 2) @map("bhxh_rate")
-  bhytRate                Decimal @default("1.5") @db.Decimal(5, 2) @map("bhyt_rate")
-  bhtnRate                Decimal @default("1") @db.Decimal(5, 2) @map("bhtn_rate")
+  bhxhRate               Decimal  @default("8") @map("bhxh_rate") @db.Decimal(5, 2)
+  bhytRate               Decimal  @default("1.5") @map("bhyt_rate") @db.Decimal(5, 2)
+  bhtnRate               Decimal  @default("1") @map("bhtn_rate") @db.Decimal(5, 2)
   /// Hệ số OT theo bucket. JSON:
   /// { weekday: 1.5, weekend: 2.0, holiday: 3.0, night: 1.3 }
-  otRatesJson             Json    @map("ot_rates_json")
+  otRatesJson            Json     @map("ot_rates_json")
   /// Bảng bậc thuế TNCN lũy tiến. JSON array, mỗi entry { upto, rate }.
   /// upto null hoặc thiếu = bậc cuối cùng (vô cực).
-  taxBracketsJson         Json    @map("tax_brackets_json")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  taxBracketsJson        Json     @map("tax_brackets_json")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
 
   @@unique([organizationId, year])
   @@map("payroll_configs")
@@ -982,21 +985,21 @@ model PayrollConfig {
 /// Kỳ lương 1 tháng. HR tạo → tự pull data → review → CLOSE → PAY.
 /// PAID = bất biến.
 model PayrollPeriod {
-  id             String          @id @default(uuid())
-  organizationId String          @map("organization_id")
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
   /// "2026-05" — 1 period per org per month.
-  monthKey       String          @db.VarChar(7) @map("month_key")
+  monthKey       String        @map("month_key") @db.VarChar(7)
   year           Int
-  month          Int             // 1-12
-  status         PayrollStatus   @default(DRAFT)
-  closedAt       DateTime?       @map("closed_at")
-  closedById     String?         @map("closed_by_id")
-  paidAt         DateTime?       @map("paid_at")
-  paidById       String?         @map("paid_by_id")
-  note           String?         @db.Text
-  createdById    String          @map("created_by_id")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
+  month          Int // 1-12
+  status         PayrollStatus @default(DRAFT)
+  closedAt       DateTime?     @map("closed_at")
+  closedById     String?       @map("closed_by_id")
+  paidAt         DateTime?     @map("paid_at")
+  paidById       String?       @map("paid_by_id")
+  note           String?       @db.Text
+  createdById    String        @map("created_by_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
   items PayrollItem[]
 
@@ -1007,41 +1010,41 @@ model PayrollPeriod {
 
 /// 1 row = 1 NV × 1 kỳ. SNAPSHOT mọi thông tin tại thời điểm compute.
 model PayrollItem {
-  id              String   @id @default(uuid())
-  organizationId  String   @map("organization_id")
-  periodId        String   @map("period_id")
-  employeeId      String   @map("employee_id")
+  id             String @id @default(uuid())
+  organizationId String @map("organization_id")
+  periodId       String @map("period_id")
+  employeeId     String @map("employee_id")
 
-  baseSalary       Decimal @db.Decimal(15, 2) @map("base_salary")
-  dependents       Int
-  region           RegionTier
+  baseSalary Decimal    @map("base_salary") @db.Decimal(15, 2)
+  dependents Int
+  region     RegionTier
 
-  standardWorkdays   Int     @map("standard_workdays")
-  actualWorkdays     Decimal @db.Decimal(5, 2) @map("actual_workdays")
-  lateMinutes        Int     @default(0) @map("late_minutes")
-  earlyLeaveMinutes  Int     @default(0) @map("early_leave_minutes")
-  otMinutesWeekday   Int     @default(0) @map("ot_minutes_weekday")
-  otMinutesWeekend   Int     @default(0) @map("ot_minutes_weekend")
-  otMinutesHoliday   Int     @default(0) @map("ot_minutes_holiday")
+  standardWorkdays  Int     @map("standard_workdays")
+  actualWorkdays    Decimal @map("actual_workdays") @db.Decimal(5, 2)
+  lateMinutes       Int     @default(0) @map("late_minutes")
+  earlyLeaveMinutes Int     @default(0) @map("early_leave_minutes")
+  otMinutesWeekday  Int     @default(0) @map("ot_minutes_weekday")
+  otMinutesWeekend  Int     @default(0) @map("ot_minutes_weekend")
+  otMinutesHoliday  Int     @default(0) @map("ot_minutes_holiday")
 
   /// Free-form allowances. JSON array:
   /// [{ name, amount, taxable: boolean, insurable: boolean }]
-  allowancesJson  Json    @map("allowances_json")
+  allowancesJson Json @map("allowances_json")
   /// [{ name, amount, note? }]
-  deductionsJson  Json    @map("deductions_json")
+  deductionsJson Json @map("deductions_json")
 
   /// Computed columns — set by calculator.compute(). 0 trước khi compute.
-  grossIncome      Decimal @db.Decimal(15, 2) @default("0") @map("gross_income")
-  insurableBase    Decimal @db.Decimal(15, 2) @default("0") @map("insurable_base")
-  bhxhEmployee     Decimal @db.Decimal(15, 2) @default("0") @map("bhxh_employee")
-  bhytEmployee     Decimal @db.Decimal(15, 2) @default("0") @map("bhyt_employee")
-  bhtnEmployee     Decimal @db.Decimal(15, 2) @default("0") @map("bhtn_employee")
-  insuranceTotal   Decimal @db.Decimal(15, 2) @default("0") @map("insurance_total")
-  taxableIncome    Decimal @db.Decimal(15, 2) @default("0") @map("taxable_income")
-  taxAmount        Decimal @db.Decimal(15, 2) @default("0") @map("tax_amount")
-  netPay           Decimal @db.Decimal(15, 2) @default("0") @map("net_pay")
+  grossIncome    Decimal @default("0") @map("gross_income") @db.Decimal(15, 2)
+  insurableBase  Decimal @default("0") @map("insurable_base") @db.Decimal(15, 2)
+  bhxhEmployee   Decimal @default("0") @map("bhxh_employee") @db.Decimal(15, 2)
+  bhytEmployee   Decimal @default("0") @map("bhyt_employee") @db.Decimal(15, 2)
+  bhtnEmployee   Decimal @default("0") @map("bhtn_employee") @db.Decimal(15, 2)
+  insuranceTotal Decimal @default("0") @map("insurance_total") @db.Decimal(15, 2)
+  taxableIncome  Decimal @default("0") @map("taxable_income") @db.Decimal(15, 2)
+  taxAmount      Decimal @default("0") @map("tax_amount") @db.Decimal(15, 2)
+  netPay         Decimal @default("0") @map("net_pay") @db.Decimal(15, 2)
 
-  computeNote      String? @db.Text @map("compute_note")
+  computeNote String? @map("compute_note") @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1052,4 +1055,127 @@ model PayrollItem {
   @@unique([periodId, employeeId])
   @@index([organizationId, employeeId])
   @@map("payroll_items")
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Onboarding (F10) — Phase 1 schema foundation.
+//
+// OnboardingTemplate = bộ task khuôn mẫu admin HRM cấu hình ở /settings/
+// onboarding. Mỗi org có thể tạo nhiều mẫu (vd "Dev mới", "Sales mới"),
+// 1 mẫu được đánh dấu isDefault để auto-apply khi Employee được tạo.
+//
+// OnboardingPlan = instance áp 1 template lên 1 Employee. SNAPSHOT
+// templateName để khi mẫu gốc bị đổi/xoá vẫn truy lại được.
+//
+// OnboardingTask = task cụ thể trong 1 plan. assigneeId resolved từ
+// defaultAssigneeRole của template-task (HR / MANAGER / EMPLOYEE / IT /
+// CUSTOM) lúc plan được tạo (Phase 2).
+// ──────────────────────────────────────────────────────────────────────
+
+enum AssigneeRole {
+  HR
+  MANAGER
+  EMPLOYEE
+  IT
+  CUSTOM
+}
+
+enum OnboardingPlanStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum OnboardingTaskStatus {
+  TODO
+  DONE
+}
+
+model OnboardingTemplate {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  name           String    @db.VarChar(127)
+  description    String?   @db.Text
+  isActive       Boolean   @default(true) @map("is_active")
+  /// 1 template per org có isDefault=true. Auto-apply khi Employee created.
+  isDefault      Boolean   @default(false) @map("is_default")
+  createdById    String    @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  tasks OnboardingTemplateTask[]
+  plans OnboardingPlan[]
+
+  @@index([organizationId, isActive, deletedAt])
+  @@map("onboarding_templates")
+}
+
+model OnboardingTemplateTask {
+  id                    String       @id @default(uuid())
+  templateId            String       @map("template_id")
+  title                 String       @db.VarChar(255)
+  /// Richtext HTML (Tiptap). Can paste images as base64.
+  description           String?      @db.Text
+  order                 Float        @default(0)
+  defaultAssigneeRole   AssigneeRole @default(HR) @map("default_assignee_role")
+  /// Only used when role=CUSTOM. Reference to User.id.
+  defaultAssigneeUserId String?      @map("default_assignee_user_id")
+  /// Days from employee.hireDate. 0 = same day, 7 = within a week, -3 = 3 days before.
+  dueOffsetDays         Int          @default(0) @map("due_offset_days")
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+
+  template OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, order])
+  @@map("onboarding_template_tasks")
+}
+
+model OnboardingPlan {
+  id                   String               @id @default(uuid())
+  organizationId       String               @map("organization_id")
+  employeeId           String               @unique @map("employee_id")
+  templateId           String               @map("template_id")
+  /// Snapshot of template name at create time — original template can be renamed/deleted.
+  templateNameSnapshot String               @map("template_name_snapshot") @db.VarChar(127)
+  status               OnboardingPlanStatus @default(PENDING)
+  startedAt            DateTime?            @map("started_at")
+  completedAt          DateTime?            @map("completed_at")
+  createdById          String               @map("created_by_id")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  template OnboardingTemplate @relation(fields: [templateId], references: [id])
+  employee Employee           @relation(fields: [employeeId], references: [id])
+  tasks    OnboardingTask[]
+
+  @@index([organizationId, status])
+  @@map("onboarding_plans")
+}
+
+model OnboardingTask {
+  id             String               @id @default(uuid())
+  organizationId String               @map("organization_id")
+  planId         String               @map("plan_id")
+  /// Audit pointer back to template task. Null if HR added the task manually after plan creation.
+  templateTaskId String?              @map("template_task_id")
+  title          String               @db.VarChar(255)
+  description    String?              @db.Text
+  order          Float                @default(0)
+  assigneeId     String               @map("assignee_id")
+  dueDate        DateTime?            @map("due_date") @db.Date
+  status         OnboardingTaskStatus @default(TODO)
+  completedAt    DateTime?            @map("completed_at")
+  completedById  String?              @map("completed_by_id")
+  completedNote  String?              @map("completed_note") @db.Text
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  plan OnboardingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId, order])
+  @@index([assigneeId, status])
+  @@map("onboarding_tasks")
 }
