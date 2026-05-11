@@ -2,6 +2,11 @@
 node_modules/
 .pnpm-store/
 
+# Claude Code agent worktrees — auto-cleanup sometimes leaves orphan dirs
+# due to file locks (Windows VSCode TS language server). They contain
+# their own .git/node_modules and should never be tracked.
+.claude/worktrees/
+
 # Build output
 dist/
 build/
