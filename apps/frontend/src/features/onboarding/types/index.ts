@@ -77,3 +77,129 @@ export interface UpdateTemplateTaskInput {
 export interface ReorderTemplateTasksInput {
   ids: ID[];
 }
+
+// ─── Plans + Tasks (Phase 3) ────────────────────────────────────────
+
+export interface OnboardingPlanEmployee {
+  id: ID;
+  code: string;
+  user: {
+    id: ID;
+    name: Nullable<string>;
+    email: string;
+    avatar: Nullable<string>;
+  } | null;
+  department: { id: ID; name: string } | null;
+}
+
+export interface OnboardingTaskAssignee {
+  id: ID;
+  name: Nullable<string>;
+  email: string;
+  avatar: Nullable<string>;
+}
+
+export interface OnboardingTaskRow {
+  id: ID;
+  organizationId: ID;
+  planId: ID;
+  templateTaskId: Nullable<ID>;
+  title: string;
+  description: Nullable<string>;
+  order: number;
+  assigneeId: ID;
+  assignee?: OnboardingTaskAssignee | null;
+  dueDate: Nullable<ISODate>;
+  status: OnboardingTaskStatus;
+  completedAt: Nullable<ISODate>;
+  completedById: Nullable<ID>;
+  completedNote: Nullable<string>;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface OnboardingTaskAclView {
+  canView: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canComplete: boolean;
+  canReassign: boolean;
+}
+
+export interface OnboardingTaskDetail extends OnboardingTaskRow {
+  plan: {
+    id: ID;
+    status: OnboardingPlanStatus;
+    templateNameSnapshot: string;
+    employee: {
+      id: ID;
+      code: string;
+      user: { id: ID; name: Nullable<string>; email: string } | null;
+    };
+  };
+  view: OnboardingTaskAclView;
+}
+
+export interface OnboardingPlanRow {
+  id: ID;
+  organizationId: ID;
+  employeeId: ID;
+  employee: OnboardingPlanEmployee;
+  templateId: ID;
+  templateNameSnapshot: string;
+  status: OnboardingPlanStatus;
+  startedAt: Nullable<ISODate>;
+  completedAt: Nullable<ISODate>;
+  createdById: ID;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+  tasks: OnboardingTaskRow[];
+  template?: { id: ID; name: string } | null;
+}
+
+export interface OnboardingPlanAclView {
+  canView: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canArchive: boolean;
+}
+
+export interface OnboardingPlanDetail extends OnboardingPlanRow {
+  view: OnboardingPlanAclView;
+}
+
+export interface ListPlansQuery {
+  status?: OnboardingPlanStatus;
+  employeeId?: string;
+  /** Client-side only — free-text search across employee code/name/email. */
+  q?: string;
+}
+
+export interface CreatePlanInput {
+  employeeId: string;
+  templateId: string;
+  note?: string;
+}
+
+export interface AddTaskInput {
+  title: string;
+  description?: string | null;
+  assigneeUserId: string;
+  dueDate?: string | null;
+  order?: number;
+}
+
+export interface UpdateTaskInput {
+  title?: string;
+  description?: string | null;
+  dueDate?: string | null;
+}
+
+export interface CompleteTaskInput {
+  note?: string;
+}
+
+export interface ReassignTaskInput {
+  assigneeUserId: string;
+  note?: string;
+}

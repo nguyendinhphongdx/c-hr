@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarClock,
   Calendar,
+  ClipboardCheck,
   DoorOpen,
   FolderKanban,
   Home,
@@ -95,6 +96,16 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Lương",
     items: [{ href: "/payroll", label: "Bảng lương", icon: Wallet }],
   },
+  {
+    label: "Onboarding",
+    items: [
+      {
+        href: "/onboarding",
+        label: "Quy trình onboarding",
+        icon: ClipboardCheck,
+      },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -129,6 +140,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
       <nav className="flex-1 space-y-3 overflow-y-auto p-2 scrollbar-thin">
         {NAV_SECTIONS.map((section, idx) => {
           if (section.label === "Lương" && !showAdmin) return null;
+          if (section.label === "Onboarding" && !showAdmin) return null;
           return (
           <div key={section.label ?? idx} className="space-y-1">
             {section.label &&
