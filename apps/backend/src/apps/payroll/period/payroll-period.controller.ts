@@ -9,9 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 
 import { Auditable } from '@/common/audit';
 import { JwtAuthGuard } from '@/common/guards';
@@ -81,5 +83,17 @@ export class PayrollPeriodController {
   @Auditable({ action: 'PAYROLL_PERIOD_DELETE', entity: 'PayrollPeriod' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
+  }
+
+  /**
+   * Bulk payslip xlsx — 1 workbook with N sheets (one per item) + a summary.
+   * Bypasses the JSON envelope; HRM admin gated inside the service.
+   */
+  @Get(':id/payslips.xlsx')
+  async payslipsBulkXlsx(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: false }) res: Response,
+  ): Promise<void> {
+    await this.service.exportBulkPayslipsXlsx(id, res);
   }
 }

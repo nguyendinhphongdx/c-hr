@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, Loader2, RefreshCw } from "lucide-react";
+import { Download, Info, Loader2, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -36,6 +36,7 @@ import {
   useUpdatePayrollItem,
 } from "../../hooks/usePayrollItems";
 import { usePayrollItem } from "../../hooks/usePayrollItems";
+import { payrollItemService } from "../../services/itemService";
 import type {
   AllowanceRow,
   DeductionRow,
@@ -112,6 +113,7 @@ export function ItemEditDialog({
   // identity stamp. Reset to null when dialog closes (item becomes null).
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const stamp = item ? `${item.id}:${item.updatedAt}` : null;
   if (stamp && stamp !== hydratedFor) {
@@ -160,6 +162,28 @@ export function ItemEditDialog({
       toast.error("Không tính lại được", {
         description: err instanceof Error ? err.message : "Vui lòng thử lại.",
       });
+    }
+  };
+
+  const onDownloadPayslip = async () => {
+    if (!item) return;
+    setExporting(true);
+    try {
+      const blob = await payrollItemService.payslipXlsx(item.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `payslip_${item.employee.code}_${item.period?.monthKey ?? "ky-luong"}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error("Không tải được payslip", {
+        description: err instanceof Error ? err.message : "Vui lòng thử lại.",
+      });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -479,6 +503,20 @@ export function ItemEditDialog({
                     Tính lại
                   </Button>
                 )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onDownloadPayslip}
+                  disabled={exporting}
+                >
+                  {exporting ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Tải payslip
+                </Button>
                 <div className="flex-1" />
                 <Button type="button" variant="ghost" onClick={onClose}>
                   {canEdit ? "Hủy" : "Đóng"}

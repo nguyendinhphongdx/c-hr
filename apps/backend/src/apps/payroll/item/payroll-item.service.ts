@@ -1,11 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PayrollStatus, Prisma } from '@prisma/client';
+import type { Response } from 'express';
 
 import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { CalcInput, Region, computePayroll } from '../calculator';
 import { PayrollConfigService } from '../config/payroll-config.service';
+import { itemToPayslipPayload } from '../lib/payslip-mapper';
+import { buildPayslipXlsx } from '../lib/payslip.xlsx-builder';
 import {
   jsonToAllowances,
   jsonToDeductions,
@@ -118,6 +121,49 @@ export class PayrollItemService {
     }
 
     return this.computeOne(id);
+  }
+
+  /**
+   * Stream the payslip xlsx for one item. ACL via `findOne` gates HRM admin
+   * or self-view; bypasses the global JSON envelope by writing directly to
+   * the Express response.
+   */
+  async exportPayslipXlsx(id: string, res: Response): Promise<void> {
+    const item = await this.findOne(id);
+
+    const [employeeExtra, org, user] = await Promise.all([
+      this.prisma.employee.findUnique({
+        where: { id: item.employeeId },
+        select: { title: true, taxCode: true, bhxhCode: true },
+      }),
+      this.prisma.organization.findUnique({
+        where: { id: item.organizationId },
+        select: { name: true },
+      }),
+      this.ctx.userId
+        ? this.prisma.user.findUnique({
+            where: { id: this.ctx.userId },
+            select: { name: true, email: true },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const payload = itemToPayslipPayload({
+      item,
+      employeeExtra: employeeExtra ?? { title: null, taxCode: null, bhxhCode: null },
+      org: { name: org?.name ?? null },
+      generatedBy: user?.name ?? user?.email ?? null,
+    });
+
+    const buffer = buildPayslipXlsx(payload);
+    const filename = `payslip_${item.employee.code}_${item.period.monthKey}.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.end(buffer);
   }
 
   // ──────────────────────────────────────────────────────────────────

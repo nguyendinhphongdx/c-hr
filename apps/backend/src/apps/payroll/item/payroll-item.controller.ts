@@ -8,9 +8,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 
 import { Auditable } from '@/common/audit';
 import { JwtAuthGuard } from '@/common/guards';
@@ -47,5 +49,17 @@ export class PayrollItemController {
   @Auditable({ action: 'PAYROLL_ITEM_RECOMPUTE', entity: 'PayrollItem' })
   recompute(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.recompute(id);
+  }
+
+  /**
+   * Binary xlsx — bypasses the global JSON envelope via `passthrough: false`
+   * + direct `res.end`. ACL gated inside `exportPayslipXlsx` (HR or self).
+   */
+  @Get('items/:id/payslip.xlsx')
+  async payslipXlsx(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: false }) res: Response,
+  ): Promise<void> {
+    await this.service.exportPayslipXlsx(id, res);
   }
 }

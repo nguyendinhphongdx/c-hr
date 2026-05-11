@@ -77,4 +77,13 @@ export const payrollPeriodService = {
     );
     return res.data;
   },
+
+  /** Download the bulk-period payslips workbook (1 sheet/item + summary). */
+  payslipsBulkXlsx: async (id: ID): Promise<Blob> => {
+    const res = await apiClient.get<Blob>(
+      `/payroll/periods/${id}/payslips.xlsx`,
+      { responseType: "blob" },
+    );
+    return res.data;
+  },
 };

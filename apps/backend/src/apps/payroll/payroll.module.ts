@@ -9,9 +9,10 @@ import { PayrollPeriodModule } from './period/payroll-period.module';
  *
  * Phase 1A (done): PayrollConfig per-Org per-year + auto-seed defaults.
  * Phase 1B (done): pure-function calculator (no DI, see ./calculator).
- * Phase 2 (current): PayrollPeriod + PayrollItem services (open/close/pay).
- * Phase 3: FE list view.
- * Phase 4: Payslip PDF export.
+ * Phase 2 (done): PayrollPeriod + PayrollItem services (open/close/pay).
+ * Phase 3 (done): FE list + detail views, ItemEditDialog.
+ * Phase 4 (done): payslip xlsx export (per-item + bulk per-period). PDF
+ *   delivery + emailing deferred to Phase 5.
  *
  * The calculator stack lives under `./calculator/` and is consumed as
  * pure imports by Phase 2 services — it is NOT exposed as a Nest module

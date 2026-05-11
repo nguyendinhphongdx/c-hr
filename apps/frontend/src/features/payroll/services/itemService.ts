@@ -44,4 +44,13 @@ export const payrollItemService = {
     );
     return res.data;
   },
+
+  /** Download the per-item payslip as an XLSX. Caller triggers the browser save. */
+  payslipXlsx: async (id: ID): Promise<Blob> => {
+    const res = await apiClient.get<Blob>(
+      `/payroll/items/${id}/payslip.xlsx`,
+      { responseType: "blob" },
+    );
+    return res.data;
+  },
 };

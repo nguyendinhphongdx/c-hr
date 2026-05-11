@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PayrollConfig, PayrollStatus, Prisma, RegionTier } from '@prisma/client';
+import type { Response } from 'express';
 
 import { TimesheetReportService } from '@/apps/attendance/timesheet/timesheet-report.service';
 import { ActivityService } from '@/apps/collaboration/activity/activity.service';
@@ -23,6 +24,8 @@ import {
   computePayroll,
 } from '../calculator';
 import { PayrollConfigService } from '../config/payroll-config.service';
+import { itemToPayslipPayload } from '../lib/payslip-mapper';
+import { buildBulkPayslipsXlsx } from '../lib/payslip.xlsx-builder';
 
 import { CreatePeriodDto, ListPeriodsDto, UpdatePeriodDto } from './dto';
 import { PayrollPeriodAcl, PayrollPeriodAclSubject } from './payroll-period.acl';
@@ -290,6 +293,90 @@ export class PayrollPeriodService {
       ...fresh!,
       totalNetPay: await this.repo.sumNetPay(id),
     };
+  }
+
+  /**
+   * Build a single workbook with a summary tab + one detail sheet per item.
+   * `findOne` gates HRM admin (period ACL canView). Streams directly to the
+   * Express response, bypassing the global JSON envelope.
+   */
+  async exportBulkPayslipsXlsx(id: string, res: Response): Promise<void> {
+    const period = await this.findOne(id);
+
+    const [items, org, user] = await Promise.all([
+      this.prisma.payrollItem.findMany({
+        where: { periodId: id, organizationId: period.organizationId },
+        include: {
+          employee: {
+            select: {
+              code: true,
+              title: true,
+              taxCode: true,
+              bhxhCode: true,
+              department: { select: { name: true } },
+              user: { select: { name: true, email: true } },
+            },
+          },
+        },
+        orderBy: { employee: { code: 'asc' } },
+      }),
+      this.prisma.organization.findUnique({
+        where: { id: period.organizationId },
+        select: { name: true },
+      }),
+      this.ctx.userId
+        ? this.prisma.user.findUnique({
+            where: { id: this.ctx.userId },
+            select: { name: true, email: true },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const orgPayload = { name: org?.name ?? null };
+    const generatedBy = user?.name ?? user?.email ?? null;
+    const periodPayload = {
+      monthKey: period.monthKey,
+      year: period.year,
+      month: period.month,
+      status: period.status,
+    };
+
+    const payloads = items.map((it) =>
+      itemToPayslipPayload({
+        item: {
+          ...it,
+          period: periodPayload,
+          employee: {
+            code: it.employee.code,
+            department: it.employee.department,
+            user: it.employee.user,
+          },
+        },
+        employeeExtra: {
+          title: it.employee.title,
+          taxCode: it.employee.taxCode,
+          bhxhCode: it.employee.bhxhCode,
+        },
+        org: orgPayload,
+        generatedBy,
+      }),
+    );
+
+    const buffer = buildBulkPayslipsXlsx({
+      org: orgPayload,
+      generatedBy,
+      period: periodPayload,
+      items: payloads,
+    });
+
+    const filename = `bang-luong_${period.monthKey}.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.end(buffer);
   }
 
   // ──────────────────────────────────────────────────────────────────

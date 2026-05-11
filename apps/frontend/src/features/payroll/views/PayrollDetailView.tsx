@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import {
   usePayrollPeriods,
   useUpdatePayrollPeriodNote,
 } from "../hooks/usePayrollPeriods";
+import { payrollPeriodService } from "../services/periodService";
 
 const DEPT_ALL = "__all__";
 
@@ -59,6 +60,7 @@ export function PayrollDetailView({ monthKey }: PayrollDetailViewProps) {
   const [departmentId, setDepartmentId] = useState<string>(DEPT_ALL);
   const [search, setSearch] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const itemsQuery = useMemo(
     () => ({
@@ -83,6 +85,28 @@ export function PayrollDetailView({ monthKey }: PayrollDetailViewProps) {
       </div>
     );
   }
+
+  const onExportBulk = async () => {
+    if (!period) return;
+    setExporting(true);
+    try {
+      const blob = await payrollPeriodService.payslipsBulkXlsx(period.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bang-luong_${period.monthKey}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error("Không xuất được Excel", {
+        description: err instanceof Error ? err.message : "Vui lòng thử lại.",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (notFound || !period) {
     return (
@@ -117,7 +141,23 @@ export function PayrollDetailView({ monthKey }: PayrollDetailViewProps) {
             <PeriodNoteInline period={period} />
           </div>
 
-          <PeriodActionsBar period={period} />
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onExportBulk}
+              disabled={exporting || (items.data?.length ?? 0) === 0}
+            >
+              {exporting ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Xuất Excel kỳ lương
+            </Button>
+            <PeriodActionsBar period={period} />
+          </div>
         </div>
 
         <PeriodKpiBar items={items.data ?? []} />
