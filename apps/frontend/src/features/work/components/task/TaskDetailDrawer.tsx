@@ -53,6 +53,8 @@ import type {
   TaskStatus,
   UpdateTaskInput,
 } from "../../types";
+import { TaskTimerButton } from "../timer/TaskTimerButton";
+import { TaskTimerHistory } from "../timer/TaskTimerHistory";
 import { TaskAssigneeAvatar } from "./TaskAssigneeAvatar";
 import { TaskStatusBadge } from "./TaskStatusBadge";
 
@@ -243,6 +245,14 @@ function TaskDetailBody({
               ))}
             </SelectContent>
           </Select>
+          <div className="ml-auto">
+            <TaskTimerButton
+              taskId={task.id}
+              taskCode={task.code}
+              loggedMinutes={task.actualMinutes ?? 0}
+              disabled={!task.view.canView}
+            />
+          </div>
         </div>
 
         <SheetTitle className="sr-only">{task.title}</SheetTitle>
@@ -505,6 +515,10 @@ function TaskDetailBody({
               </li>
             )}
           </ul>
+        </section>
+
+        <section>
+          <TaskTimerHistory taskId={task.id} />
         </section>
 
         <section>

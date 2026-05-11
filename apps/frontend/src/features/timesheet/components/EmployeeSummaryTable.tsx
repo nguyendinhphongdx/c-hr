@@ -72,6 +72,7 @@ export function EmployeeSummaryTable({
             <TableHead className="text-right">Về sớm</TableHead>
             <TableHead className="text-right">Vắng</TableHead>
             <TableHead className="text-right">OT</TableHead>
+            <TableHead className="text-right">Giờ làm theo project</TableHead>
             <TableHead className="text-right">Chuyên cần</TableHead>
           </TableRow>
         </TableHeader>
@@ -145,6 +146,13 @@ export function EmployeeSummaryTable({
                   <span className="text-muted-foreground">—</span>
                 ) : (
                   fmtHm(r.otMinutes)
+                )}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {r.workMinutes === 0 ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  fmtHm(r.workMinutes)
                 )}
               </TableCell>
               <TableCell className="text-right tabular-nums font-medium">

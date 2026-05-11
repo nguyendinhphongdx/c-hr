@@ -5,6 +5,7 @@ import { ProjectModule } from './project/project.module';
 import { ProjectReportModule } from './project-report/project-report.module';
 import { TaskModule } from './task/task.module';
 import { TaskSectionModule } from './task-section/task-section.module';
+import { TaskTimerModule } from './task-timer/task-timer.module';
 
 /**
  * Work bounded context — projects + members + task sections + tasks.
@@ -12,6 +13,7 @@ import { TaskSectionModule } from './task-section/task-section.module';
  * Phase 1B — foundation (Project + ProjectMember + TaskSection).
  * Phase 2 — Task entity + watchers.
  * Phase 6 — Reports (per-project + org-wide aggregates).
+ * Phase 7 — Time tracking timer (TaskTimer + payroll integration).
  */
 @Module({
   imports: [
@@ -19,6 +21,7 @@ import { TaskSectionModule } from './task-section/task-section.module';
     ProjectMemberModule,
     TaskSectionModule,
     TaskModule,
+    TaskTimerModule,
     ProjectReportModule,
   ],
   exports: [
@@ -26,6 +29,7 @@ import { TaskSectionModule } from './task-section/task-section.module';
     ProjectMemberModule,
     TaskSectionModule,
     TaskModule,
+    TaskTimerModule,
     ProjectReportModule,
   ],
 })

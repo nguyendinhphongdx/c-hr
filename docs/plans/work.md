@@ -92,7 +92,7 @@ Tenant isolation cứng (ADR 0001) — mọi query qua `*ByOrg` repo methods.
 | 4 | Comments + Watchers + Activity (reuse F6) + @mention auto-watch | 1-2 ngày | ✅ done |
 | 5 | My Tasks cross-project view + filters | 1-2 ngày | ✅ done |
 | 6 | Reports — per-project (KPI + burndown + workload) + org-wide | 2 ngày | ✅ done |
-| 7+ | **Moat — Time tracking timer** trên task → cộng dồn `actualMinutes` per employee × period → cột mới trong Báo cáo timesheet | 2-3 ngày | defer |
+| 7+ | **Moat — Time tracking timer** trên task → cộng dồn `actualMinutes` per employee × period → cột mới trong Báo cáo timesheet | 2-3 ngày | ✅ done |
 
 **MVP demo bán hàng — DONE**. Phase 1A → 6 hoàn tất qua 6 agent (chủ yếu worktree isolation, 1 song song cặp 1A/1B).
 
@@ -148,8 +148,28 @@ apps/backend/src/apps/work/                   (Phase 1B)
 ├─ project/        (acl, controller, module, repository, service, dto/)
 ├─ project-member/ (controller, module, repository, service, dto/)
 ├─ task-section/   (controller, module, repository, service, dto/)
-└─ work.module.ts                             (composes 3 sub-modules)
+├─ task-timer/     (Phase 7) acl, controller, module, repository, service, dto/
+└─ work.module.ts                             (composes sub-modules)
 ```
+
+### Phase 7 (Time tracking timer) — additions
+
+BE:
+
+- `apps/backend/src/apps/work/task-timer/` — new module (TaskTimerAcl, controller, service, repository, dto: start/stop/list/summary).
+- `prisma/schema.prisma` — new `TaskTimer` model + inverse relations on `Task.timers` and `User.taskTimers`. Migration name: `f8_work_task_timer`.
+- `apps/backend/src/apps/attendance/timesheet/timesheet-report.service.ts` — `EmployeeSummaryRow.workMinutes` field + bulk groupBy fetch.
+- `apps/backend/src/apps/attendance/timesheet/lib/xlsx-report.builder.ts` — "Giờ làm theo project" column.
+
+FE:
+
+- `apps/frontend/src/features/work/components/timer/` — `TaskTimerButton`, `TaskTimerHistory`, `RunningTimerBar`.
+- `apps/frontend/src/features/work/services/timerService.ts` + `hooks/useTaskTimer.ts`.
+- `apps/frontend/src/features/work/types/index.ts` — `TaskTimer`, `StartTimerInput`, `StopTimerInput`, etc.
+- `apps/frontend/src/components/layout/DashboardShell.tsx` — mounts `<RunningTimerBar />` (cross-page floating indicator).
+- `apps/frontend/src/features/work/components/task/TaskDetailDrawer.tsx` — embeds `<TaskTimerButton>` in header + `<TaskTimerHistory>` section.
+- `apps/frontend/src/features/work/views/ProjectDetailView.tsx` — reads `?taskCode=` to auto-open the drawer (used by the floating bar).
+- `apps/frontend/src/features/timesheet/components/EmployeeSummaryTable.tsx` + `types/report.ts` — new "Giờ làm theo project" column.
 
 `prisma/schema.prisma`: 5 model mới (Tag, TagAssignment, Project, ProjectMember, TaskSection) + inverse relations trên User.
 

@@ -125,6 +125,7 @@ model User {
   tasksAssigned Task[]        @relation("TaskAssignee")
   tasksReported Task[]        @relation("TaskReporter")
   taskWatching  TaskWatcher[] @relation("TaskWatcher")
+  taskTimers    TaskTimer[]   @relation("TaskTimerUser")
 
   @@map("users")
 }
@@ -858,6 +859,7 @@ model Task {
   assignee User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
   reporter User          @relation("TaskReporter", fields: [reporterId], references: [id])
   watchers TaskWatcher[]
+  timers   TaskTimer[]
 
   @@unique([organizationId, code])
   @@index([projectId, status, deletedAt])
@@ -877,4 +879,31 @@ model TaskWatcher {
 
   @@unique([taskId, userId])
   @@map("task_watchers")
+}
+
+/// F8 Phase 7 — one row per work session per (task, user). Many sessions
+/// per (task, user) possible. Service stamps `stoppedAt` + `minutes` on
+/// stop; while running, both are null. `stoppedAt IS NULL` is the
+/// canonical "running" predicate — indexed for fast lookups.
+model TaskTimer {
+  id        String    @id @default(uuid())
+  taskId    String    @map("task_id")
+  userId    String    @map("user_id")
+  startedAt DateTime  @map("started_at")
+  /// null while running. Service stamps when stop() is called.
+  stoppedAt DateTime? @map("stopped_at")
+  /// Computed on stop: minutes between startedAt and stoppedAt.
+  /// null while running so summary queries can use SUM(minutes).
+  minutes   Int?
+  /// Free-text note user can attach when stopping ("fixed bug X", etc.).
+  note      String?   @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation("TaskTimerUser", fields: [userId], references: [id])
+
+  @@index([userId, startedAt])
+  @@index([taskId, startedAt])
+  @@index([userId, stoppedAt])
+  @@map("task_timers")
 }

@@ -6,10 +6,12 @@ import { AuthGuard } from "@/components/layout/AuthGuard";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
+import { RunningTimerBar } from "@/features/work/components/timer/RunningTimerBar";
 
 /**
  * Client wrapper that owns dashboard chrome state (sidebar collapse).
  * The route layout itself stays an RSC; only this shell is "use client".
+ * Hosts the cross-page running-timer indicator so it survives navigation.
  */
 export function DashboardShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -28,6 +30,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <RunningTimerBar />
     </AuthGuard>
   );
 }

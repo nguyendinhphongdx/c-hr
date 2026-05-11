@@ -23,6 +23,12 @@ export interface EmployeeSummaryRow {
   otMinutes: number;
   /** actualWorkdays / standardWorkdays — 0 when no scheduled days. */
   attendanceRate: number;
+  /**
+   * F8 Phase 7 — sum of TaskTimer minutes for this employee's linked
+   * User account over the period (all projects). 0 when no linked User
+   * or no work-tracked sessions.
+   */
+  workMinutes: number;
 }
 
 export interface TimesheetSummaryQuery {

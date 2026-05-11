@@ -20,8 +20,12 @@ export { BoardCard } from "./components/board/BoardCard";
 export { BoardAddColumn } from "./components/board/BoardAddColumn";
 export { ProjectReportPanel } from "./components/reports/ProjectReportPanel";
 export { WorkOverviewPanel } from "./components/reports/WorkOverviewPanel";
+export { TaskTimerButton } from "./components/timer/TaskTimerButton";
+export { TaskTimerHistory } from "./components/timer/TaskTimerHistory";
+export { RunningTimerBar } from "./components/timer/RunningTimerBar";
 export { projectService } from "./services/projectService";
 export { taskService } from "./services/taskService";
+export { timerService } from "./services/timerService";
 export { workReportService } from "./services/reportService";
 export {
   projectKeys,
@@ -59,6 +63,13 @@ export {
   useProjectOverview,
   useOrgOverview,
 } from "./hooks/useReports";
+export {
+  timerKeys,
+  useCurrentTimer,
+  useTaskTimers,
+  useStartTimer,
+  useStopTimer,
+} from "./hooks/useTaskTimer";
 export type {
   AddMemberInput,
   CreateProjectInput,
@@ -90,6 +101,13 @@ export type {
   UpdateSectionInput,
   UpdateTaskInput,
   UserSummary,
+  TaskTimer,
+  TaskTimerTaskSummary,
+  StartTimerInput,
+  StopTimerInput,
+  ListTimersQuery,
+  SummaryTimersQuery,
+  TimerSummaryRow,
 } from "./types";
 export type {
   BurndownPoint,

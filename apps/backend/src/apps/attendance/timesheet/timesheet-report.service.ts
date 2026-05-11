@@ -84,6 +84,13 @@ export interface EmployeeSummaryRow {
 
   /** actualWorkdays / standardWorkdays — 0 when no scheduled days. */
   attendanceRate: number;
+
+  /**
+   * F8 Phase 7 — sum of TaskTimer minutes attributed to this employee's
+   * linked User account across the period (all projects). 0 when the
+   * employee has no User account or no work-tracked sessions.
+   */
+  workMinutes: number;
 }
 
 @Injectable()
@@ -142,7 +149,7 @@ export class TimesheetReportService {
         code: true,
         departmentId: true,
         department: { select: { id: true, name: true } },
-        user: { select: { name: true, email: true } },
+        user: { select: { id: true, name: true, email: true } },
       },
       orderBy: [{ code: 'asc' }],
     });
@@ -175,6 +182,13 @@ export class TimesheetReportService {
         checkOutAt: l.checkOutAt,
       });
     }
+
+    // 2b. F8 Phase 7 — bulk-fetch TaskTimer minutes for the period,
+    // grouped by userId. Employees without a linked User account get 0.
+    const userIds = employees
+      .map((e) => e.user?.id)
+      .filter((id): id is string => !!id);
+    const workMinutesByUser = await this.fetchWorkMinutesByUser(orgId, userIds, from, to);
 
     // 3. Iterate every (employee × day) and aggregate.
     const dates = enumerateDays(from, to);
@@ -232,6 +246,10 @@ export class TimesheetReportService {
       const attendanceRate =
         standardWorkdays > 0 ? actualWorkdays / standardWorkdays : 0;
 
+      const workMinutes = emp.user?.id
+        ? workMinutesByUser.get(emp.user.id) ?? 0
+        : 0;
+
       rows.push({
         employeeId: emp.id,
         code: emp.code,
@@ -249,10 +267,40 @@ export class TimesheetReportService {
         absentDays,
         otMinutes,
         attendanceRate,
+        workMinutes,
       } as EmployeeSummaryRow);
     }
 
     return rows;
+  }
+
+  /**
+   * F8 Phase 7 — sum TaskTimer.minutes (stopped sessions only) grouped
+   * by userId for the period. Tenant-scoped via the parent task's org.
+   */
+  private async fetchWorkMinutesByUser(
+    orgId: string,
+    userIds: string[],
+    from: Date,
+    to: Date,
+  ): Promise<Map<string, number>> {
+    const map = new Map<string, number>();
+    if (userIds.length === 0) return map;
+
+    const rows = await this.prisma.taskTimer.groupBy({
+      by: ['userId'],
+      where: {
+        task: { organizationId: orgId },
+        userId: { in: userIds },
+        startedAt: { gte: from, lte: to },
+        minutes: { not: null },
+      },
+      _sum: { minutes: true },
+    });
+    for (const r of rows) {
+      map.set(r.userId, r._sum.minutes ?? 0);
+    }
+    return map;
   }
 
   /**

@@ -247,3 +247,59 @@ export interface UpdateTaskInput {
 export interface ReorderTasksInput {
   ids: ID[];
 }
+
+// ── Task Timer (Phase 7) ───────────────────────────────────────────
+
+export interface TaskTimerTaskSummary {
+  id: ID;
+  code: string;
+  title: string;
+  projectId: ID;
+  organizationId: ID;
+  project: TaskProjectSummary;
+}
+
+export interface TaskTimer {
+  id: ID;
+  taskId: ID;
+  userId: ID;
+  startedAt: ISODate;
+  /** null while running. */
+  stoppedAt: Nullable<ISODate>;
+  /** Filled on stop. null while running. */
+  minutes: Nullable<number>;
+  note: Nullable<string>;
+  createdAt: ISODate;
+  task: TaskTimerTaskSummary;
+  user: UserSummary;
+}
+
+export interface StartTimerInput {
+  taskId: ID;
+  note?: string;
+}
+
+export interface StopTimerInput {
+  note?: string;
+}
+
+export interface ListTimersQuery {
+  taskId?: ID;
+  userId?: ID;
+  from?: string;
+  to?: string;
+}
+
+export interface TimerSummaryRow {
+  userId: ID;
+  projectId: ID;
+  projectName: string;
+  minutes: number;
+}
+
+export interface SummaryTimersQuery {
+  from: string;
+  to: string;
+  userId?: ID;
+  projectId?: ID;
+}

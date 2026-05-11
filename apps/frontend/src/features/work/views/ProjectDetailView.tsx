@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,8 +20,13 @@ interface ProjectDetailViewProps {
 
 export function ProjectDetailView({ slug }: ProjectDetailViewProps) {
   const { data: project, isLoading, error } = useProject(slug);
+  const searchParams = useSearchParams();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [selectedTaskCode, setSelectedTaskCode] = useState<string | null>(null);
+  // Initialize from `?taskCode=` so RunningTimerBar (and any other deep
+  // link) can auto-open the drawer. After that, the user controls it.
+  const [selectedTaskCode, setSelectedTaskCode] = useState<string | null>(
+    () => searchParams.get("taskCode"),
+  );
 
   if (isLoading) {
     return (

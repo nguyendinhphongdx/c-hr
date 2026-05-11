@@ -50,6 +50,7 @@ export function buildTimesheetReportXlsx(args: BuildArgs): Buffer {
     'Về sớm (giờ)',
     'Vắng',
     'OT (giờ)',
+    'Giờ làm theo project',
     'Chuyên cần',
   ];
 
@@ -67,6 +68,7 @@ export function buildTimesheetReportXlsx(args: BuildArgs): Buffer {
     fmtHm(r.earlyLeaveMinutes),
     r.absentDays,
     fmtHm(r.otMinutes),
+    fmtHm(r.workMinutes),
     `${(r.attendanceRate * 100).toFixed(1)}%`,
   ]);
 
@@ -85,6 +87,7 @@ export function buildTimesheetReportXlsx(args: BuildArgs): Buffer {
     fmtHm(rows.reduce((s, r) => s + r.earlyLeaveMinutes, 0)),
     rows.reduce((s, r) => s + r.absentDays, 0),
     fmtHm(rows.reduce((s, r) => s + r.otMinutes, 0)),
+    fmtHm(rows.reduce((s, r) => s + r.workMinutes, 0)),
     '',
   ];
 
@@ -103,7 +106,7 @@ export function buildTimesheetReportXlsx(args: BuildArgs): Buffer {
     { wch: 8 }, { wch: 8 }, { wch: 10 },
     { wch: 8 }, { wch: 10 },
     { wch: 8 }, { wch: 10 },
-    { wch: 6 }, { wch: 8 }, { wch: 10 },
+    { wch: 6 }, { wch: 8 }, { wch: 14 }, { wch: 10 },
   ];
   // Freeze header rows + first 2 columns so HR can scroll wide.
   sheet['!freeze'] = { ySplit: headerRows.length + 1, xSplit: 2 };
