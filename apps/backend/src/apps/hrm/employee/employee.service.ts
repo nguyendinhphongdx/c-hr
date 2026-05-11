@@ -244,6 +244,12 @@ export class EmployeeService {
                 ? new Date(dto.terminationDate)
                 : undefined,
           status: dto.status,
+          // F9 salary/BHXH fields. Optional + nullable — pass through as-is.
+          baseSalary: dto.baseSalary === undefined ? undefined : dto.baseSalary,
+          dependents: dto.dependents,
+          region: dto.region,
+          taxCode: dto.taxCode,
+          bhxhCode: dto.bhxhCode,
         },
       });
 

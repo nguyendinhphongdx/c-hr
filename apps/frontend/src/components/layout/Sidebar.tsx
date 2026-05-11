@@ -15,6 +15,7 @@ import {
   Shield,
   Sparkles,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -88,6 +89,12 @@ const NAV_SECTIONS: NavSection[] = [
         exact: true,
       },
       { href: "/projects", label: "Dự án", icon: FolderKanban },
+    ],
+  },
+  {
+    label: "Lương",
+    items: [
+      { href: "/payroll", label: "Bảng lương", icon: Wallet, disabled: true },
     ],
   },
 ];

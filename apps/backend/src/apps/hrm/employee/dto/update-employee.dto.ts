@@ -1,13 +1,16 @@
-import { EmployeeStatus } from '@prisma/client';
+import { EmployeeStatus, RegionTier } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
+  IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Matches,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -55,4 +58,35 @@ export class UpdateEmployeeDto {
   @IsOptional()
   @IsEnum(EmployeeStatus)
   status?: EmployeeStatus;
+
+  // ── Salary / BHXH (F9 Payroll). HRM admin only — gated server-side
+  // via EmployeeAcl.canEdit (which the service already checks).
+  // Pass null to clear; omit to leave unchanged.
+
+  @Transform(passThrough)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  baseSalary?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  dependents?: number;
+
+  @IsOptional()
+  @IsEnum(RegionTier)
+  region?: RegionTier;
+
+  @Transform(passThrough)
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{10}$/, { message: 'taxCode must be exactly 10 digits' })
+  taxCode?: string | null;
+
+  @Transform(passThrough)
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  bhxhCode?: string | null;
 }

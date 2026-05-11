@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useIsAppAdmin } from "@/features/auth";
 import { useDepartments } from "@/features/departments";
 import { UserPicker } from "@/features/users";
 import type { ID } from "@/lib/types";
@@ -56,6 +57,21 @@ const schema = z.object({
     { message: "Chọn phòng ban hợp lệ" },
   ),
   status: z.enum(["ACTIVE", "ON_LEAVE", "TERMINATED"]),
+  // Salary / BHXH — strings on the form, parsed/coerced on submit.
+  baseSalary: z.string().nullable(),
+  dependents: z
+    .number()
+    .int()
+    .min(0, "Phải là số nguyên >= 0"),
+  region: z.enum(["REGION_I", "REGION_II", "REGION_III", "REGION_IV"]),
+  taxCode: z
+    .string()
+    .refine(
+      (s) => s === "" || /^\d{10}$/.test(s),
+      "Phải đúng 10 chữ số hoặc để trống",
+    )
+    .nullable(),
+  bhxhCode: z.string().max(20).nullable(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -74,6 +90,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
   const employee = useEmployee(id);
   const departments = useDepartments();
   const update = useUpdateEmployee();
+  const isHrmAdmin = useIsAppAdmin("HRM");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -85,6 +102,11 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
       terminationDate: "",
       departmentId: NO_DEPARTMENT,
       status: "ACTIVE",
+      baseSalary: "",
+      dependents: 0,
+      region: "REGION_I",
+      taxCode: "",
+      bhxhCode: "",
     },
   });
 
@@ -99,6 +121,11 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
         terminationDate: toInputDate(e.terminationDate),
         departmentId: e.departmentId ?? NO_DEPARTMENT,
         status: e.status,
+        baseSalary: e.baseSalary ?? "",
+        dependents: e.dependents ?? 0,
+        region: e.region ?? "REGION_I",
+        taxCode: e.taxCode ?? "",
+        bhxhCode: e.bhxhCode ?? "",
       });
     }
   }, [employee.data, form]);
@@ -106,6 +133,10 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
   const onSubmit = async (values: FormValues) => {
     if (!id) return;
     try {
+      const baseSalaryNum =
+        values.baseSalary && values.baseSalary.trim() !== ""
+          ? Number(values.baseSalary)
+          : null;
       await update.mutateAsync({
         id,
         data: {
@@ -117,6 +148,20 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
           departmentId:
             values.departmentId === NO_DEPARTMENT ? null : values.departmentId,
           status: values.status,
+          // Only send salary fields if caller is HRM admin — BE re-checks
+          // but the omission keeps the audit log clean for non-admin edits.
+          ...(isHrmAdmin
+            ? {
+                baseSalary:
+                  baseSalaryNum != null && Number.isFinite(baseSalaryNum)
+                    ? baseSalaryNum
+                    : null,
+                dependents: Number(values.dependents) || 0,
+                region: values.region,
+                taxCode: values.taxCode ? values.taxCode : null,
+                bhxhCode: values.bhxhCode ? values.bhxhCode : null,
+              }
+            : {}),
         },
       });
       toast.success("Đã cập nhật nhân sự");
@@ -319,6 +364,149 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                   </FormItem>
                 )}
               />
+
+              {isHrmAdmin && (
+                <div className="space-y-4 rounded-md border bg-muted/30 p-4">
+                  <div>
+                    <h4 className="text-sm font-semibold">Lương &amp; BHXH</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Dùng cho tính lương tháng (F9). Chỉ HRM admin nhìn thấy.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="baseSalary"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Lương cơ bản (VND)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              placeholder="22000000"
+                              min={0}
+                              step={100000}
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            Để trống = chưa thiết lập.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="dependents"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Số người phụ thuộc</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={0}
+                              step={1}
+                              value={String(field.value ?? 0)}
+                              onChange={(e) =>
+                                field.onChange(Number(e.target.value))
+                              }
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            Áp dụng giảm trừ gia cảnh thuế TNCN.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="region"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vùng lương tối thiểu</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="REGION_I">
+                              Vùng I — TP.HCM, Hà Nội (nội thành)
+                            </SelectItem>
+                            <SelectItem value="REGION_II">Vùng II</SelectItem>
+                            <SelectItem value="REGION_III">Vùng III</SelectItem>
+                            <SelectItem value="REGION_IV">Vùng IV</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-xs">
+                          Quyết định mức trần đóng BHXH/BHYT/BHTN.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="taxCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mã số thuế</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="10 chữ số"
+                              maxLength={10}
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="bhxhCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Số sổ BHXH</FormLabel>
+                          <FormControl>
+                            <Input
+                              maxLength={20}
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
             </form>
           </Form>
         )}

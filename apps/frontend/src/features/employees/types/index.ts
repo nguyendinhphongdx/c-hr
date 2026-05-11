@@ -3,6 +3,7 @@ import type { ID, ISODate, Nullable } from "@/lib/types";
 export type EmployeeStatus = "ACTIVE" | "ON_LEAVE" | "TERMINATED";
 export type Gender = "MALE" | "FEMALE" | "OTHER";
 export type Role = "sysowner" | "admin" | "user";
+export type Region = "REGION_I" | "REGION_II" | "REGION_III" | "REGION_IV";
 
 export interface EmployeeUser {
   id: ID;
@@ -27,6 +28,12 @@ export interface Employee {
   hireDate: Nullable<ISODate>;
   terminationDate: Nullable<ISODate>;
   status: EmployeeStatus;
+  /** F9 Payroll — Decimal serialized as string. Null until HR sets it. */
+  baseSalary: Nullable<string>;
+  dependents: number;
+  region: Region;
+  taxCode: Nullable<string>;
+  bhxhCode: Nullable<string>;
   createdAt: ISODate;
   updatedAt: ISODate;
   deletedAt: Nullable<ISODate>;
@@ -73,6 +80,12 @@ export interface UpdateEmployeeInput {
   hireDate?: Nullable<string>;
   terminationDate?: Nullable<string>;
   status?: EmployeeStatus;
+  // F9 — salary & BHXH. HRM admin only on BE.
+  baseSalary?: Nullable<number>;
+  dependents?: number;
+  region?: Region;
+  taxCode?: Nullable<string>;
+  bhxhCode?: Nullable<string>;
 }
 
 export type ImportRowStatus = "valid" | "invalid";

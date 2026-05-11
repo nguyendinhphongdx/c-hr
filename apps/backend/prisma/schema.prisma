@@ -215,6 +215,17 @@ model Employee {
   hireDate        DateTime?      @map("hire_date")
   terminationDate DateTime?      @map("termination_date")
   status          EmployeeStatus @default(ACTIVE)
+  /// Lương cơ bản theo hợp đồng — VND. HR set khi onboard / raise.
+  /// Có thể override per PayrollItem nếu tháng đó đặc biệt.
+  baseSalary      Decimal?       @db.Decimal(15, 2) @map("base_salary")
+  /// Số người phụ thuộc cho giảm trừ gia cảnh thuế TNCN.
+  dependents      Int            @default(0)
+  /// Vùng I/II/III/IV — quyết định mức trần đóng BHXH/BHYT/BHTN.
+  region          RegionTier     @default(REGION_I)
+  /// Mã số thuế cá nhân (10 chữ số).
+  taxCode         String?        @db.VarChar(10) @map("tax_code")
+  /// Số sổ BHXH.
+  bhxhCode        String?        @db.VarChar(20) @map("bhxh_code")
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
   deletedAt       DateTime?      @map("deleted_at")
@@ -230,6 +241,8 @@ model Employee {
 
   calendarFollowers CalendarFollow[] @relation("CalendarFollowFollower")
   calendarFollowing CalendarFollow[] @relation("CalendarFollowFollowed")
+
+  payrollItems PayrollItem[] @relation("EmployeePayroll")
 
   @@unique([organizationId, code])
   @@index([organizationId, departmentId])
@@ -906,4 +919,137 @@ model TaskTimer {
   @@index([taskId, startedAt])
   @@index([userId, stoppedAt])
   @@map("task_timers")
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Payroll (F9) — Phase 1A schema foundation.
+//
+// PayrollConfig = bảng cấu hình per Org per year (mức giảm trừ, hệ số
+// trần BH, bậc thuế lũy tiến, ...). HR cập nhật qua /settings/payroll
+// khi luật thay đổi — không cần redeploy.
+//
+// PayrollPeriod = kỳ lương 1 tháng. HR mở period → pull data → review →
+// CLOSE → PAY. PAID là trạng thái bất biến.
+//
+// PayrollItem = 1 row / NV × 1 kỳ. Snapshot mọi input + output để khi
+// luật/lương đổi giữa kỳ vẫn truy lại được.
+// ──────────────────────────────────────────────────────────────────────
+
+enum RegionTier {
+  REGION_I
+  REGION_II
+  REGION_III
+  REGION_IV
+}
+
+enum PayrollStatus {
+  DRAFT
+  CLOSED
+  PAID
+}
+
+/// Config per Org per year cho payroll. Mọi mức cứng / hệ số / bậc thuế
+/// lưu ở đây — HR update khi luật thay đổi, không cần redeploy.
+model PayrollConfig {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  year            Int
+  /// Mức giảm trừ bản thân (VND/tháng). 2024 = 11_000_000.
+  personalDeduction       Decimal @db.Decimal(15, 2) @map("personal_deduction")
+  /// Mức giảm trừ người phụ thuộc (VND/người/tháng). 2024 = 4_400_000.
+  dependentDeduction      Decimal @db.Decimal(15, 2) @map("dependent_deduction")
+  /// Mức lương tối thiểu vùng (VND/tháng). JSON: { I, II, III, IV }.
+  regionMinWageJson       Json    @map("region_min_wage_json")
+  /// Hệ số trần đóng BH (BHXH/BHYT/BHTN) = N × regionMinWage. Default 20.
+  insuranceCapMultiplier  Decimal @default("20") @db.Decimal(5, 2) @map("insurance_cap_multiplier")
+  /// Tỷ lệ % NLĐ trừ. Default 8/1.5/1 = 10.5%.
+  bhxhRate                Decimal @default("8") @db.Decimal(5, 2) @map("bhxh_rate")
+  bhytRate                Decimal @default("1.5") @db.Decimal(5, 2) @map("bhyt_rate")
+  bhtnRate                Decimal @default("1") @db.Decimal(5, 2) @map("bhtn_rate")
+  /// Hệ số OT theo bucket. JSON:
+  /// { weekday: 1.5, weekend: 2.0, holiday: 3.0, night: 1.3 }
+  otRatesJson             Json    @map("ot_rates_json")
+  /// Bảng bậc thuế TNCN lũy tiến. JSON array, mỗi entry { upto, rate }.
+  /// upto null hoặc thiếu = bậc cuối cùng (vô cực).
+  taxBracketsJson         Json    @map("tax_brackets_json")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, year])
+  @@map("payroll_configs")
+}
+
+/// Kỳ lương 1 tháng. HR tạo → tự pull data → review → CLOSE → PAY.
+/// PAID = bất biến.
+model PayrollPeriod {
+  id             String          @id @default(uuid())
+  organizationId String          @map("organization_id")
+  /// "2026-05" — 1 period per org per month.
+  monthKey       String          @db.VarChar(7) @map("month_key")
+  year           Int
+  month          Int             // 1-12
+  status         PayrollStatus   @default(DRAFT)
+  closedAt       DateTime?       @map("closed_at")
+  closedById     String?         @map("closed_by_id")
+  paidAt         DateTime?       @map("paid_at")
+  paidById       String?         @map("paid_by_id")
+  note           String?         @db.Text
+  createdById    String          @map("created_by_id")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  items PayrollItem[]
+
+  @@unique([organizationId, monthKey])
+  @@index([organizationId, status])
+  @@map("payroll_periods")
+}
+
+/// 1 row = 1 NV × 1 kỳ. SNAPSHOT mọi thông tin tại thời điểm compute.
+model PayrollItem {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  periodId        String   @map("period_id")
+  employeeId      String   @map("employee_id")
+
+  baseSalary       Decimal @db.Decimal(15, 2) @map("base_salary")
+  dependents       Int
+  region           RegionTier
+
+  standardWorkdays   Int     @map("standard_workdays")
+  actualWorkdays     Decimal @db.Decimal(5, 2) @map("actual_workdays")
+  lateMinutes        Int     @default(0) @map("late_minutes")
+  earlyLeaveMinutes  Int     @default(0) @map("early_leave_minutes")
+  otMinutesWeekday   Int     @default(0) @map("ot_minutes_weekday")
+  otMinutesWeekend   Int     @default(0) @map("ot_minutes_weekend")
+  otMinutesHoliday   Int     @default(0) @map("ot_minutes_holiday")
+
+  /// Free-form allowances. JSON array:
+  /// [{ name, amount, taxable: boolean, insurable: boolean }]
+  allowancesJson  Json    @map("allowances_json")
+  /// [{ name, amount, note? }]
+  deductionsJson  Json    @map("deductions_json")
+
+  /// Computed columns — set by calculator.compute(). 0 trước khi compute.
+  grossIncome      Decimal @db.Decimal(15, 2) @default("0") @map("gross_income")
+  insurableBase    Decimal @db.Decimal(15, 2) @default("0") @map("insurable_base")
+  bhxhEmployee     Decimal @db.Decimal(15, 2) @default("0") @map("bhxh_employee")
+  bhytEmployee     Decimal @db.Decimal(15, 2) @default("0") @map("bhyt_employee")
+  bhtnEmployee     Decimal @db.Decimal(15, 2) @default("0") @map("bhtn_employee")
+  insuranceTotal   Decimal @db.Decimal(15, 2) @default("0") @map("insurance_total")
+  taxableIncome    Decimal @db.Decimal(15, 2) @default("0") @map("taxable_income")
+  taxAmount        Decimal @db.Decimal(15, 2) @default("0") @map("tax_amount")
+  netPay           Decimal @db.Decimal(15, 2) @default("0") @map("net_pay")
+
+  computeNote      String? @db.Text @map("compute_note")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  period   PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  employee Employee      @relation("EmployeePayroll", fields: [employeeId], references: [id])
+
+  @@unique([periodId, employeeId])
+  @@index([organizationId, employeeId])
+  @@map("payroll_items")
 }
