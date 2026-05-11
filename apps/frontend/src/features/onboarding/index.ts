@@ -11,8 +11,10 @@ export { TaskChecklistRow } from "./components/task/TaskChecklistRow";
 export { TaskCompleteDialog } from "./components/task/TaskCompleteDialog";
 export { TaskDetailDrawer } from "./components/task/TaskDetailDrawer";
 export { TaskReassignDialog } from "./components/task/TaskReassignDialog";
+export { TaskWatchRow } from "./components/task/TaskWatchRow";
 export { OnboardingListView } from "./views/OnboardingListView";
 export { OnboardingDetailView } from "./views/OnboardingDetailView";
+export { MyOnboardingView } from "./views/MyOnboardingView";
 
 export {
   onboardingTemplateKeys,
@@ -33,6 +35,7 @@ export {
   useArchivePlan,
   useCreatePlan,
   useDeletePlan,
+  useMyOnboardingPlan,
   useOnboardingPlans,
   usePlan,
   usePlanByEmployee,

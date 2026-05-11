@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 
 import type { ID } from "@/lib/types";
 
@@ -9,6 +10,7 @@ import type {
   AddTaskInput,
   CreatePlanInput,
   ListPlansQuery,
+  OnboardingPlanDetail,
 } from "../types";
 
 export const onboardingPlanKeys = {
@@ -92,4 +94,43 @@ export function useAddPlanTask() {
       qc.invalidateQueries({ queryKey: onboardingPlanKeys.all });
     },
   });
+}
+
+/**
+ * Self-service lookup for the current employee's plan.
+ *
+ * Wraps `usePlanByEmployee` but treats a 404 as "no plan" instead of an
+ * error so callers can branch on `plan === null` without try/catch noise.
+ * `hasActivePlan` is true only for PENDING / IN_PROGRESS — completed and
+ * archived plans are still readable via `plan` but should be hidden in
+ * sidebar / dashboard widgets.
+ */
+export function useMyOnboardingPlan(employeeId: ID | null | undefined) {
+  const query = useQuery({
+    queryKey: onboardingPlanKeys.byEmployee(employeeId ?? ""),
+    queryFn: async (): Promise<OnboardingPlanDetail | null> => {
+      try {
+        return await planService.getByEmployee(employeeId!);
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 404) {
+          return null;
+        }
+        throw err;
+      }
+    },
+    enabled: !!employeeId,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+
+  const plan = query.data ?? null;
+  const hasActivePlan =
+    !!plan && (plan.status === "PENDING" || plan.status === "IN_PROGRESS");
+
+  return {
+    plan,
+    hasActivePlan,
+    isLoading: query.isLoading,
+    error: query.error,
+  };
 }
