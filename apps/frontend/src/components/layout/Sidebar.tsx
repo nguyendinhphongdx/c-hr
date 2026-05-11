@@ -93,9 +93,7 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: "Lương",
-    items: [
-      { href: "/payroll", label: "Bảng lương", icon: Wallet, disabled: true },
-    ],
+    items: [{ href: "/payroll", label: "Bảng lương", icon: Wallet }],
   },
 ];
 
@@ -129,7 +127,9 @@ export function Sidebar({ collapsed }: SidebarProps) {
       </div>
 
       <nav className="flex-1 space-y-3 overflow-y-auto p-2 scrollbar-thin">
-        {NAV_SECTIONS.map((section, idx) => (
+        {NAV_SECTIONS.map((section, idx) => {
+          if (section.label === "Lương" && !showAdmin) return null;
+          return (
           <div key={section.label ?? idx} className="space-y-1">
             {section.label &&
               (collapsed ? (
@@ -194,7 +194,8 @@ export function Sidebar({ collapsed }: SidebarProps) {
               />
             )}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="mt-auto space-y-1 border-t p-2">
