@@ -313,9 +313,7 @@ export class EventService {
     }
     const span = (to.getTime() - from.getTime()) / 86_400_000;
     if (span > FREE_BUSY_MAX_RANGE_DAYS) {
-      throw new BadRequestException(
-        `Range too wide (max ${FREE_BUSY_MAX_RANGE_DAYS} days)`,
-      );
+      throw new BadRequestException(`Range too wide (max ${FREE_BUSY_MAX_RANGE_DAYS} days)`);
     }
 
     // Tenant gate — keep only ids that belong to caller's org. Silently
@@ -367,9 +365,7 @@ export class EventService {
         createdById: ev.createdById,
         isPrivate: ev.isPrivate,
         visibility: ev.visibility,
-        _attendeeUserIds: ev.attendees
-          .map((a) => a.userId)
-          .filter((u): u is string => !!u),
+        _attendeeUserIds: ev.attendees.map((a) => a.userId).filter((u): u is string => !!u),
       });
       const detail = acl.canViewDetail();
       const safeTitle = detail ? ev.title : '(Bận)';
@@ -498,9 +494,7 @@ export class EventService {
       _attendeeUserIds: row.attendees.map((a) => a.userId).filter((u): u is string => !!u),
     });
     const shaped = this.shapeRow(row, acl.canViewDetail());
-    return attributionUserIds !== undefined
-      ? { ...shaped, _userIds: attributionUserIds }
-      : shaped;
+    return attributionUserIds !== undefined ? { ...shaped, _userIds: attributionUserIds } : shaped;
   }
 
   private async resolveAttendees(

@@ -1,12 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsNumber,
-  IsObject,
-  IsOptional,
-  Min,
-  ValidateNested,
-} from 'class-validator';
+import { IsArray, IsNumber, IsObject, IsOptional, Min, ValidateNested } from 'class-validator';
 
 /**
  * PATCH /payroll/config — admin-only. Fields omitted stay unchanged.

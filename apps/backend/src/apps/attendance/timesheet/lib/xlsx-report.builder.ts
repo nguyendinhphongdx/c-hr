@@ -91,22 +91,27 @@ export function buildTimesheetReportXlsx(args: BuildArgs): Buffer {
     '',
   ];
 
-  const aoa: (string | number)[][] = [
-    ...headerRows,
-    tableHeader,
-    ...tableRows,
-    totalsRow,
-  ];
+  const aoa: (string | number)[][] = [...headerRows, tableHeader, ...tableRows, totalsRow];
 
   const sheet = XLSX.utils.aoa_to_sheet(aoa);
 
   // Column widths picked for VN names + email length.
   sheet['!cols'] = [
-    { wch: 12 }, { wch: 24 }, { wch: 28 }, { wch: 18 },
-    { wch: 8 }, { wch: 8 }, { wch: 10 },
-    { wch: 8 }, { wch: 10 },
-    { wch: 8 }, { wch: 10 },
-    { wch: 6 }, { wch: 8 }, { wch: 14 }, { wch: 10 },
+    { wch: 12 },
+    { wch: 24 },
+    { wch: 28 },
+    { wch: 18 },
+    { wch: 8 },
+    { wch: 8 },
+    { wch: 10 },
+    { wch: 8 },
+    { wch: 10 },
+    { wch: 8 },
+    { wch: 10 },
+    { wch: 6 },
+    { wch: 8 },
+    { wch: 14 },
+    { wch: 10 },
   ];
   // Freeze header rows + first 2 columns so HR can scroll wide.
   sheet['!freeze'] = { ySplit: headerRows.length + 1, xSplit: 2 };

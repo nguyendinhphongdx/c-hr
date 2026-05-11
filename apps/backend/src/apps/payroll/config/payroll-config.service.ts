@@ -140,9 +140,12 @@ export class PayrollConfigService {
     }
   }
 
-  private assertRegionMinWage(
-    json: { REGION_I: number; REGION_II: number; REGION_III: number; REGION_IV: number },
-  ) {
+  private assertRegionMinWage(json: {
+    REGION_I: number;
+    REGION_II: number;
+    REGION_III: number;
+    REGION_IV: number;
+  }) {
     const regions = ['REGION_I', 'REGION_II', 'REGION_III', 'REGION_IV'] as const;
     for (const r of regions) {
       if (typeof json[r] !== 'number' || json[r] <= 0) {

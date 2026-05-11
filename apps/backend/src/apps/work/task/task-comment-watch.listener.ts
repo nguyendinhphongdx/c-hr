@@ -2,10 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 
-import {
-  CommentCreatedEvent,
-  CommentMention,
-} from '@/apps/collaboration/comment/comment.types';
+import { CommentCreatedEvent, CommentMention } from '@/apps/collaboration/comment/comment.types';
 import { PrismaService } from '@libs/database/prisma.service';
 
 /**
@@ -63,9 +60,7 @@ export class TaskCommentWatchListener {
    *
    * Returns deduped UUIDs only. Caller still org-validates downstream.
    */
-  private async collectMentionedUserIds(
-    payload: CommentCreatedEvent,
-  ): Promise<string[]> {
+  private async collectMentionedUserIds(payload: CommentCreatedEvent): Promise<string[]> {
     const row = await this.prisma.comment.findUnique({
       where: { id: payload.commentId },
       select: { mentions: true, bodyHtml: true },
@@ -93,7 +88,6 @@ export class TaskCommentWatchListener {
   }
 }
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const MENTION_HTML_RE = /data-mention-user-id="([0-9a-fA-F-]{36})"/g;

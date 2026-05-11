@@ -13,7 +13,7 @@ const MAX_RANGE_DAYS = 92; // ~3 months — caps the aggregation cost.
 interface ShiftLike {
   name: string;
   startTime: string; // "HH:MM"
-  endTime: string;   // "HH:MM"
+  endTime: string; // "HH:MM"
   daysOfWeek: number[];
   lateGraceMinutes: number;
   crossesMidnight: boolean;
@@ -185,9 +185,7 @@ export class TimesheetReportService {
 
     // 2b. F8 Phase 7 — bulk-fetch TaskTimer minutes for the period,
     // grouped by userId. Employees without a linked User account get 0.
-    const userIds = employees
-      .map((e) => e.user?.id)
-      .filter((id): id is string => !!id);
+    const userIds = employees.map((e) => e.user?.id).filter((id): id is string => !!id);
     const workMinutesByUser = await this.fetchWorkMinutesByUser(orgId, userIds, from, to);
 
     // 3. Iterate every (employee × day) and aggregate.
@@ -243,12 +241,9 @@ export class TimesheetReportService {
         }
       }
 
-      const attendanceRate =
-        standardWorkdays > 0 ? actualWorkdays / standardWorkdays : 0;
+      const attendanceRate = standardWorkdays > 0 ? actualWorkdays / standardWorkdays : 0;
 
-      const workMinutes = emp.user?.id
-        ? workMinutesByUser.get(emp.user.id) ?? 0
-        : 0;
+      const workMinutes = emp.user?.id ? (workMinutesByUser.get(emp.user.id) ?? 0) : 0;
 
       rows.push({
         employeeId: emp.id,

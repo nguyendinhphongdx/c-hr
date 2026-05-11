@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ProjectRole } from '@prisma/client';
 
 import { ActivityService } from '@/apps/collaboration/activity/activity.service';
@@ -150,9 +146,7 @@ export class TaskTimerService {
       await this.buildTaskAcl(task, project).require('canView');
     } else if (!isAdmin) {
       if (!query.userId || query.userId !== callerId) {
-        throw new ForbiddenException(
-          'Non-admin must pass userId=ctx.userId when taskId omitted',
-        );
+        throw new ForbiddenException('Non-admin must pass userId=ctx.userId when taskId omitted');
       }
     }
 
@@ -182,9 +176,7 @@ export class TaskTimerService {
 
     if (!isAdmin) {
       if (!query.userId || query.userId !== callerId) {
-        throw new ForbiddenException(
-          'Non-admin must pass userId=ctx.userId',
-        );
+        throw new ForbiddenException('Non-admin must pass userId=ctx.userId');
       }
     }
 
@@ -196,7 +188,9 @@ export class TaskTimerService {
       startedAt: { gte: from, lte: to },
       minutes: { not: null },
       ...(query.userId ? { userId: query.userId } : {}),
-      ...(query.projectId ? { task: { is: { projectId: query.projectId, organizationId: orgId } } } : {}),
+      ...(query.projectId
+        ? { task: { is: { projectId: query.projectId, organizationId: orgId } } }
+        : {}),
     };
 
     const rows = await this.prisma.taskTimer.findMany({
@@ -285,10 +279,7 @@ export class TaskTimerService {
     note: string | null,
   ): Promise<void> {
     const stoppedAt = new Date();
-    const minutes = Math.max(
-      0,
-      Math.round((stoppedAt.getTime() - startedAt.getTime()) / 60_000),
-    );
+    const minutes = Math.max(0, Math.round((stoppedAt.getTime() - startedAt.getTime()) / 60_000));
 
     await this.prisma.$transaction(async (tx) => {
       await tx.taskTimer.update({

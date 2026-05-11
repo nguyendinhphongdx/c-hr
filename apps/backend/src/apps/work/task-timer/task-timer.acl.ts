@@ -7,10 +7,7 @@ import { AclView, BaseAcl } from '@/common/acl';
  * task's organizationId is passed in so the ACL can call `isAppAdmin`
  * scoped to the right org without re-fetching.
  */
-export type TaskTimerAclSubject = Pick<
-  TaskTimer,
-  'id' | 'taskId' | 'userId' | 'stoppedAt'
-> & {
+export type TaskTimerAclSubject = Pick<TaskTimer, 'id' | 'taskId' | 'userId' | 'stoppedAt'> & {
   /** Org of the parent task — required for HRM admin check. */
   organizationId: string;
 };

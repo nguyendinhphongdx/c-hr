@@ -86,11 +86,7 @@ export interface OrgWorkOverview {
 const MAX_BURNDOWN_DAYS = 30;
 const HEATMAP_DAYS = 14;
 const TOP_PROJECTS_LIMIT = 5;
-const OPEN_STATUSES: TaskStatus[] = [
-  TaskStatus.TODO,
-  TaskStatus.IN_PROGRESS,
-  TaskStatus.REVIEW,
-];
+const OPEN_STATUSES: TaskStatus[] = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.REVIEW];
 
 @Injectable()
 export class ProjectReportService {
@@ -187,74 +183,64 @@ export class ProjectReportService {
       archivedAt: null,
     };
 
-    const [
-      activeProjects,
-      openTasks,
-      overdueTasks,
-      memberAgg,
-      heatmapTasks,
-      topProjectsRaw,
-    ] = await Promise.all([
-      this.prisma.project.count({
-        where: { ...projectWhere, status: { not: 'DONE' } },
-      }),
-      this.prisma.task.count({
-        where: {
-          organizationId: orgId,
-          deletedAt: null,
-          status: { in: OPEN_STATUSES },
-        },
-      }),
-      this.prisma.task.count({
-        where: {
-          organizationId: orgId,
-          deletedAt: null,
-          status: { in: OPEN_STATUSES },
-          dueDate: { lt: todayUtc },
-        },
-      }),
-      this.prisma.projectMember.findMany({
-        where: { project: { organizationId: orgId, deletedAt: null } },
-        select: { userId: true },
-        distinct: ['userId'],
-      }),
-      this.prisma.task.findMany({
-        where: {
-          organizationId: orgId,
-          deletedAt: null,
-          status: { in: OPEN_STATUSES },
-          dueDate: { gte: todayUtc, lte: horizonEnd },
-          assigneeId: { not: null },
-        },
-        select: { assigneeId: true, dueDate: true },
-      }),
-      this.prisma.project.findMany({
-        where: projectWhere,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          updatedAt: true,
-          _count: {
-            select: {
-              tasks: {
-                where: { deletedAt: null, status: { in: OPEN_STATUSES } },
+    const [activeProjects, openTasks, overdueTasks, memberAgg, heatmapTasks, topProjectsRaw] =
+      await Promise.all([
+        this.prisma.project.count({
+          where: { ...projectWhere, status: { not: 'DONE' } },
+        }),
+        this.prisma.task.count({
+          where: {
+            organizationId: orgId,
+            deletedAt: null,
+            status: { in: OPEN_STATUSES },
+          },
+        }),
+        this.prisma.task.count({
+          where: {
+            organizationId: orgId,
+            deletedAt: null,
+            status: { in: OPEN_STATUSES },
+            dueDate: { lt: todayUtc },
+          },
+        }),
+        this.prisma.projectMember.findMany({
+          where: { project: { organizationId: orgId, deletedAt: null } },
+          select: { userId: true },
+          distinct: ['userId'],
+        }),
+        this.prisma.task.findMany({
+          where: {
+            organizationId: orgId,
+            deletedAt: null,
+            status: { in: OPEN_STATUSES },
+            dueDate: { gte: todayUtc, lte: horizonEnd },
+            assigneeId: { not: null },
+          },
+          select: { assigneeId: true, dueDate: true },
+        }),
+        this.prisma.project.findMany({
+          where: projectWhere,
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            updatedAt: true,
+            _count: {
+              select: {
+                tasks: {
+                  where: { deletedAt: null, status: { in: OPEN_STATUSES } },
+                },
               },
             },
           },
-        },
-        orderBy: { updatedAt: 'desc' },
-        take: TOP_PROJECTS_LIMIT,
-      }),
-    ]);
+          orderBy: { updatedAt: 'desc' },
+          take: TOP_PROJECTS_LIMIT,
+        }),
+      ]);
 
     // Resolve user details for heatmap rows.
     const heatmapUserIds = Array.from(
-      new Set(
-        heatmapTasks
-          .map((t) => t.assigneeId)
-          .filter((id): id is string => !!id),
-      ),
+      new Set(heatmapTasks.map((t) => t.assigneeId).filter((id): id is string => !!id)),
     );
     const users = heatmapUserIds.length
       ? await this.prisma.user.findMany({
@@ -318,7 +304,9 @@ export class ProjectReportService {
   // Helpers
   // ──────────────────────────────────────────────────────────────────
 
-  private buildProjectAcl(project: NonNullable<Awaited<ReturnType<ProjectRepository['findByIdByOrg']>>>): ProjectAcl {
+  private buildProjectAcl(
+    project: NonNullable<Awaited<ReturnType<ProjectRepository['findByIdByOrg']>>>,
+  ): ProjectAcl {
     const memberRoles = new Map<string, ProjectRole>();
     for (const m of project.members) memberRoles.set(m.userId, m.role);
     const subject: ProjectAclSubject = {
@@ -365,8 +353,7 @@ function computeTotals(tasks: TaskShape[], todayUtc: Date): ProjectReportTotals 
 
   const total = tasks.length;
   const completionRate = total > 0 ? done / total : 0;
-  const avgCycleTimeDays =
-    cycleCount > 0 ? cycleSumMs / cycleCount / 86_400_000 : null;
+  const avgCycleTimeDays = cycleCount > 0 ? cycleSumMs / cycleCount / 86_400_000 : null;
 
   return { total, done, open, overdue, completionRate, avgCycleTimeDays };
 }
@@ -389,8 +376,7 @@ function buildBurndown(tasks: TaskShape[], from: Date, to: Date): BurndownPoint[
     let count = 0;
     for (const t of tasks) {
       if (t.createdAt > endOfDay) continue;
-      const terminal =
-        t.status === TaskStatus.DONE || t.status === TaskStatus.CANCELLED;
+      const terminal = t.status === TaskStatus.DONE || t.status === TaskStatus.CANCELLED;
       if (terminal && t.updatedAt <= endOfDay) continue;
       count++;
     }
@@ -405,10 +391,7 @@ interface UserLite {
   avatar: string | null;
 }
 
-function buildWorkload(
-  tasks: TaskShape[],
-  userById: Map<string, UserLite>,
-): WorkloadAssigneeRow[] {
+function buildWorkload(tasks: TaskShape[], userById: Map<string, UserLite>): WorkloadAssigneeRow[] {
   const map = new Map<string, WorkloadAssigneeRow>();
   for (const t of tasks) {
     const key = t.assigneeId ?? '__unassigned__';
@@ -466,9 +449,7 @@ function startOfUtcDay(d: Date): Date {
 }
 
 function endOfUtcDay(d: Date): Date {
-  return new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999),
-  );
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
 }
 
 function addDays(d: Date, n: number): Date {
