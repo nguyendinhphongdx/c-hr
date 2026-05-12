@@ -8,6 +8,7 @@ import { PrismaService } from '@libs/database/prisma.service';
 import { CalcInput, Region, computePayroll } from '../calculator';
 import { PayrollConfigService } from '../config/payroll-config.service';
 import { itemToPayslipPayload } from '../lib/payslip-mapper';
+import { buildPayslipPdf } from '../lib/payslip.pdf-builder';
 import { buildPayslipXlsx } from '../lib/payslip.xlsx-builder';
 import {
   jsonToAllowances,
@@ -129,6 +130,33 @@ export class PayrollItemService {
    * the Express response.
    */
   async exportPayslipXlsx(id: string, res: Response): Promise<void> {
+    const { item, payload } = await this.loadPayslipPayload(id);
+    const buffer = buildPayslipXlsx(payload);
+    const filename = `payslip_${item.employee.code}_${item.period.monthKey}.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.end(buffer);
+  }
+
+  /**
+   * Stream the payslip PDF for one item. Same ACL + payload-building as the
+   * xlsx export; only the body builder + content-type differ.
+   */
+  async exportPayslipPdf(id: string, res: Response): Promise<void> {
+    const { item, payload } = await this.loadPayslipPayload(id);
+    const buffer = await buildPayslipPdf(payload);
+    const filename = `payslip_${item.employee.code}_${item.period.monthKey}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.end(buffer);
+  }
+
+  private async loadPayslipPayload(id: string) {
     const item = await this.findOne(id);
 
     const [employeeExtra, org, user] = await Promise.all([
@@ -155,15 +183,7 @@ export class PayrollItemService {
       generatedBy: user?.name ?? user?.email ?? null,
     });
 
-    const buffer = buildPayslipXlsx(payload);
-    const filename = `payslip_${item.employee.code}_${item.period.monthKey}.xlsx`;
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Length', buffer.length.toString());
-    res.end(buffer);
+    return { item, payload };
   }
 
   // ──────────────────────────────────────────────────────────────────

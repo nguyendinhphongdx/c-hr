@@ -53,4 +53,13 @@ export const payrollItemService = {
     );
     return res.data;
   },
+
+  /** Download the per-item payslip as a PDF. Same blob → browser save flow. */
+  payslipPdf: async (id: ID): Promise<Blob> => {
+    const res = await apiClient.get<Blob>(
+      `/payroll/items/${id}/payslip.pdf`,
+      { responseType: "blob" },
+    );
+    return res.data;
+  },
 };

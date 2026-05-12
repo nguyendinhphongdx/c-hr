@@ -62,4 +62,13 @@ export class PayrollItemController {
   ): Promise<void> {
     await this.service.exportPayslipXlsx(id, res);
   }
+
+  /** Same shape as `.xlsx` — PDF rendition for HR distribution. */
+  @Get('items/:id/payslip.pdf')
+  async payslipPdf(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: false }) res: Response,
+  ): Promise<void> {
+    await this.service.exportPayslipPdf(id, res);
+  }
 }

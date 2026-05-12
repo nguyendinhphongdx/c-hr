@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Info, Loader2, RefreshCw } from "lucide-react";
+import { Download, FileText, Info, Loader2, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -113,7 +113,7 @@ export function ItemEditDialog({
   // identity stamp. Reset to null when dialog closes (item becomes null).
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<"xlsx" | "pdf" | null>(null);
 
   const stamp = item ? `${item.id}:${item.updatedAt}` : null;
   if (stamp && stamp !== hydratedFor) {
@@ -165,15 +165,18 @@ export function ItemEditDialog({
     }
   };
 
-  const onDownloadPayslip = async () => {
+  const downloadPayslip = async (kind: "xlsx" | "pdf") => {
     if (!item) return;
-    setExporting(true);
+    setExporting(kind);
     try {
-      const blob = await payrollItemService.payslipXlsx(item.id);
+      const blob =
+        kind === "xlsx"
+          ? await payrollItemService.payslipXlsx(item.id)
+          : await payrollItemService.payslipPdf(item.id);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `payslip_${item.employee.code}_${item.period?.monthKey ?? "ky-luong"}.xlsx`;
+      a.download = `payslip_${item.employee.code}_${item.period?.monthKey ?? "ky-luong"}.${kind}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -183,7 +186,7 @@ export function ItemEditDialog({
         description: err instanceof Error ? err.message : "Vui lòng thử lại.",
       });
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   };
 
@@ -507,15 +510,29 @@ export function ItemEditDialog({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={onDownloadPayslip}
-                  disabled={exporting}
+                  onClick={() => downloadPayslip("xlsx")}
+                  disabled={exporting !== null}
                 >
-                  {exporting ? (
+                  {exporting === "xlsx" ? (
                     <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Download className="mr-1.5 h-3.5 w-3.5" />
                   )}
-                  Tải payslip
+                  Tải Excel
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadPayslip("pdf")}
+                  disabled={exporting !== null}
+                >
+                  {exporting === "pdf" ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileText className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Tải PDF
                 </Button>
                 <div className="flex-1" />
                 <Button type="button" variant="ghost" onClick={onClose}>
