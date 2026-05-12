@@ -4,6 +4,7 @@ import { requireAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
+import { HolidayService } from '../holiday/holiday.service';
 import { WorkScheduleRepository } from '../work-schedule/work-schedule.repository';
 
 import { TimesheetSummaryQueryDto } from './dto';
@@ -79,8 +80,20 @@ export interface EmployeeSummaryRow {
    */
   absentDays: number;
 
-  /** Minutes worked beyond the shift end (clamped to ≥ 0). v1: single bucket. */
-  otMinutes: number;
+  /**
+   * Minutes worked beyond the shift end (clamped to ≥ 0), split into the
+   * three legal buckets per VN labor law:
+   *   - weekday  → 100% base × 1.5 OT (config `otRates.weekday`)
+   *   - weekend  → 100% base × 2.0 OT (Sat/Sun) (config `otRates.weekend`)
+   *   - holiday  → 100% base × 3.0 OT (per Holiday model) (config `otRates.holiday`)
+   * The holiday bucket takes precedence when a date is both Sat/Sun AND
+   * marked as a holiday — holiday rate (3.0) > weekend rate (2.0).
+   */
+  otMinutesWeekday: number;
+  otMinutesWeekend: number;
+  otMinutesHoliday: number;
+  /** Convenience sum across the three buckets. */
+  otMinutesTotal: number;
 
   /** actualWorkdays / standardWorkdays — 0 when no scheduled days. */
   attendanceRate: number;
@@ -99,6 +112,7 @@ export class TimesheetReportService {
     private readonly prisma: PrismaService,
     private readonly ctx: RequestContextService,
     private readonly schedules: WorkScheduleRepository,
+    private readonly holidays: HolidayService,
   ) {}
 
   async summary(query: TimesheetSummaryQueryDto): Promise<EmployeeSummaryRow[]> {
@@ -188,6 +202,11 @@ export class TimesheetReportService {
     const userIds = employees.map((e) => e.user?.id).filter((id): id is string => !!id);
     const workMinutesByUser = await this.fetchWorkMinutesByUser(orgId, userIds, from, to);
 
+    // 2c. F3/F9 — load the holiday date set for the entire period in one
+    // query so per-day classification stays O(1). Set keys are
+    // `YYYY-MM-DD` (UTC) matching `toDateKey()` output below.
+    const holidaySet = await this.holidays.listSetByRange(orgId, from, to);
+
     // 3. Iterate every (employee × day) and aggregate.
     const dates = enumerateDays(from, to);
     const rows: EmployeeSummaryRow[] = [];
@@ -201,7 +220,9 @@ export class TimesheetReportService {
       let earlyLeaveCount = 0;
       let earlyLeaveMinutes = 0;
       let absentDays = 0;
-      let otMinutes = 0;
+      let otMinutesWeekday = 0;
+      let otMinutesWeekend = 0;
+      let otMinutesHoliday = 0;
 
       for (const d of dates) {
         const isoDay = isoWeekday(d);
@@ -209,7 +230,8 @@ export class TimesheetReportService {
         if (!shift) continue; // weekend / non-scheduled day
         standardWorkdays++;
 
-        const log = logsByEmpDate.get(`${emp.id}|${toDateKey(d)}`) ?? null;
+        const dateKey = toDateKey(d);
+        const log = logsByEmpDate.get(`${emp.id}|${dateKey}`) ?? null;
         if (!log || !log.checkInAt) {
           absentDays++;
           continue;
@@ -236,7 +258,17 @@ export class TimesheetReportService {
           const worked = Math.max(0, outM - inM);
           totalWorkMinutes += worked;
           if (outM > endM) {
-            otMinutes += outM - endM;
+            const ot = outM - endM;
+            // Bucket precedence: holiday > weekend > weekday. Saturday
+            // and Sunday that are ALSO marked as a holiday get the
+            // higher 3.0× rate per VN labor law.
+            if (holidaySet.has(dateKey)) {
+              otMinutesHoliday += ot;
+            } else if (isoDay === 6 || isoDay === 7) {
+              otMinutesWeekend += ot;
+            } else {
+              otMinutesWeekday += ot;
+            }
           }
         }
       }
@@ -244,6 +276,7 @@ export class TimesheetReportService {
       const attendanceRate = standardWorkdays > 0 ? actualWorkdays / standardWorkdays : 0;
 
       const workMinutes = emp.user?.id ? (workMinutesByUser.get(emp.user.id) ?? 0) : 0;
+      const otMinutesTotal = otMinutesWeekday + otMinutesWeekend + otMinutesHoliday;
 
       rows.push({
         employeeId: emp.id,
@@ -260,7 +293,10 @@ export class TimesheetReportService {
         earlyLeaveCount,
         earlyLeaveMinutes,
         absentDays,
-        otMinutes,
+        otMinutesWeekday,
+        otMinutesWeekend,
+        otMinutesHoliday,
+        otMinutesTotal,
         attendanceRate,
         workMinutes,
       } as EmployeeSummaryRow);
@@ -314,7 +350,7 @@ export class TimesheetReportService {
     const totals: OverviewTotals = {
       activeEmployees: periodRows.length,
       totalWorkMinutes: periodRows.reduce((s, r) => s + r.totalWorkMinutes, 0),
-      totalOTMinutes: periodRows.reduce((s, r) => s + r.otMinutes, 0),
+      totalOTMinutes: periodRows.reduce((s, r) => s + r.otMinutesTotal, 0),
       attendanceRate: avgAttendanceRate(periodRows),
     };
 
@@ -358,7 +394,7 @@ export class TimesheetReportService {
       trend.push({
         month: `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}`,
         totalWorkMinutes: monthRows.reduce((s, r) => s + r.totalWorkMinutes, 0),
-        totalOTMinutes: monthRows.reduce((s, r) => s + r.otMinutes, 0),
+        totalOTMinutes: monthRows.reduce((s, r) => s + r.otMinutesTotal, 0),
       });
     }
 

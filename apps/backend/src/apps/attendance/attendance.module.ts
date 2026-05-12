@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { AttendanceDeviceModule } from './attendance-device/attendance-device.module';
 import { AttendanceLogModule } from './attendance-log/attendance-log.module';
+import { HolidayModule } from './holiday/holiday.module';
 import { TimesheetModule } from './timesheet/timesheet.module';
 import { WorkScheduleModule } from './work-schedule/work-schedule.module';
 
@@ -10,7 +11,19 @@ import { WorkScheduleModule } from './work-schedule/work-schedule.module';
  * queries. Per ADR 0005, cross-context imports must go through this barrel.
  */
 @Module({
-  imports: [WorkScheduleModule, AttendanceDeviceModule, AttendanceLogModule, TimesheetModule],
-  exports: [WorkScheduleModule, AttendanceDeviceModule, AttendanceLogModule, TimesheetModule],
+  imports: [
+    WorkScheduleModule,
+    AttendanceDeviceModule,
+    AttendanceLogModule,
+    HolidayModule,
+    TimesheetModule,
+  ],
+  exports: [
+    WorkScheduleModule,
+    AttendanceDeviceModule,
+    AttendanceLogModule,
+    HolidayModule,
+    TimesheetModule,
+  ],
 })
 export class AttendanceModule {}

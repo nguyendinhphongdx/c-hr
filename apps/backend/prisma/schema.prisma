@@ -350,6 +350,28 @@ model AttendanceLog {
   @@map("attendance_logs")
 }
 
+/// Public holidays / org-specific days off. Used by TimesheetReportService
+/// to classify OT into weekday / weekend / holiday buckets per VN labor
+/// law (100% / 200% / 300% multipliers). HR enters per year — no auto-seed.
+model Holiday {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  /// Single date (no range). For multi-day holidays, HR creates one row per day.
+  date           DateTime  @db.Date
+  /// Vietnamese name e.g. "Tết Dương lịch", "Quốc Khánh".
+  name           String    @db.VarChar(127)
+  /// `true` = NLĐ được nghỉ có lương. `false` = ngày lễ nhưng đi làm tính
+  /// như ngày thường (rare — for org-specific commemorations).
+  isPaid         Boolean   @default(true) @map("is_paid")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  @@unique([organizationId, date])
+  @@index([organizationId, date, deletedAt])
+  @@map("holidays")
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // Universal Request engine (F5) — replaces F4's per-type tables.
 // Một bảng `requests` với polymorphic `data: Json` validated theo

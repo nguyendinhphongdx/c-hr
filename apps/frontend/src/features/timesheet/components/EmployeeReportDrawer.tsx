@@ -106,10 +106,17 @@ export function EmployeeReportDrawer({
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">OT</div>
+                <div className="text-xs text-muted-foreground">OT (tổng)</div>
                 <div className="font-medium tabular-nums">
-                  {fmtHm(row.otMinutes)}
+                  {fmtHm(row.otMinutesTotal)}
                 </div>
+                {row.otMinutesTotal > 0 && (
+                  <div className="text-[10px] text-muted-foreground tabular-nums">
+                    T {fmtHm(row.otMinutesWeekday)} · CT{" "}
+                    {fmtHm(row.otMinutesWeekend)} · L{" "}
+                    {fmtHm(row.otMinutesHoliday)}
+                  </div>
+                )}
               </div>
             </div>
 

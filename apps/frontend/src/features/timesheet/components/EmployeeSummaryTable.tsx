@@ -71,7 +71,10 @@ export function EmployeeSummaryTable({
             <TableHead className="text-right">Đi muộn</TableHead>
             <TableHead className="text-right">Về sớm</TableHead>
             <TableHead className="text-right">Vắng</TableHead>
-            <TableHead className="text-right">OT</TableHead>
+            <TableHead className="text-right">OT thường</TableHead>
+            <TableHead className="text-right">OT cuối tuần</TableHead>
+            <TableHead className="text-right">OT lễ</TableHead>
+            <TableHead className="text-right">OT tổng</TableHead>
             <TableHead className="text-right">Giờ làm theo project</TableHead>
             <TableHead className="text-right">Chuyên cần</TableHead>
           </TableRow>
@@ -142,10 +145,31 @@ export function EmployeeSummaryTable({
                 )}
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                {r.otMinutes === 0 ? (
+                {r.otMinutesWeekday === 0 ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
-                  fmtHm(r.otMinutes)
+                  fmtHm(r.otMinutesWeekday)
+                )}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {r.otMinutesWeekend === 0 ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  fmtHm(r.otMinutesWeekend)
+                )}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {r.otMinutesHoliday === 0 ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  fmtHm(r.otMinutesHoliday)
+                )}
+              </TableCell>
+              <TableCell className="text-right tabular-nums font-medium">
+                {r.otMinutesTotal === 0 ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  fmtHm(r.otMinutesTotal)
                 )}
               </TableCell>
               <TableCell className="text-right tabular-nums">

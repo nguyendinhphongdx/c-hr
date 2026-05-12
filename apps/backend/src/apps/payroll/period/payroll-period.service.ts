@@ -438,10 +438,11 @@ export class PayrollPeriodService {
       const actualWorkdays = ts?.actualWorkdays ?? 0;
       const lateMinutes = ts?.lateMinutes ?? 0;
       const earlyLeaveMinutes = ts?.earlyLeaveMinutes ?? 0;
-      // Timesheet v1 doesn't split OT into weekday/weekend/holiday buckets
-      // — drop the lump sum into the weekday bucket; HR splits later
-      // via the item edit dialog.
-      const otMinutesWeekday = ts?.otMinutes ?? 0;
+      // Timesheet now classifies OT per VN labor law (B1 — Holiday model
+      // + bucket classification). HR still edits per-item later if needed.
+      const otMinutesWeekday = ts?.otMinutesWeekday ?? 0;
+      const otMinutesWeekend = ts?.otMinutesWeekend ?? 0;
+      const otMinutesHoliday = ts?.otMinutesHoliday ?? 0;
 
       itemsToCreate.push({
         organizationId: orgId,
@@ -455,8 +456,8 @@ export class PayrollPeriodService {
         lateMinutes,
         earlyLeaveMinutes,
         otMinutesWeekday,
-        otMinutesWeekend: 0,
-        otMinutesHoliday: 0,
+        otMinutesWeekend,
+        otMinutesHoliday,
         allowancesJson: [] as unknown as Prisma.InputJsonValue,
         deductionsJson: [] as unknown as Prisma.InputJsonValue,
       });
