@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-11T06:37:57.895Z",
+  "generatedAt": "2026-05-12T01:52:20.578Z",
   "repoRelativeRoot": ".",
-  "count": 65,
+  "count": 66,
   "entries": [
     {
       "id": "AGENTS",
@@ -643,7 +643,7 @@
       "category": "plans",
       "headings": [
         "Nguyên tắc (cứng — không đổi)",
-        "Trạng thái hiện tại (cập nhật 2026-05-10)",
+        "Trạng thái hiện tại (cập nhật 2026-05-12)",
         "F3 verify checklist (đã chạy 2026-05-04 qua curl, BE :8000 + DB Docker)",
         "Edge findings (non-blocking, ghi chú để fix sau)",
         "Manual UI smoke (chờ demo qua browser)",
@@ -711,6 +711,36 @@
         "Workflow mỗi feature (template)"
       ],
       "summary": "Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 + Phase 4 docs/MCP unification — root scaffolding, identity, docs gộp ra root, infra Docker chạy, Prisma migrate `_init` áp dụng)."
+    },
+    {
+      "id": "docs:plans:onboarding",
+      "path": "docs/plans/onboarding.md",
+      "title": "F10 — Onboarding (Template + Plan + Task lifecycle)",
+      "description": "Quy trình onboarding nhân sự mới — HR khai báo template, hệ thống auto-spawn plan khi tạo Employee, task được giao + theo dõi qua F6 timeline.",
+      "tags": [
+        "project",
+        "plan",
+        "onboarding",
+        "hrm"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Vì sao cần",
+        "Domain model",
+        "ACL (BaseAcl pattern, ADR 0008)",
+        "UX inventory",
+        "Phase plan",
+        "Decisions đã chốt",
+        "Cross-reference",
+        "Files đã tạo",
+        "BE — `apps/backend/src/apps/onboarding/`",
+        "FE — `apps/frontend/src/features/onboarding/`",
+        "Phase 5 polish — chi tiết",
+        "Defers / future",
+        "Workflow check (mỗi phase)"
+      ],
+      "summary": "> **Trạng thái**: Phase 1-4 — ✅ done (commit `5cdc2f5`). Phase 5 (polish) — ✅ done. > > **Vị trí**: BE bounded context `apps/backend/src/apps/onboarding/`. FE `apps/frontend/src/features/onboarding/`. > > **Routes**: `/onboarding` (list plans) · `/onboarding/[planId]` (HR/manager view) · `/my-onboarding` (self-service, new hire) · `/settings/onboarding-templates` (admin)."
     },
     {
       "id": "docs:plans:refactor",

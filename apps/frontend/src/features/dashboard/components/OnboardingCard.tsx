@@ -1,5 +1,7 @@
 "use client";
 
+import { differenceInDays, format, parseISO } from "date-fns";
+import { vi } from "date-fns/locale";
 import { ArrowRight, ClipboardCheck } from "lucide-react";
 import Link from "next/link";
 
@@ -17,16 +19,16 @@ import {
   useMyOnboardingPlan,
 } from "@/features/onboarding";
 
+const CELEBRATION_WINDOW_DAYS = 30;
+
 /**
  * Home page widget for the new hire — surfaces onboarding progress so
  * they don't need to discover `/my-onboarding` first.
  *
- * Hidden when there is no employee link, no plan, or the plan is no
- * longer active (COMPLETED / ARCHIVED).
- *
- * TODO (Phase 5+): show a 30-day post-completion celebration card
- * before hiding entirely; for MVP we hide as soon as the plan
- * transitions to COMPLETED.
+ * Variants:
+ *  - active (PENDING / IN_PROGRESS) → progress card
+ *  - completed within last 30 days → emerald celebration card
+ *  - otherwise (no plan, archived, or >30d since completion) → hidden
  */
 export function OnboardingCard() {
   const { user } = useAuth();
@@ -35,7 +37,45 @@ export function OnboardingCard() {
 
   if (!employeeId) return null;
   if (isLoading) return null;
-  if (!plan || !hasActivePlan) return null;
+  if (!plan) return null;
+
+  if (!hasActivePlan) {
+    if (
+      plan.status === "COMPLETED" &&
+      plan.completedAt &&
+      differenceInDays(new Date(), parseISO(plan.completedAt)) <=
+        CELEBRATION_WINDOW_DAYS
+    ) {
+      return (
+        <Card className="border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/40">
+          <CardContent className="flex items-start justify-between gap-3 pt-6">
+            <div className="min-w-0 space-y-1">
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                🎉 Chúc mừng! Bạn đã hoàn thành onboarding
+              </p>
+              <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                Hoàn thành ngày{" "}
+                {format(parseISO(plan.completedAt), "dd/MM/yyyy", {
+                  locale: vi,
+                })}
+              </p>
+            </div>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="shrink-0 gap-1 text-emerald-700 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200"
+            >
+              <Link href="/my-onboarding">
+                Xem lại <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+    return null;
+  }
 
   const total = plan.tasks.length;
   const done = plan.tasks.filter((t) => t.status === "DONE").length;

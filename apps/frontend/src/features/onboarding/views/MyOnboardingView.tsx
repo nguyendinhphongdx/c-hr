@@ -3,7 +3,8 @@
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { ClipboardCheck, Eye, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/features/auth";
@@ -35,13 +36,39 @@ export function MyOnboardingView() {
   const currentUserId = user?.id ?? null;
   const { plan, isLoading, error } = useMyOnboardingPlan(employeeId);
 
-  const [detailTaskId, setDetailTaskId] = useState<ID | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Mirrors the `?taskCode=` pattern in features/work/views/ProjectDetailView —
+  // read once on mount so deep links open the drawer; user gestures after that
+  // sync via `openTask` / `closeTask`.
+  const [detailTaskId, setDetailTaskId] = useState<ID | null>(
+    () => searchParams.get("taskId"),
+  );
   const [completeTask, setCompleteTask] = useState<OnboardingTaskRow | null>(
     null,
   );
   const [reassignTask, setReassignTask] = useState<OnboardingTaskRow | null>(
     null,
   );
+
+  const openTask = useCallback(
+    (id: ID) => {
+      setDetailTaskId(id);
+      const next = new URLSearchParams(searchParams.toString());
+      next.set("taskId", id);
+      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const closeTask = useCallback(() => {
+    setDetailTaskId(null);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("taskId");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   const { myTasks, watchedTasks, done, total } = useMemo(() => {
     const tasks = plan?.tasks ?? [];
@@ -173,10 +200,10 @@ export function MyOnboardingView() {
                         key={task.id}
                         task={task}
                         plan={plan}
-                        onOpen={(t) => setDetailTaskId(t.id)}
+                        onOpen={(t) => openTask(t.id)}
                         onComplete={(t) => setCompleteTask(t)}
                         onReassign={(t) => setReassignTask(t)}
-                        onEdit={(t) => setDetailTaskId(t.id)}
+                        onEdit={(t) => openTask(t.id)}
                       />
                     ))}
                   </ul>
@@ -194,7 +221,7 @@ export function MyOnboardingView() {
                       <TaskWatchRow
                         key={task.id}
                         task={task}
-                        onOpen={(t) => setDetailTaskId(t.id)}
+                        onOpen={(t) => openTask(t.id)}
                       />
                     ))}
                   </ul>
@@ -207,7 +234,7 @@ export function MyOnboardingView() {
 
       <TaskDetailDrawer
         open={detailTaskId !== null}
-        onClose={() => setDetailTaskId(null)}
+        onClose={closeTask}
         taskId={detailTaskId}
         onRequestComplete={(t) => setCompleteTask(t)}
         onRequestReassign={(t) => setReassignTask(t)}

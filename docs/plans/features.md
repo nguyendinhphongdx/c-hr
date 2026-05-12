@@ -20,7 +20,7 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 6. **1 feature = 1 PR** (BE module + Prisma migration + FE feature + test). Không trộn.
 7. **Audit log** ([ADR 0002](../decisions/0002-audit-log.md)) cho mọi action thay đổi org structure / appadmin / approve workflow.
 
-## Trạng thái hiện tại (cập nhật 2026-05-10)
+## Trạng thái hiện tại (cập nhật 2026-05-12)
 
 | # | Feature | Status | Ghi chú |
 | --- | --- | --- | --- |
@@ -34,6 +34,7 @@ Plan tính năng HRM, **sau** khi xong [refactor.md](refactor.md) (Phase 1+2+3 +
 | 7 | Calendar + Booking | 🚧 partial (7.1–7.3 done, 7.4+ defer) | **Done**: F7.1 events 4-view (week/day/month/agenda với react-big-calendar) + EventCreateDialog 2-step + visibility/isPrivate + attendees + comments wire-in. F7.2 resources (ROOM/EQUIPMENT/VEHICLE) + RoomsView + booking conflict check. F7.3 follow + per-attendee chips + stored follow colors (migration `calendar_follow_color`) + visibility filter. **Bonus**: scheduling assistant + free/busy badges (`aa7ff1e`), CalendarSettingsForm, Preference module ([apps/backend/src/apps/core/preference](../../apps/backend/src/apps/core/preference/)) cho follow defaults. **Chưa làm**: F7.4 OAuth Google/Microsoft sync (không có `external-sync/`, `googleapis`/`microsoft-graph-client` deps), recurrence/rrule (schema comment line 460: "MVP: single events only"), F7.5 Tasks. |
 | 8 | Work — Project + Task + Tag generic | ✅ done | App quản lý dự án + task cho team (Linear-class UX + tích hợp HRM). Phase 1A–6 hoàn tất: Tag polymorphic + Project + Task + Kanban Board (@dnd-kit) + Comments/Activity (reuse F6) + My Tasks cross-project + Reports per-project & org-wide. Spec: [work.md](work.md). |
 | 9 | Payroll — kỳ lương + BHXH/thuế TNCN VN + payslip Excel | ✅ done | Phase 1-4. Pure-function calculator (5 unit tests), DRAFT→CLOSED→PAID lifecycle, auto-pull Timesheet, free-form allowances/deductions, payslip xlsx per-item + bulk per-period. Migration `f9_payroll_foundation`. |
+| 10 | Onboarding — template + plan + task lifecycle | ✅ done | Phase 1-5. Template CRUD + clone, Plan auto-spawn task từ template + snapshot `templateNameSnapshot`, Task lifecycle (complete/uncomplete/reassign) + activity audit, `/my-onboarding` self-service view, dashboard widget + 30-day celebration card, `?taskId=` deep-link drawer, template softDelete guard. Reuse F6 (Comment/Activity timeline) + ADR 0008 BaseAcl. Spec: [onboarding.md](onboarding.md). |
 | — | Dashboard data-driven home | ✅ done (ngoài plan gốc) | Today status + approvals queue + birthdays. Commit `0167cd0`. |
 | — | Preference module | ✅ done (ngoài plan gốc) | `Preference` model với `PreferenceScope` enum, registry pattern. Hỗ trợ user-level config (vd calendar follow defaults). Migration `add_preferences_drop_calendar_default`. |
 | — | ZK-Bridge standalone | ✅ done (chuyển từ roadmap → ship) | [services/zk-bridge](../../services/zk-bridge/) là pnpm package độc lập publishable, có CLI entry, env reload, defuse orphan ZK waiters. Commits `4328c48`, `fbb721a`, `92b6a0f`. |

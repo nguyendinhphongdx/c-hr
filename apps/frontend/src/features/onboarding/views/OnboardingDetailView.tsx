@@ -1,7 +1,8 @@
 "use client";
 
 import { Loader2, Plus } from "lucide-react";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { ID } from "@/lib/types";
@@ -22,7 +23,15 @@ interface OnboardingDetailViewProps {
 export function OnboardingDetailView({ planId }: OnboardingDetailViewProps) {
   const { data: plan, isLoading, error } = usePlan(planId);
 
-  const [detailTaskId, setDetailTaskId] = useState<ID | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Mirrors the `?taskCode=` pattern in features/work/views/ProjectDetailView —
+  // read once on mount so deep links open the drawer; user gestures after that
+  // sync via `setSelectedTaskId` below.
+  const [detailTaskId, setDetailTaskId] = useState<ID | null>(
+    () => searchParams.get("taskId"),
+  );
   const [completeTask, setCompleteTask] = useState<OnboardingTaskRow | null>(
     null,
   );
@@ -30,6 +39,24 @@ export function OnboardingDetailView({ planId }: OnboardingDetailViewProps) {
     null,
   );
   const [addOpen, setAddOpen] = useState(false);
+
+  const openTask = useCallback(
+    (id: ID) => {
+      setDetailTaskId(id);
+      const next = new URLSearchParams(searchParams.toString());
+      next.set("taskId", id);
+      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const closeTask = useCallback(() => {
+    setDetailTaskId(null);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("taskId");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   if (isLoading) {
     return (
@@ -73,10 +100,10 @@ export function OnboardingDetailView({ planId }: OnboardingDetailViewProps) {
                   key={task.id}
                   task={task}
                   plan={plan}
-                  onOpen={(t) => setDetailTaskId(t.id)}
+                  onOpen={(t) => openTask(t.id)}
                   onComplete={(t) => setCompleteTask(t)}
                   onReassign={(t) => setReassignTask(t)}
-                  onEdit={(t) => setDetailTaskId(t.id)}
+                  onEdit={(t) => openTask(t.id)}
                 />
               ))}
             </ul>
@@ -99,7 +126,7 @@ export function OnboardingDetailView({ planId }: OnboardingDetailViewProps) {
 
       <TaskDetailDrawer
         open={detailTaskId !== null}
-        onClose={() => setDetailTaskId(null)}
+        onClose={closeTask}
         taskId={detailTaskId}
         onRequestComplete={(t) => setCompleteTask(t)}
         onRequestReassign={(t) => setReassignTask(t)}

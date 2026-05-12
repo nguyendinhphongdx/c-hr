@@ -135,10 +135,18 @@ export class OnboardingTemplateService {
     const existing = await this.repo.findRawByIdByOrg(orgId, id);
     if (!existing) throw new NotFoundException('Template not found');
 
-    // TODO Phase 2: reject when active plans reference this template
-    // (count OnboardingPlan WHERE templateId = id AND status != ARCHIVED).
-    // Phase 1 has no plan service yet — soft-delete is safe because the
-    // FK still resolves (plans keep their templateNameSnapshot).
+    const activePlanCount = await this.prisma.onboardingPlan.count({
+      where: {
+        templateId: id,
+        status: { not: 'ARCHIVED' },
+      },
+    });
+    if (activePlanCount > 0) {
+      throw new BadRequestException(
+        `Không xoá được mẫu — còn ${activePlanCount} quy trình đang hoạt động.`,
+      );
+    }
+
     await this.repo.softDelete(id);
     return { id, success: true as const };
   }
