@@ -51,7 +51,10 @@ export class CommentService {
   async create(input: CreateCommentInput): Promise<CommentDto> {
     const bodyHtml = sanitize(input.bodyHtml);
     const bodyText = htmlToText(bodyHtml);
-    if (!bodyText) {
+    // Image-only comments have no text after stripping tags; treat
+    // them as valid by checking for an <img> in the sanitized HTML.
+    const hasImage = /<img\b/i.test(bodyHtml);
+    if (!bodyText && !hasImage) {
       throw new BadRequestException('Comment body is empty after sanitize');
     }
 
@@ -116,7 +119,8 @@ export class CommentService {
 
     const bodyHtml = sanitize(input.bodyHtml);
     const bodyText = htmlToText(bodyHtml);
-    if (!bodyText) {
+    const hasImage = /<img\b/i.test(bodyHtml);
+    if (!bodyText && !hasImage) {
       throw new BadRequestException('Comment body is empty after sanitize');
     }
 
