@@ -75,7 +75,8 @@ export function TimesheetReportsView() {
     }),
     [range, departmentId, search],
   );
-  const { data: rows, isLoading } = useTimesheetSummary(summaryQuery);
+  const { data: rows, isLoading, error: summaryError } =
+    useTimesheetSummary(summaryQuery);
   const overview = useTimesheetOverview(summaryQuery);
 
   const onExport = async () => {
@@ -175,11 +176,17 @@ export function TimesheetReportsView() {
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto">
-              <EmployeeSummaryTable
-                rows={rows ?? []}
-                loading={isLoading}
-                onRowClick={setSelectedRow}
-              />
+              {summaryError ? (
+                <div className="py-16 text-center text-sm text-destructive">
+                  Lỗi: {(summaryError as Error).message}
+                </div>
+              ) : (
+                <EmployeeSummaryTable
+                  rows={rows ?? []}
+                  loading={isLoading}
+                  onRowClick={setSelectedRow}
+                />
+              )}
             </div>
           </TabsContent>
 

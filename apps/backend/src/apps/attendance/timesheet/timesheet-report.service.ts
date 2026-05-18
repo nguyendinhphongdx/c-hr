@@ -141,12 +141,14 @@ export class TimesheetReportService {
     const schedule = await this.schedules.findDefaultByOrg(orgId);
     const shiftsByDay = indexShiftsByDay(schedule?.shifts ?? []);
 
-    // 1. Fetch employees matching filters.
+    // 1. Fetch employees matching filters. Include ON_LEAVE so people on
+    // leave during the period still surface (with zeros if they didn't
+    // check in). Only TERMINATED is excluded — they have no active record.
     const employees = await this.prisma.employee.findMany({
       where: {
         organizationId: orgId,
         deletedAt: null,
-        status: 'ACTIVE',
+        status: { in: ['ACTIVE', 'ON_LEAVE'] },
         ...(query.departmentId ? { departmentId: query.departmentId } : {}),
         ...(query.q
           ? {
