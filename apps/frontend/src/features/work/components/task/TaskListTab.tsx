@@ -66,20 +66,34 @@ export function TaskListTab({ projectId, onOpenTask }: TaskListTabProps) {
   });
 
   const tasks = tasksQuery.data ?? [];
-  const tasksBySection = useMemo(() => {
-    const m = new Map<ID | "__none__", TaskListItem[]>();
+  // Split: root tasks (parentTaskId === null) group by section; subtasks
+  // render only when their parent is expanded.
+  const { tasksBySection, subtasksByParent } = useMemo(() => {
+    const bySection = new Map<ID | "__none__", TaskListItem[]>();
+    const byParent = new Map<ID, TaskListItem[]>();
     for (const t of tasks) {
-      const key = t.sectionId ?? "__none__";
-      const arr = m.get(key) ?? [];
-      arr.push(t);
-      m.set(key, arr);
+      if (t.parentTaskId) {
+        const arr = byParent.get(t.parentTaskId) ?? [];
+        arr.push(t);
+        byParent.set(t.parentTaskId, arr);
+      } else {
+        const key = t.sectionId ?? "__none__";
+        const arr = bySection.get(key) ?? [];
+        arr.push(t);
+        bySection.set(key, arr);
+      }
     }
-    return m;
+    return { tasksBySection: bySection, subtasksByParent: byParent };
   }, [tasks]);
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggleCollapsed = (key: string) =>
     setCollapsed((s) => ({ ...s, [key]: !s[key] }));
+
+  // Per-parent expansion (subtask reveal). Default collapsed.
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+  const toggleTaskExpanded = (id: string) =>
+    setExpandedTasks((s) => ({ ...s, [id]: !s[id] }));
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createSection, setCreateSection] = useState<ID | null>(null);
@@ -99,6 +113,37 @@ export function TaskListTab({ projectId, onOpenTask }: TaskListTabProps) {
       // toast handled globally; swallow here so the row stays responsive
     }
   };
+
+  const renderTaskRows = (items: TaskListItem[]) =>
+    items.flatMap((t) => {
+      const subtasks = subtasksByParent.get(t.id) ?? [];
+      const hasSubtasks = subtasks.length > 0;
+      const isOpen = !!expandedTasks[t.id];
+      const rows = [
+        <TaskRow
+          key={t.id}
+          task={t}
+          onOpen={(task) => onOpenTask(task.code)}
+          onCycleStatus={handleCycleStatus}
+          isExpanded={hasSubtasks ? isOpen : undefined}
+          onToggleExpand={hasSubtasks ? () => toggleTaskExpanded(t.id) : undefined}
+        />,
+      ];
+      if (hasSubtasks && isOpen) {
+        for (const sub of subtasks) {
+          rows.push(
+            <TaskRow
+              key={sub.id}
+              task={sub}
+              onOpen={(task) => onOpenTask(task.code)}
+              onCycleStatus={handleCycleStatus}
+              depth={1}
+            />,
+          );
+        }
+      }
+      return rows;
+    });
 
   const sectionList = useMemo(() => {
     const list = (sections.data ?? []).slice().sort((a, b) => a.order - b.order);
@@ -232,16 +277,7 @@ export function TaskListTab({ projectId, onOpenTask }: TaskListTabProps) {
                           <TableHead className="w-40">Tag</TableHead>
                         </TableRow>
                       </TableHeader>
-                      <TableBody>
-                        {sectionTasks.map((t) => (
-                          <TaskRow
-                            key={t.id}
-                            task={t}
-                            onOpen={(task) => onOpenTask(task.code)}
-                            onCycleStatus={handleCycleStatus}
-                          />
-                        ))}
-                      </TableBody>
+                      <TableBody>{renderTaskRows(sectionTasks)}</TableBody>
                     </Table>
                   )}
                 </div>
@@ -273,14 +309,7 @@ export function TaskListTab({ projectId, onOpenTask }: TaskListTabProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(tasksBySection.get("__none__") ?? []).map((t) => (
-                  <TaskRow
-                    key={t.id}
-                    task={t}
-                    onOpen={(task) => onOpenTask(task.code)}
-                    onCycleStatus={handleCycleStatus}
-                  />
-                ))}
+                {renderTaskRows(tasksBySection.get("__none__") ?? [])}
               </TableBody>
             </Table>
           </div>

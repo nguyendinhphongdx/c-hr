@@ -2,7 +2,15 @@
 
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { CheckCircle2, Circle, CircleDashed, CircleDot, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Circle,
+  CircleDashed,
+  CircleDot,
+  XCircle,
+} from "lucide-react";
 import { useMemo } from "react";
 
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -37,9 +45,24 @@ interface TaskRowProps {
   onCycleStatus: (task: TaskListItem) => void;
   /** Render a project chip before the title (used by cross-project My Tasks view). */
   showProject?: boolean;
+  /** Visual nesting depth — 0 = root, 1+ = subtask. Used by TaskListTab when
+   *  rendering subtasks beneath their expanded parent. */
+  depth?: number;
+  /** When defined, the row shows a chevron toggle next to the subtask badge.
+   *  Pass `undefined` to hide the chevron (leaf row or no subtasks). */
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
-export function TaskRow({ task, onOpen, onCycleStatus, showProject }: TaskRowProps) {
+export function TaskRow({
+  task,
+  onOpen,
+  onCycleStatus,
+  showProject,
+  depth = 0,
+  isExpanded,
+  onToggleExpand,
+}: TaskRowProps) {
   const { Icon, className: iconClass } = STATUS_ICON[task.status];
   const tagsShown = useMemo(() => task.tags.slice(0, 2), [task.tags]);
   const tagOverflow = task.tags.length - tagsShown.length;
@@ -49,10 +72,14 @@ export function TaskRow({ task, onOpen, onCycleStatus, showProject }: TaskRowPro
       className={cn(
         "cursor-pointer transition-colors hover:bg-accent/40",
         task.status === "CANCELLED" && "opacity-60",
+        depth > 0 && "bg-muted/20",
       )}
       onClick={() => onOpen(task)}
     >
-      <TableCell className="w-8 py-1.5 pl-2 pr-0">
+      <TableCell
+        className="w-8 py-1.5 pr-0"
+        style={{ paddingLeft: `${8 + depth * 24}px` }}
+      >
         <button
           type="button"
           aria-label="Đổi trạng thái"
@@ -93,10 +120,30 @@ export function TaskRow({ task, onOpen, onCycleStatus, showProject }: TaskRowPro
         >
           {task.title}
         </span>
-        {task._count.subtasks > 0 && (
-          <span className="ml-2 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+        {task._count.subtasks > 0 && onToggleExpand ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand();
+            }}
+            aria-label={isExpanded ? "Thu gọn subtask" : "Mở subtask"}
+            aria-expanded={isExpanded}
+            className="ml-2 inline-flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-muted/80"
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-3 w-3" />
+            ) : (
+              <ChevronRight className="h-3 w-3" />
+            )}
             {task._count.subtasks} subtask
-          </span>
+          </button>
+        ) : (
+          task._count.subtasks > 0 && (
+            <span className="ml-2 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              {task._count.subtasks} subtask
+            </span>
+          )
         )}
       </TableCell>
       <TableCell className="py-1.5">
