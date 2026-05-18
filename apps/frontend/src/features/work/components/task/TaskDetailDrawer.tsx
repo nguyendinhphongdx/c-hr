@@ -714,6 +714,7 @@ function TaskCommentComposer({
   canComment: boolean;
 }) {
   const qc = useQueryClient();
+  const [expanded, setExpanded] = useState(false);
   const objectRef = useMemo(
     () => encodeObjectRef({ objectType: "Task", objectId: taskId }),
     [taskId],
@@ -721,15 +722,37 @@ function TaskCommentComposer({
 
   if (!canComment) return null;
 
+  if (!expanded) {
+    return (
+      <div className="shrink-0 border-t bg-background px-6 py-2">
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="w-full rounded-md border border-dashed bg-muted/30 px-3 py-2 text-left text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+        >
+          Viết bình luận…
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="shrink-0 border-t bg-background px-6 py-3">
+      <div className="mb-1 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="text-[11px] text-muted-foreground hover:text-foreground"
+        >
+          Thu gọn
+        </button>
+      </div>
       <CommentComposer
         objectRef={objectRef}
-        // @mention auto-watch may have added watchers on BE — refetch the
-        // task detail so the Watchers section reflects the change.
-        onCreated={() =>
-          qc.invalidateQueries({ queryKey: taskKeys.detail(taskId) })
-        }
+        onCreated={() => {
+          qc.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+          setExpanded(false);
+        }}
       />
     </div>
   );

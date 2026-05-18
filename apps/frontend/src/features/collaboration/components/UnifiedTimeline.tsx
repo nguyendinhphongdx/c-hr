@@ -48,9 +48,11 @@ export function UnifiedTimeline({
       if (hideCommentedActivity && a.action.endsWith(".commented")) continue;
       merged.push({ kind: "activity", data: a, createdAt: a.createdAt });
     }
+    // Newest first — drawers/sidebars surface the latest activity at the top
+    // so the user doesn't have to scroll past months of history.
     merged.sort(
       (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
     return merged;
   }, [commentsQ.data, activitiesQ.data, hideCommentedActivity]);
