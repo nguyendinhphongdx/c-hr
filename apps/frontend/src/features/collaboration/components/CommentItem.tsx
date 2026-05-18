@@ -9,6 +9,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
+import { ImageLightboxScope } from "@/components/shared/ImagePreview";
 import { Button } from "@/components/ui/button";
 import type { ID } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -130,10 +131,12 @@ export function CommentItem({
           <p className="mt-1 italic text-sm text-muted-foreground">[Đã xoá]</p>
         ) : (
           // BE sanitizes via sanitize-html (F6 plan).
-          <div
-            className="prose prose-sm dark:prose-invert mt-1 max-w-none wrap-break-word"
-            dangerouslySetInnerHTML={{ __html: comment.bodyHtml }}
-          />
+          <ImageLightboxScope>
+            <div
+              className="prose prose-sm dark:prose-invert mt-1 max-w-none wrap-break-word"
+              dangerouslySetInnerHTML={{ __html: comment.bodyHtml }}
+            />
+          </ImageLightboxScope>
         )}
 
         {(canEdit || canDelete) && (

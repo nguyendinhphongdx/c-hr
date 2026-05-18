@@ -22,6 +22,7 @@ import {
   useDeleteComment,
   useUpdateComment,
 } from "@/features/collaboration";
+import { ImageLightboxScope } from "@/components/shared/ImagePreview";
 import { encodeObjectRef } from "@/lib/object-ref";
 import { cn } from "@/lib/utils";
 
@@ -112,10 +113,12 @@ export function EventDetailDialog({
                 {event.description && (
                   <div className="mt-5">
                     <SectionHeader>Mô tả</SectionHeader>
-                    <div
-                      className="prose prose-sm dark:prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: event.description }}
-                    />
+                    <ImageLightboxScope>
+                      <div
+                        className="prose prose-sm dark:prose-invert max-w-none"
+                        dangerouslySetInnerHTML={{ __html: event.description }}
+                      />
+                    </ImageLightboxScope>
                   </div>
                 )}
 

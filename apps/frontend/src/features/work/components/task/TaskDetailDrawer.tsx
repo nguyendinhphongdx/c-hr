@@ -34,6 +34,7 @@ import { TagPicker } from "@/features/tags";
 import { UserPicker } from "@/features/users/components/UserPicker";
 import { encodeObjectRef } from "@/lib/object-ref";
 import type { ID } from "@/lib/types";
+import { ImageLightboxScope } from "@/components/shared/ImagePreview";
 import { cn } from "@/lib/utils";
 
 import {
@@ -419,14 +420,16 @@ function TaskDetailBody({
               </div>
             </div>
           ) : task.description ? (
-            <div
-              className={cn(
-                "prose prose-sm dark:prose-invert max-w-none",
-                canEdit && "cursor-text rounded-sm hover:bg-accent/30",
-              )}
-              onClick={() => canEdit && setEditingDescription(true)}
-              dangerouslySetInnerHTML={{ __html: task.description }}
-            />
+            <ImageLightboxScope>
+              <div
+                className={cn(
+                  "prose prose-sm dark:prose-invert max-w-none",
+                  canEdit && "cursor-text rounded-sm hover:bg-accent/30",
+                )}
+                onClick={() => canEdit && setEditingDescription(true)}
+                dangerouslySetInnerHTML={{ __html: task.description }}
+              />
+            </ImageLightboxScope>
           ) : (
             <button
               type="button"

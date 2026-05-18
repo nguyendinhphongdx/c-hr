@@ -31,6 +31,7 @@ import {
   useDeleteComment,
   useUpdateComment,
 } from "@/features/collaboration";
+import { ImageLightboxScope } from "@/components/shared/ImagePreview";
 import { encodeObjectRef } from "@/lib/object-ref";
 import type { ID } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -337,10 +338,12 @@ function TaskDetailBodyInner({
               </div>
             </div>
           ) : task.description ? (
-            <div
-              className="prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: task.description }}
-            />
+            <ImageLightboxScope>
+              <div
+                className="prose prose-sm dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: task.description }}
+              />
+            </ImageLightboxScope>
           ) : (
             <p className="text-xs text-muted-foreground">Chưa có mô tả.</p>
           )}
