@@ -11,6 +11,7 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarRange,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   HelpCircle,
@@ -52,14 +53,20 @@ import { TaskDetailDrawer } from "../components/task/TaskDetailDrawer";
 type StatusFilter = "OPEN" | "ALL" | TaskStatus;
 type PriorityFilter = "ALL" | TaskPriority;
 
-type BucketKey = "overdue" | "today" | "thisWeek" | "later" | "noDate";
+type BucketKey =
+  | "overdue"
+  | "today"
+  | "thisWeek"
+  | "later"
+  | "noDate"
+  | "done";
 
 interface BucketDef {
   key: BucketKey;
   label: string;
   description: string;
   icon: LucideIcon;
-  tone: "destructive" | "warning" | "info" | "muted";
+  tone: "destructive" | "warning" | "info" | "muted" | "success";
 }
 
 const BUCKETS: BucketDef[] = [
@@ -98,6 +105,13 @@ const BUCKETS: BucketDef[] = [
     icon: HelpCircle,
     tone: "muted",
   },
+  {
+    key: "done",
+    label: "Đã hoàn thành",
+    description: "Task đã đóng (hoàn thành hoặc huỷ).",
+    icon: CheckCircle2,
+    tone: "success",
+  },
 ];
 
 function bucketOf(task: TaskListItem, today: Date): BucketKey {
@@ -117,6 +131,7 @@ const TONE_CLASSES: Record<BucketDef["tone"], string> = {
   warning: "text-amber-600 dark:text-amber-400",
   info: "text-sky-600 dark:text-sky-400",
   muted: "text-muted-foreground",
+  success: "text-emerald-600 dark:text-emerald-400",
 };
 
 export function MyTasksView() {
@@ -133,6 +148,7 @@ export function MyTasksView() {
     thisWeek: false,
     later: false,
     noDate: false,
+    done: true,
   });
   // Per-parent subtask collapse state. undefined = expanded (default).
   // Only subtasks ALSO in the user's task list render nested — the
@@ -212,6 +228,7 @@ export function MyTasksView() {
       thisWeek: [],
       later: [],
       noDate: [],
+      done: [],
     };
     const parentIds = new Set(
       filteredTasks.filter((t) => !t.parentTaskId).map((t) => t.id),
@@ -219,14 +236,9 @@ export function MyTasksView() {
     for (const t of filteredTasks) {
       // Skip subtasks whose parent is in the list — they render nested.
       if (t.parentTaskId && parentIds.has(t.parentTaskId)) continue;
-      // Tasks that are DONE/CANCELLED never count as overdue, regardless
-      // of due date — they're finished.
-      if (
-        (t.status === "DONE" || t.status === "CANCELLED") &&
-        t.dueDate &&
-        isBefore(startOfDay(new Date(t.dueDate)), today)
-      ) {
-        map.later.push(t);
+      // Closed tasks always live in the "done" bucket regardless of dueDate.
+      if (t.status === "DONE" || t.status === "CANCELLED") {
+        map.done.push(t);
         continue;
       }
       map[bucketOf(t, today)].push(t);
@@ -405,6 +417,9 @@ export function MyTasksView() {
         {!tasksQuery.isLoading && !isEmpty && (
           <div className="space-y-4">
             {BUCKETS.map((b) => {
+              // The "OPEN" filter drops closed tasks at the BE, so the done
+              // bucket would always be empty — hide it entirely.
+              if (b.key === "done" && statusFilter === "OPEN") return null;
               const rows = groups[b.key];
               const Icon = b.icon;
               const isCollapsed = collapsed[b.key];

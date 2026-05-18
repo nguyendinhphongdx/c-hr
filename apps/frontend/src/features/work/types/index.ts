@@ -201,6 +201,7 @@ export interface TaskSubtaskRow {
 }
 
 export interface TaskDetail extends TaskListItem {
+  parent: Nullable<{ id: ID; code: string; title: string }>;
   subtasks: TaskSubtaskRow[];
   watchers: TaskWatcherRow[];
   view: TaskAclView;

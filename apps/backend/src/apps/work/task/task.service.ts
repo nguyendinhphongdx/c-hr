@@ -270,6 +270,44 @@ export class TaskService {
       data.actualMinutes = dto.actualMinutes;
     }
 
+    // Bidirectional sync between status and the 3 default sections so the
+    // Board column (= section) and the status badge stay aligned without
+    // the user having to update both. Custom sections (no name match)
+    // break the link — accepted trade-off.
+    const STATUS_TO_SECTION: Partial<Record<TaskStatus, string>> = {
+      [TaskStatus.TODO]: 'Cần làm',
+      [TaskStatus.IN_PROGRESS]: 'Đang làm',
+      [TaskStatus.DONE]: 'Hoàn thành',
+    };
+    const SECTION_TO_STATUS: Record<string, TaskStatus> = {
+      'Cần làm': TaskStatus.TODO,
+      'Đang làm': TaskStatus.IN_PROGRESS,
+      'Hoàn thành': TaskStatus.DONE,
+    };
+    // Status changed (or set) → auto-move card to matching default section.
+    if (dto.status !== undefined && dto.sectionId === undefined) {
+      const wantName = STATUS_TO_SECTION[dto.status];
+      if (wantName) {
+        const section = project.sections.find((s) => s.name === wantName);
+        if (section && section.id !== row.sectionId) {
+          data.sectionId = section.id;
+        }
+      }
+    }
+    // Section changed (drag-drop in Board) → auto-set status if section
+    // name maps to a known status.
+    if (
+      dto.sectionId !== undefined &&
+      dto.sectionId !== null &&
+      dto.status === undefined
+    ) {
+      const section = project.sections.find((s) => s.id === dto.sectionId);
+      const wantStatus = section ? SECTION_TO_STATUS[section.name] : null;
+      if (wantStatus && wantStatus !== row.status) {
+        data.status = wantStatus;
+      }
+    }
+
     await this.prisma.task.update({ where: { id }, data });
 
     // Auto-watch newly assigned user.
@@ -295,8 +333,9 @@ export class TaskService {
     const updated = await this.repo.findByIdByOrg(orgId, id);
     if (!updated) throw new NotFoundException('Task disappeared after update');
 
-    // Emit one activity per meaningful change.
-    if (dto.status !== undefined && dto.status !== row.status) {
+    // Emit one activity per meaningful change. Read from `data` (not `dto`)
+    // so sync-driven status changes (drag column → status follows) log too.
+    if (data.status !== undefined && data.status !== row.status) {
       this.activities.log({
         organizationId: orgId,
         objectType: 'Task',
@@ -304,7 +343,7 @@ export class TaskService {
         objectLabel: updated.title,
         action: 'task.status_changed',
         userId: callerId,
-        metadata: { from: row.status, to: dto.status },
+        metadata: { from: row.status, to: data.status },
       });
     }
     if (dto.assigneeId !== undefined && dto.assigneeId !== row.assigneeId) {

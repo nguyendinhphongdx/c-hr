@@ -60,6 +60,8 @@ interface TaskCreateDialogProps {
   defaultSectionId?: ID | null;
   /** Available sections for select. */
   sections: { id: ID; name: string }[];
+  /** When set, the created task becomes a subtask of this parent. */
+  parentTaskId?: ID | null;
 }
 
 export function TaskCreateDialog({
@@ -68,6 +70,7 @@ export function TaskCreateDialog({
   projectId,
   defaultSectionId,
   sections,
+  parentTaskId,
 }: TaskCreateDialogProps) {
   const create = useCreateTask();
   const members = useProjectMembers(projectId);
@@ -111,6 +114,7 @@ export function TaskCreateDialog({
         assigneeId: values.assigneeId || undefined,
         priority: values.priority,
         dueDate: values.dueDate || undefined,
+        parentTaskId: parentTaskId ?? undefined,
         tagIds:
           values.tagIds && values.tagIds.length > 0 ? values.tagIds : undefined,
       });
@@ -129,7 +133,9 @@ export function TaskCreateDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="shrink-0 border-b px-6 py-4">
-          <DialogTitle>Tạo task mới</DialogTitle>
+          <DialogTitle>
+            {parentTaskId ? "Tạo subtask" : "Tạo task mới"}
+          </DialogTitle>
           <DialogDescription>
             Điền thông tin task — bạn có thể bổ sung mô tả, người làm và tag.
           </DialogDescription>

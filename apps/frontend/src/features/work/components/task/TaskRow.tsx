@@ -21,7 +21,7 @@ import type { TaskListItem, TaskStatus } from "../../types";
 import { TaskAssigneeAvatar } from "./TaskAssigneeAvatar";
 import { TaskPriorityBadge } from "./TaskPriorityBadge";
 
-const STATUS_ICON: Record<
+export const STATUS_ICON: Record<
   TaskStatus,
   { Icon: typeof Circle; className: string }
 > = {

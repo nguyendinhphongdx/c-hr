@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { Eye, EyeOff, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -46,7 +46,7 @@ import {
   useUpdateTask,
   useWatchTask,
 } from "../../hooks/useTasks";
-import { useProjectMembers } from "../../hooks/useProjects";
+import { useProjectMembers, useProjectSections } from "../../hooks/useProjects";
 import type {
   TaskDetail,
   TaskPriority,
@@ -56,6 +56,8 @@ import type {
 import { TaskTimerButton } from "../timer/TaskTimerButton";
 import { TaskTimerHistory } from "../timer/TaskTimerHistory";
 import { TaskAssigneeAvatar } from "./TaskAssigneeAvatar";
+import { TaskCreateDialog } from "./TaskCreateDialog";
+import { cycleStatus, STATUS_ICON } from "./TaskRow";
 import { TaskStatusBadge } from "./TaskStatusBadge";
 
 interface TaskDetailDrawerProps {
@@ -164,6 +166,19 @@ export function TaskDetailDrawer({
                 });
               }
             }}
+            onSubtaskCycle={async (subtaskId, next) => {
+              try {
+                await update.mutateAsync({
+                  id: subtaskId,
+                  data: { status: next },
+                });
+              } catch (err) {
+                toast.error("Không đổi trạng thái được", {
+                  description:
+                    err instanceof Error ? err.message : "Vui lòng thử lại.",
+                });
+              }
+            }}
             onSubtaskClick={onNavigate}
           />
         )}
@@ -180,6 +195,7 @@ interface BodyProps {
   onDelete: () => Promise<void>;
   onWatchToggle: (isWatching: boolean) => Promise<void>;
   onAddSubtask: (title: string) => Promise<void>;
+  onSubtaskCycle: (subtaskId: ID, nextStatus: TaskStatus) => Promise<void>;
   onSubtaskClick?: (code: string) => void;
 }
 
@@ -191,6 +207,7 @@ function TaskDetailBody({
   onDelete,
   onWatchToggle,
   onAddSubtask,
+  onSubtaskCycle,
   onSubtaskClick,
 }: BodyProps) {
   const [title, setTitle] = useState(task.title);
@@ -198,6 +215,21 @@ function TaskDetailBody({
   const [description, setDescription] = useState(task.description ?? "");
   const [editingDescription, setEditingDescription] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState("");
+  const [subtaskDialogOpen, setSubtaskDialogOpen] = useState(false);
+
+  // Sections available for the subtask create dialog. Subtasks live in the
+  // same project as their parent, so reuse the parent's projectId.
+  const sectionsQuery = useProjectSections(
+    subtaskDialogOpen ? task.projectId : null,
+  );
+  const sectionList = useMemo(
+    () =>
+      (sectionsQuery.data ?? [])
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((s) => ({ id: s.id, name: s.name })),
+    [sectionsQuery.data],
+  );
 
   useEffect(() => {
     setTitle(task.title);
@@ -229,6 +261,18 @@ function TaskDetailBody({
   return (
     <div className="flex h-full flex-col">
       <header className="shrink-0 border-b px-6 py-3">
+        {task.parent && onSubtaskClick && (
+          <button
+            type="button"
+            onClick={() => onSubtaskClick(task.parent!.code)}
+            className="mb-1.5 inline-flex items-center gap-1 rounded text-[11px] text-muted-foreground hover:text-foreground"
+            aria-label={`Quay về task cha ${task.parent.code}`}
+          >
+            <ArrowLeft className="h-3 w-3" />
+            <span className="font-mono">{task.parent.code}</span>
+            <span className="max-w-75 truncate">{task.parent.title}</span>
+          </button>
+        )}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="font-mono">{task.code}</span>
           <span>·</span>
@@ -443,10 +487,28 @@ function TaskDetailBody({
         </section>
 
         <section>
-          <SectionHeader>Subtask ({task.subtasks.length})</SectionHeader>
+          <div className="mb-2 flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Subtask ({task.subtasks.length})
+            </h4>
+            {canEdit && !task.parentTaskId && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setSubtaskDialogOpen(true)}
+                className="h-7 gap-1 px-2 text-[11px]"
+              >
+                <Plus className="h-3 w-3" />
+                Tạo chi tiết
+              </Button>
+            )}
+          </div>
           <ul className="space-y-1.5">
             {task.subtasks.map((s) => {
               const clickable = !!onSubtaskClick;
+              const { Icon: StatusIcon, className: statusClass } =
+                STATUS_ICON[s.status];
               return (
                 <li
                   key={s.id}
@@ -469,12 +531,36 @@ function TaskDetailBody({
                     "flex items-center gap-2 rounded border px-2 py-1.5 text-sm",
                     clickable &&
                       "cursor-pointer transition-colors hover:bg-accent/40 focus:bg-accent/40 focus:outline-none",
+                    (s.status === "DONE" || s.status === "CANCELLED") &&
+                      "opacity-60",
                   )}
                 >
+                  <button
+                    type="button"
+                    aria-label="Đổi trạng thái subtask"
+                    disabled={!canEdit}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!canEdit) return;
+                      const next = cycleStatus(s.status);
+                      if (next !== s.status) void onSubtaskCycle(s.id, next);
+                    }}
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent"
+                  >
+                    <StatusIcon className={cn("h-3.5 w-3.5", statusClass)} />
+                  </button>
                   <span className="font-mono text-[11px] text-muted-foreground">
                     {s.code}
                   </span>
-                  <span className="flex-1 truncate">{s.title}</span>
+                  <span
+                    className={cn(
+                      "flex-1 truncate",
+                      (s.status === "DONE" || s.status === "CANCELLED") &&
+                        "line-through",
+                    )}
+                  >
+                    {s.title}
+                  </span>
                   <TaskStatusBadge status={s.status} size="sm" />
                 </li>
               );
@@ -580,6 +666,14 @@ function TaskDetailBody({
           </Button>
         </footer>
       )}
+
+      <TaskCreateDialog
+        open={subtaskDialogOpen}
+        onClose={() => setSubtaskDialogOpen(false)}
+        projectId={task.projectId}
+        sections={sectionList}
+        parentTaskId={task.id}
+      />
     </div>
   );
 }

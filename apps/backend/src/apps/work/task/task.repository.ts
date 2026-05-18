@@ -19,6 +19,9 @@ const TASK_LIST_INCLUDE = {
 
 const TASK_DETAIL_INCLUDE = {
   ...TASK_LIST_INCLUDE,
+  parent: {
+    select: { id: true, code: true, title: true },
+  },
   subtasks: {
     where: { deletedAt: null },
     orderBy: { order: 'asc' },

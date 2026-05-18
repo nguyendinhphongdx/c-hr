@@ -252,7 +252,10 @@ export function TextEditor({
         />
       </div>
 
-      <EditorContent editor={editor} className={cn("text-sm")} />
+      <EditorContent
+        editor={editor}
+        className={cn("max-h-72 overflow-y-auto text-sm")}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
         {isInternalToggle ? (
