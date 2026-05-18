@@ -79,8 +79,9 @@ export class TaskService {
     if (query.includeDone !== 'true') {
       where.status = where.status ?? { notIn: ['DONE', 'CANCELLED'] };
     }
-    // Top-level tasks only in list (subtasks render under their parent).
-    where.parentTaskId = null;
+    // Return root + subtasks so FE can group them. FE renders subtasks
+    // nested under their parent when both are in the result set, else
+    // standalone (useful for search hits on a subtask title).
 
     const rows = await this.repo.findManyByOrg(orgId, where);
     const taskIds = rows.map((r) => r.id);

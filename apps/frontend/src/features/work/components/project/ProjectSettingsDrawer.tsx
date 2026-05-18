@@ -153,7 +153,7 @@ export function ProjectSettingsDrawer({
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as typeof activeTab)}
-          className="mt-4 flex-1 overflow-hidden"
+          className="flex-1 overflow-hidden px-4 pb-4"
         >
           <TabsList>
             <TabsTrigger value="info">Thông tin</TabsTrigger>
@@ -161,7 +161,7 @@ export function ProjectSettingsDrawer({
             <TabsTrigger value="danger">Khác</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="info" className="space-y-4 overflow-y-auto p-1">
+          <TabsContent value="info" className="space-y-4 overflow-y-auto pt-3">
             <Form {...form}>
               <form onSubmit={onSubmit} className="space-y-4">
                 <FormField
@@ -291,7 +291,7 @@ export function ProjectSettingsDrawer({
 
           <TabsContent
             value="members"
-            className="space-y-3 overflow-y-auto p-1"
+            className="space-y-3 overflow-y-auto pt-3"
           >
             <ProjectMemberList
               projectId={project.id}
@@ -299,7 +299,7 @@ export function ProjectSettingsDrawer({
             />
           </TabsContent>
 
-          <TabsContent value="danger" className="space-y-3 p-1">
+          <TabsContent value="danger" className="space-y-3 pt-3">
             {canArchive && (
               <Button
                 variant="outline"
