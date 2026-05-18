@@ -134,6 +134,13 @@ export function MyTasksView() {
     later: false,
     noDate: false,
   });
+  // Per-parent subtask collapse state. undefined = expanded (default).
+  // Only subtasks ALSO in the user's task list render nested — the
+  // _count.subtasks badge may exceed visible nested rows when some
+  // subtasks are assigned to other people.
+  const [collapsedTasks, setCollapsedTasks] = useState<Record<string, boolean>>({});
+  const toggleTaskCollapsed = (id: string) =>
+    setCollapsedTasks((s) => ({ ...s, [id]: !s[id] }));
 
   const update = useUpdateTask();
 
@@ -181,6 +188,23 @@ export function MyTasksView() {
     });
   }, [tasksQuery.data, priorityFilter, projectFilter]);
 
+  // Index subtasks by parent — but only when the parent is ALSO in the
+  // filtered list. Subtasks whose parent isn't visible bucket as standalone.
+  const subtasksByParent = useMemo(() => {
+    const parentIds = new Set(
+      filteredTasks.filter((t) => !t.parentTaskId).map((t) => t.id),
+    );
+    const m = new Map<string, TaskListItem[]>();
+    for (const t of filteredTasks) {
+      if (t.parentTaskId && parentIds.has(t.parentTaskId)) {
+        const arr = m.get(t.parentTaskId) ?? [];
+        arr.push(t);
+        m.set(t.parentTaskId, arr);
+      }
+    }
+    return m;
+  }, [filteredTasks]);
+
   const groups = useMemo(() => {
     const map: Record<BucketKey, TaskListItem[]> = {
       overdue: [],
@@ -189,7 +213,12 @@ export function MyTasksView() {
       later: [],
       noDate: [],
     };
+    const parentIds = new Set(
+      filteredTasks.filter((t) => !t.parentTaskId).map((t) => t.id),
+    );
     for (const t of filteredTasks) {
+      // Skip subtasks whose parent is in the list — they render nested.
+      if (t.parentTaskId && parentIds.has(t.parentTaskId)) continue;
       // Tasks that are DONE/CANCELLED never count as overdue, regardless
       // of due date — they're finished.
       if (
@@ -204,6 +233,39 @@ export function MyTasksView() {
     }
     return map;
   }, [filteredTasks, today]);
+
+  const renderTaskRows = (items: TaskListItem[]) =>
+    items.flatMap((t) => {
+      const subtasks = subtasksByParent.get(t.id) ?? [];
+      const hasSubtasks = subtasks.length > 0;
+      const isOpen = hasSubtasks && !collapsedTasks[t.id];
+      const rows = [
+        <TaskRow
+          key={t.id}
+          task={t}
+          showProject
+          onOpen={(task) => setSelectedTaskCode(task.code)}
+          onCycleStatus={handleCycleStatus}
+          isExpanded={hasSubtasks ? isOpen : undefined}
+          onToggleExpand={hasSubtasks ? () => toggleTaskCollapsed(t.id) : undefined}
+        />,
+      ];
+      if (hasSubtasks && isOpen) {
+        for (const sub of subtasks) {
+          rows.push(
+            <TaskRow
+              key={sub.id}
+              task={sub}
+              showProject
+              depth={1}
+              onOpen={(task) => setSelectedTaskCode(task.code)}
+              onCycleStatus={handleCycleStatus}
+            />,
+          );
+        }
+      }
+      return rows;
+    });
 
   const selectedTask = useMemo(
     () =>
@@ -391,17 +453,7 @@ export function MyTasksView() {
                               <TableHead className="w-40">Tag</TableHead>
                             </TableRow>
                           </TableHeader>
-                          <TableBody>
-                            {rows.map((t) => (
-                              <TaskRow
-                                key={t.id}
-                                task={t}
-                                showProject
-                                onOpen={(task) => setSelectedTaskCode(task.code)}
-                                onCycleStatus={handleCycleStatus}
-                              />
-                            ))}
-                          </TableBody>
+                          <TableBody>{renderTaskRows(rows)}</TableBody>
                         </Table>
                       )}
                     </div>
