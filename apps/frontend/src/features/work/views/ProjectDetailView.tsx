@@ -13,6 +13,7 @@ import { ProjectReportPanel } from "../components/reports/ProjectReportPanel";
 import { TaskListTab } from "../components/task/TaskListTab";
 import { TaskDetailDrawer } from "../components/task/TaskDetailDrawer";
 import { BoardView } from "../components/board/BoardView";
+import { GanttView } from "../components/gantt/GanttView";
 
 interface ProjectDetailViewProps {
   slug: string;
@@ -56,6 +57,7 @@ export function ProjectDetailView({ slug }: ProjectDetailViewProps) {
         <TabsList className="mx-6 mt-3">
           <TabsTrigger value="list">Danh sách</TabsTrigger>
           <TabsTrigger value="board">Bảng</TabsTrigger>
+          <TabsTrigger value="gantt">Gantt</TabsTrigger>
           <TabsTrigger value="reports">Báo cáo</TabsTrigger>
         </TabsList>
 
@@ -68,6 +70,10 @@ export function ProjectDetailView({ slug }: ProjectDetailViewProps) {
 
         <TabsContent value="board" className="flex-1 overflow-hidden p-0">
           <BoardView projectId={project.id} onOpenTask={setSelectedTaskCode} />
+        </TabsContent>
+
+        <TabsContent value="gantt" className="flex-1 overflow-hidden p-0">
+          <GanttView projectId={project.id} onOpenTask={setSelectedTaskCode} />
         </TabsContent>
 
         <TabsContent value="reports" className="flex-1 overflow-y-auto p-6">
