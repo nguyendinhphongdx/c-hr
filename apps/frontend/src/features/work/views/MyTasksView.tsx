@@ -470,6 +470,7 @@ export function MyTasksView() {
         onClose={() => setSelectedTaskCode(null)}
         idOrCode={selectedTaskCode}
         projectId={selectedTask?.projectId ?? ""}
+        onNavigate={setSelectedTaskCode}
       />
     </div>
   );

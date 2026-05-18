@@ -62,6 +62,11 @@ interface TaskDetailDrawerProps {
   onClose: () => void;
   idOrCode: string | null;
   projectId: ID;
+  /**
+   * Optional — when set, clicking a subtask in the drawer body swaps the
+   * drawer to that subtask. Parent typically passes its setSelectedTaskCode.
+   */
+  onNavigate?: (code: string) => void;
 }
 
 const STATUS_OPTIONS: TaskStatus[] = [
@@ -79,6 +84,7 @@ export function TaskDetailDrawer({
   onClose,
   idOrCode,
   projectId,
+  onNavigate,
 }: TaskDetailDrawerProps) {
   const { user } = useAuth();
   const { data: task, isLoading, error } = useTask(open ? idOrCode : null);
@@ -157,6 +163,7 @@ export function TaskDetailDrawer({
                 });
               }
             }}
+            onSubtaskClick={onNavigate}
           />
         )}
       </SheetContent>
@@ -172,6 +179,7 @@ interface BodyProps {
   onDelete: () => Promise<void>;
   onWatchToggle: (isWatching: boolean) => Promise<void>;
   onAddSubtask: (title: string) => Promise<void>;
+  onSubtaskClick?: (code: string) => void;
 }
 
 function TaskDetailBody({
@@ -182,6 +190,7 @@ function TaskDetailBody({
   onDelete,
   onWatchToggle,
   onAddSubtask,
+  onSubtaskClick,
 }: BodyProps) {
   const [title, setTitle] = useState(task.title);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -433,18 +442,40 @@ function TaskDetailBody({
         <section>
           <SectionHeader>Subtask ({task.subtasks.length})</SectionHeader>
           <ul className="space-y-1.5">
-            {task.subtasks.map((s) => (
-              <li
-                key={s.id}
-                className="flex items-center gap-2 rounded border px-2 py-1.5 text-sm"
-              >
-                <span className="font-mono text-[11px] text-muted-foreground">
-                  {s.code}
-                </span>
-                <span className="flex-1 truncate">{s.title}</span>
-                <TaskStatusBadge status={s.status} size="sm" />
-              </li>
-            ))}
+            {task.subtasks.map((s) => {
+              const clickable = !!onSubtaskClick;
+              return (
+                <li
+                  key={s.id}
+                  role={clickable ? "button" : undefined}
+                  tabIndex={clickable ? 0 : undefined}
+                  onClick={
+                    clickable ? () => onSubtaskClick?.(s.code) : undefined
+                  }
+                  onKeyDown={
+                    clickable
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onSubtaskClick?.(s.code);
+                          }
+                        }
+                      : undefined
+                  }
+                  className={cn(
+                    "flex items-center gap-2 rounded border px-2 py-1.5 text-sm",
+                    clickable &&
+                      "cursor-pointer transition-colors hover:bg-accent/40 focus:bg-accent/40 focus:outline-none",
+                  )}
+                >
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    {s.code}
+                  </span>
+                  <span className="flex-1 truncate">{s.title}</span>
+                  <TaskStatusBadge status={s.status} size="sm" />
+                </li>
+              );
+            })}
           </ul>
           {canEdit && (
             <div className="mt-2 flex items-center gap-2">

@@ -80,6 +80,7 @@ export function ProjectDetailView({ slug }: ProjectDetailViewProps) {
         onClose={() => setSelectedTaskCode(null)}
         idOrCode={selectedTaskCode}
         projectId={project.id}
+        onNavigate={setSelectedTaskCode}
       />
 
       <ProjectSettingsDrawer
