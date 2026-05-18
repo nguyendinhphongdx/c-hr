@@ -1,7 +1,7 @@
 export { ActivityTimeline } from "./components/ActivityTimeline";
 export { ApprovalFlow } from "./components/ApprovalFlow";
 export type { ApprovalFlowStatus } from "./components/ApprovalFlow";
-export { CommentEditor } from "./components/CommentEditor";
+export { CommentComposer } from "./components/CommentComposer";
 export { CommentItem } from "./components/CommentItem";
 export { CommentList } from "./components/CommentList";
 export { UnifiedTimeline } from "./components/UnifiedTimeline";

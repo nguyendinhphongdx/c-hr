@@ -26,9 +26,8 @@ import {
 import { useAuth } from "@/features/auth";
 import { RichTextDescriptionField } from "@/features/calendar/components/event/RichTextDescriptionField";
 import {
-  CommentEditor,
+  CommentComposer,
   UnifiedTimeline,
-  useCreateComment,
   useDeleteComment,
   useUpdateComment,
 } from "@/features/collaboration";
@@ -448,29 +447,18 @@ function TaskCommentComposer({
     () => encodeObjectRef({ objectType: "OnboardingTask", objectId: taskId }),
     [taskId],
   );
-  const createComment = useCreateComment(objectRef);
 
   if (!canComment) return null;
 
   return (
     <div className="shrink-0 border-t bg-background px-6 py-3">
-      <CommentEditor
-        onSubmit={async (bodyHtml) => {
-          try {
-            await createComment.mutateAsync({ bodyHtml });
-            qc.invalidateQueries({
-              queryKey: onboardingTaskKeys.detail(taskId),
-            });
-            toast.success("Đã gửi bình luận");
-          } catch (err) {
-            const msg =
-              (err as { response?: { data?: { error?: { message?: string } } } })
-                ?.response?.data?.error?.message ?? "Không gửi được bình luận";
-            toast.error(msg);
-            throw err;
-          }
-        }}
-        placeholder="Viết bình luận…"
+      <CommentComposer
+        objectRef={objectRef}
+        onCreated={() =>
+          qc.invalidateQueries({
+            queryKey: onboardingTaskKeys.detail(taskId),
+          })
+        }
       />
     </div>
   );

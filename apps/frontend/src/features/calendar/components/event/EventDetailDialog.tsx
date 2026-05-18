@@ -3,7 +3,6 @@
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Building2, Clock, MapPin, UserRound } from "lucide-react";
-import { toast } from "sonner";
 
 import {
   Avatar,
@@ -18,9 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/features/auth";
 import {
-  CommentEditor,
+  CommentComposer,
   UnifiedTimeline,
-  useCreateComment,
   useDeleteComment,
   useUpdateComment,
 } from "@/features/collaboration";
@@ -54,7 +52,6 @@ export function EventDetailDialog({
   const objectRef = event
     ? encodeObjectRef({ objectType: "Event", objectId: event.id })
     : "";
-  const createComment = useCreateComment(objectRef);
   const updateComment = useUpdateComment(objectRef);
   const deleteComment = useDeleteComment(objectRef);
 
@@ -137,31 +134,7 @@ export function EventDetailDialog({
                     }
                   />
                   <div className="mt-3">
-                    <CommentEditor
-                      onSubmit={async (bodyHtml, isInternal) => {
-                        try {
-                          await createComment.mutateAsync({
-                            bodyHtml,
-                            isInternal,
-                          });
-                          toast.success("Đã gửi bình luận");
-                        } catch (err) {
-                          const msg =
-                            (
-                              err as {
-                                response?: {
-                                  data?: { error?: { message?: string } };
-                                };
-                              }
-                            )?.response?.data?.error?.message ??
-                            "Không gửi được bình luận";
-                          toast.error(msg);
-                          console.error("comment create failed", err);
-                          throw err;
-                        }
-                      }}
-                      placeholder="Viết bình luận…"
-                    />
+                    <CommentComposer objectRef={objectRef} />
                   </div>
                 </div>
               </div>

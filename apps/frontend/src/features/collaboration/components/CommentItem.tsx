@@ -3,6 +3,7 @@
 import { Lock, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { TextEditor } from "@/components/shared/TextEditor";
 import {
   Avatar,
   AvatarFallback,
@@ -16,7 +17,6 @@ import type {
   CommentDto,
   UpdateCommentInput,
 } from "../types";
-import { CommentEditor } from "./CommentEditor";
 
 const EDIT_WINDOW_MS = 15 * 60 * 1000;
 
@@ -87,7 +87,7 @@ export function CommentItem({
           <AvatarFallback>{initials(userName)}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
-          <CommentEditor
+          <TextEditor
             initialHtml={comment.bodyHtml}
             submitLabel="Lưu"
             onCancel={() => setEditing(false)}

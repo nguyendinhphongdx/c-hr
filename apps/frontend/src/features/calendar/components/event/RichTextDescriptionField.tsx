@@ -30,7 +30,7 @@ interface RichTextDescriptionFieldProps {
  * on every change; consumer holds the value in form state and submits
  * it as the `description` field.
  *
- * Toolbar mirrors the F6 CommentEditor's set (Bold/Italic/Underline,
+ * Toolbar mirrors the shared TextEditor's set (Bold/Italic/Underline,
  * lists, code, quote, link) — kept minimal so the dialog stays compact.
  */
 export function RichTextDescriptionField({

@@ -1,53 +1,81 @@
 "use client";
 
+import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
   Bold,
   Code,
+  ImagePlus,
   Italic,
   Link as LinkIcon,
   List,
   ListOrdered,
+  Loader2,
   Quote,
   Underline as UnderlineIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Toggle } from "@/components/ui/toggle";
+import { apiClient } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
-interface CommentEditorProps {
+interface TextEditorProps {
   /** Receives sanitized-on-BE-side HTML and the isInternal flag. */
   onSubmit: (bodyHtml: string, isInternal: boolean) => Promise<void>;
   placeholder?: string;
   /** Show "Nội bộ" checkbox before send. Default false (no toggle). */
   isInternalToggle?: boolean;
-  /** Initial HTML — used when editing an existing comment. */
+  /** Initial HTML — used when editing existing content. */
   initialHtml?: string;
   submitLabel?: string;
   /** Called when user clicks Cancel (rendered only if provided). */
   onCancel?: () => void;
 }
 
-export function CommentEditor({
+export function TextEditor({
   onSubmit,
-  placeholder = "Viết bình luận...",
+  placeholder = "Viết nội dung...",
   isInternalToggle = false,
   initialHtml = "",
   submitLabel = "Gửi",
   onCancel,
-}: CommentEditorProps) {
+}: TextEditorProps) {
   const [isInternal, setIsInternal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Tiptap v3 `useEditor` doesn't re-render on transactions by default,
   // so `editor.isEmpty` read at render time goes stale. Track it via
   // onUpdate so the submit button reflects the current document state.
   const [isEmpty, setIsEmpty] = useState(true);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const uploadAndInsertImage = async (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await apiClient.post<{ url: string }>(
+        "/uploads/inline-image",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      editor?.chain().focus().setImage({ src: res.data.url }).run();
+    } catch (err) {
+      toast.error("Không tải được ảnh", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const editor = useEditor({
     extensions: [
@@ -56,6 +84,11 @@ export function CommentEditor({
         openOnClick: false,
         autolink: true,
         HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: false,
+        HTMLAttributes: { class: "rounded-md border max-w-full" },
       }),
     ],
     content: initialHtml,
@@ -67,6 +100,25 @@ export function CommentEditor({
         class:
           "prose prose-sm dark:prose-invert max-w-none min-h-24 px-3 py-2 focus:outline-none",
         "data-placeholder": placeholder,
+      },
+      handlePaste: (_view, event) => {
+        const items = Array.from(event.clipboardData?.items ?? []);
+        const imageItem = items.find((i) => i.type.startsWith("image/"));
+        if (!imageItem) return false;
+        event.preventDefault();
+        const file = imageItem.getAsFile();
+        if (!file) return true;
+        void uploadAndInsertImage(file);
+        return true;
+      },
+      handleDrop: (_view, event) => {
+        const dt = (event as DragEvent).dataTransfer;
+        const files = Array.from(dt?.files ?? []);
+        const imageFile = files.find((f) => f.type.startsWith("image/"));
+        if (!imageFile) return false;
+        event.preventDefault();
+        void uploadAndInsertImage(imageFile);
+        return true;
       },
     },
   });
@@ -96,6 +148,15 @@ export function CommentEditor({
       return;
     }
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  };
+
+  const onPickImage = () => fileInputRef.current?.click();
+
+  const onFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    await uploadAndInsertImage(file);
   };
 
   return (
@@ -169,6 +230,26 @@ export function CommentEditor({
         >
           <LinkIcon />
         </Toggle>
+        <Toggle
+          size="sm"
+          pressed={false}
+          onPressedChange={onPickImage}
+          disabled={uploadingImage}
+          aria-label="Chèn ảnh"
+        >
+          {uploadingImage ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <ImagePlus />
+          )}
+        </Toggle>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={onFileChosen}
+        />
       </div>
 
       <EditorContent editor={editor} className={cn("text-sm")} />
@@ -186,6 +267,11 @@ export function CommentEditor({
           <span />
         )}
         <div className="flex items-center gap-2">
+          {uploadingImage ? (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="size-3 animate-spin" /> Đang tải ảnh...
+            </span>
+          ) : null}
           {onCancel ? (
             <Button
               type="button"

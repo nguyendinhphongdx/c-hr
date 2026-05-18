@@ -21,9 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth";
 import {
   ApprovalFlow,
-  CommentEditor,
+  CommentComposer,
   UnifiedTimeline,
-  useCreateComment,
   useDeleteComment,
   useUpdateComment,
 } from "@/features/collaboration";
@@ -65,7 +64,6 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
   const objectRef = request
     ? encodeObjectRef({ objectType: "Request", objectId: request.id })
     : "";
-  const createComment = useCreateComment(objectRef);
   const updateComment = useUpdateComment(objectRef);
   const deleteComment = useDeleteComment(objectRef);
 
@@ -291,23 +289,7 @@ export function RequestPreview({ request }: { request: RequestRow | null }) {
 
       {/* Sticky bottom composer */}
       <div className="sticky bottom-0 border-t bg-background p-3">
-        <CommentEditor
-          onSubmit={async (bodyHtml, isInternal) => {
-            try {
-              await createComment.mutateAsync({ bodyHtml, isInternal });
-              toast.success("Đã gửi bình luận");
-            } catch (err) {
-              const msg =
-                (err as { response?: { data?: { error?: { message?: string } } } })
-                  ?.response?.data?.error?.message ?? "Không gửi được bình luận";
-              toast.error(msg);
-              console.error("comment create failed", err);
-              throw err; // let CommentEditor know not to clear
-            }
-          }}
-          isInternalToggle
-          placeholder="Viết bình luận…"
-        />
+        <CommentComposer objectRef={objectRef} isInternalToggle />
       </div>
 
       {canEdit && (
