@@ -19,6 +19,7 @@ const ALLOWED_TAGS = [
   'h3',
   'a',
   'span',
+  'img',
 ];
 
 export function sanitize(input: string): string {
@@ -28,8 +29,13 @@ export function sanitize(input: string): string {
       a: ['href', 'target', 'rel'],
       span: ['data-mention-user-id', 'data-mention-name', 'class'],
       code: ['class'],
+      img: ['src', 'alt', 'title', 'class', 'width', 'height', 'loading'],
     },
     allowedSchemes: ['http', 'https', 'mailto'],
+    /// Inline image src — allow our /uploads/ relative URLs + http/https.
+    /// data: URIs are blocked by allowedSchemes already (no 'data' in list).
+    allowedSchemesByTag: { img: ['http', 'https'] },
+    allowedSchemesAppliedToAttributes: ['href', 'src'],
     transformTags: {
       // Inline plain transform — `sanitizeHtml.simpleTransform` is missing
       // off the default import in this CJS/ESM interop setup.
