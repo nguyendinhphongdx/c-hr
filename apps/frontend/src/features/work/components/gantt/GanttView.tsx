@@ -64,12 +64,15 @@ export function GanttView({ projectId, onOpenTask }: GanttViewProps) {
       else noDate.push(t);
     }
 
+    const today = startOfDay(new Date());
+
     if (withSpan.length === 0) {
+      // Empty timeline = still show 30 days from today so the grid renders.
       return {
         spans: [],
         missing: noDate,
-        timelineStart: startOfDay(new Date()),
-        days: 0,
+        timelineStart: addDays(today, -3),
+        days: 34,
       };
     }
 
@@ -79,9 +82,13 @@ export function GanttView({ projectId, onOpenTask }: GanttViewProps) {
       if (sp.start < minDate) minDate = sp.start;
       if (sp.end > maxDate) maxDate = sp.end;
     }
-    // Pad 2 days on each side for breathing room.
-    const start = addDays(minDate, -2);
-    const end = addDays(maxDate, 2);
+    // Always include today and at least 30 days forward so a single
+    // same-day task doesn't collapse the timeline. Pad 3 days before.
+    const earliest = minDate < today ? minDate : today;
+    const horizon = addDays(today, 30);
+    const latest = maxDate > horizon ? maxDate : horizon;
+    const start = addDays(earliest, -3);
+    const end = addDays(latest, 3);
     const span = differenceInCalendarDays(end, start) + 1;
 
     withSpan.sort((a, b) => a.start.getTime() - b.start.getTime());
