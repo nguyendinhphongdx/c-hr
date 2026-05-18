@@ -90,10 +90,12 @@ export function TaskListTab({ projectId, onOpenTask }: TaskListTabProps) {
   const toggleCollapsed = (key: string) =>
     setCollapsed((s) => ({ ...s, [key]: !s[key] }));
 
-  // Per-parent expansion (subtask reveal). Default collapsed.
-  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
-  const toggleTaskExpanded = (id: string) =>
-    setExpandedTasks((s) => ({ ...s, [id]: !s[id] }));
+  // Per-parent collapse state. undefined = expanded (default — subtasks
+  // visible). true = user collapsed. Inverted from "expanded" so the
+  // default-open behaviour falls out without seeding state.
+  const [collapsedTasks, setCollapsedTasks] = useState<Record<string, boolean>>({});
+  const toggleTaskCollapsed = (id: string) =>
+    setCollapsedTasks((s) => ({ ...s, [id]: !s[id] }));
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createSection, setCreateSection] = useState<ID | null>(null);
@@ -118,7 +120,7 @@ export function TaskListTab({ projectId, onOpenTask }: TaskListTabProps) {
     items.flatMap((t) => {
       const subtasks = subtasksByParent.get(t.id) ?? [];
       const hasSubtasks = subtasks.length > 0;
-      const isOpen = !!expandedTasks[t.id];
+      const isOpen = hasSubtasks && !collapsedTasks[t.id];
       const rows = [
         <TaskRow
           key={t.id}
@@ -126,7 +128,7 @@ export function TaskListTab({ projectId, onOpenTask }: TaskListTabProps) {
           onOpen={(task) => onOpenTask(task.code)}
           onCycleStatus={handleCycleStatus}
           isExpanded={hasSubtasks ? isOpen : undefined}
-          onToggleExpand={hasSubtasks ? () => toggleTaskExpanded(t.id) : undefined}
+          onToggleExpand={hasSubtasks ? () => toggleTaskCollapsed(t.id) : undefined}
         />,
       ];
       if (hasSubtasks && isOpen) {
