@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
 
+import { AppLogo } from "@/components/icons";
 import { SITE } from "@/lib/seo";
 
 const COLUMNS = [
@@ -37,13 +37,8 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid gap-10 py-14 md:grid-cols-12 md:gap-8">
           <div className="md:col-span-5">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <span className="text-base font-bold tracking-tight">
-                {SITE.name}
-              </span>
+            <Link href="/" className="flex items-center">
+              <AppLogo height={32} />
             </Link>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
               {SITE.description}

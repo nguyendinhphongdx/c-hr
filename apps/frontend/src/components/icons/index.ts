@@ -18,6 +18,7 @@
  * See docs/frontend/recipes/icons.md (at the repo root) for the full pattern
  * + when to use which library.
  */
+export { AppLogo, AppLogoMark } from "./app-logo";
 export { GithubIcon } from "./github-icon";
 export { GoogleIcon } from "./google-icon";
 export { MicrosoftIcon } from "./microsoft-icon";

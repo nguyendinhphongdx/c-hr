@@ -17,7 +17,6 @@ import {
   Plug,
   Settings,
   Shield,
-  Sparkles,
   UserPlus,
   Users,
   Wallet,
@@ -26,6 +25,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { AppLogo, AppLogoMark } from "@/components/icons";
 import {
   Tooltip,
   TooltipContent,
@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth, useIsAdmin, useIsAppAdmin } from "@/features/auth";
 import { useMyOnboardingPlan } from "@/features/onboarding";
-import { SITE } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -168,15 +167,13 @@ export function Sidebar({ collapsed }: SidebarProps) {
         collapsed ? "w-14" : "w-60",
       )}
     >
-      <div className="flex h-14 items-center gap-2 border-b px-4">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <Sparkles className="h-3.5 w-3.5" />
-        </div>
-        {!collapsed && (
-          <span className="text-sm font-semibold tracking-tight">
-            {SITE.name}
-          </span>
+      <div
+        className={cn(
+          "flex h-14 items-center border-b",
+          collapsed ? "justify-center px-2" : "px-4",
         )}
+      >
+        {collapsed ? <AppLogoMark size={28} /> : <AppLogo height={32} />}
       </div>
 
       <nav className="flex-1 space-y-3 overflow-y-auto p-2 scrollbar-thin">

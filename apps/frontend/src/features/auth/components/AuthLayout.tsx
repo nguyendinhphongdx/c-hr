@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { Sparkles } from "lucide-react";
 
+import { AppLogo } from "@/components/icons";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
-import { SITE } from "@/lib/seo";
 import { useAuth } from "../hooks/useAuth";
 import { readNextFromLocation } from "../utils/safeNext";
 import { BrandPanel } from "./BrandPanel";
@@ -52,14 +51,9 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
           {/* Mobile-only logo (BrandPanel is hidden on mobile) */}
           <Link
             href="/"
-            className="animate-fade-up mb-10 flex items-center gap-2.5 lg:hidden"
+            className="animate-fade-up mb-10 flex items-center lg:hidden"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">
-              {SITE.name}
-            </span>
+            <AppLogo height={36} priority />
           </Link>
 
           <div

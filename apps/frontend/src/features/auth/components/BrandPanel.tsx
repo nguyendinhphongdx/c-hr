@@ -1,5 +1,4 @@
-import { Sparkles } from "lucide-react";
-
+import { AppLogo } from "@/components/icons";
 import { SITE } from "@/lib/seo";
 
 const BULLETS = [
@@ -37,13 +36,8 @@ export function BrandPanel() {
 
       {/* Top: brand + tagline */}
       <div className="animate-fade-up relative z-10">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <span className="text-xl font-semibold tracking-tight">
-            {SITE.name}
-          </span>
+        <div className="mb-4">
+          <AppLogo height={44} priority />
         </div>
         <p className="max-w-[300px] text-[15px] leading-relaxed text-muted-foreground">
           {SITE.description}

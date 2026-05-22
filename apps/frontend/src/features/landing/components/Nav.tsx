@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Menu, Sparkles, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
+import { AppLogo } from "@/components/icons";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { NAV_LINKS, SITE } from "@/lib/seo";
+import { NAV_LINKS } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
 export function Nav() {
@@ -30,11 +31,11 @@ export function Nav() {
       )}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-        <Link href="/" className="group flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform group-hover:scale-105">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <span className="text-base font-bold tracking-tight">{SITE.name}</span>
+        <Link
+          href="/"
+          className="group flex items-center transition-transform hover:scale-[1.02]"
+        >
+          <AppLogo height={32} priority />
         </Link>
 
         <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
