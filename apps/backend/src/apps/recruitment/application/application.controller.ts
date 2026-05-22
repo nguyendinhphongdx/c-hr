@@ -22,6 +22,7 @@ import {
   ListApplicationsDto,
   MoveStageDto,
   RejectApplicationDto,
+  SendApplicationEmailDto,
 } from './dto';
 
 @ApiTags('applications')
@@ -82,5 +83,15 @@ export class ApplicationController {
     @Body() dto: HireApplicationDto,
   ) {
     return this.service.hire(id, dto);
+  }
+
+  @Post(':id/email')
+  @HttpCode(HttpStatus.OK)
+  @Auditable({ action: 'APPLICATION_EMAIL_SEND', entity: 'Application' })
+  sendEmail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SendApplicationEmailDto,
+  ) {
+    return this.service.sendEmail(id, dto);
   }
 }

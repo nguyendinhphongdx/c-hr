@@ -11,6 +11,7 @@ import { EmployeeService } from '@/apps/hrm/employee/employee.service';
 import { requireAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
+import { MailService } from '@libs/mail/mail.service';
 
 import { ApplicationAcl } from './application.acl';
 import { ApplicationRepository } from './application.repository';
@@ -21,6 +22,7 @@ import {
   ListApplicationsDto,
   MoveStageDto,
   RejectApplicationDto,
+  SendApplicationEmailDto,
 } from './dto';
 
 interface StageHistoryEntry {
@@ -38,6 +40,7 @@ export class ApplicationService {
     private readonly repo: ApplicationRepository,
     private readonly ctx: RequestContextService,
     private readonly employees: EmployeeService,
+    private readonly mail: MailService,
   ) {}
 
   async list(query: ListApplicationsDto) {
@@ -344,4 +347,70 @@ export class ApplicationService {
     if (!job) throw new NotFoundException('Parent job missing');
     return job;
   }
+
+  /**
+   * Send an HTML email to the candidate associated with this application
+   * and append a log entry on `application.emails`. Recruiters use this
+   * for interview invites, rejection notices, follow-ups, etc.
+   *
+   * Body is appended with a small "Đăng nhập …" footer linking back to
+   * the C-HR public-facing job URL (best-effort).
+   */
+  async sendEmail(id: string, dto: SendApplicationEmailDto) {
+    const orgId = this.ctx.requireOrg();
+    const callerId = this.ctx.requireUserId();
+    const row = await this.repo.findByIdByOrg(orgId, id);
+    if (!row) throw new NotFoundException('Application not found');
+
+    const job = await this.loadJobSubject(row.jobId);
+    await new ApplicationAcl({
+      id: row.id,
+      organizationId: row.organizationId,
+      job,
+    }).require('canEdit');
+
+    if (!row.candidate.email) {
+      throw new BadRequestException('Candidate has no email on file');
+    }
+
+    const caller = await this.prisma.user.findUnique({
+      where: { id: callerId },
+      select: { name: true, email: true },
+    });
+
+    await this.mail.send({
+      to: row.candidate.email,
+      subject: dto.subject,
+      html: dto.bodyHtml,
+      replyTo: dto.replyTo ?? caller?.email ?? undefined,
+    });
+
+    const emails =
+      (row.emails as unknown as Array<Record<string, unknown>>) ?? [];
+    emails.push({
+      subject: dto.subject,
+      sentAt: new Date().toISOString(),
+      sentByUserId: callerId,
+      sentByName: caller?.name ?? caller?.email ?? null,
+      snippet: htmlSnippet(dto.bodyHtml),
+    });
+    await this.repo.update(id, {
+      emails: emails as unknown as Prisma.JsonArray,
+    });
+
+    const updated = await this.repo.findByIdByOrg(orgId, id);
+    if (!updated) {
+      throw new NotFoundException('Application vanished after email');
+    }
+    return updated;
+  }
+}
+
+function htmlSnippet(html: string, max = 200): string {
+  const plain = html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return plain.length > max ? `${plain.slice(0, max)}…` : plain;
 }
