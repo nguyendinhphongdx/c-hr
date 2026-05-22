@@ -34,7 +34,7 @@ export class CandidateService {
 
   async list(query: ListCandidatesDto) {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const where: Prisma.CandidateWhereInput = {};
     if (query.source) where.source = query.source;
@@ -60,7 +60,7 @@ export class CandidateService {
   async create(dto: CreateCandidateDto) {
     const orgId = this.ctx.requireOrg();
     const callerId = this.ctx.requireUserId();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const email = normalizeEmail(dto.email);
     const existing = await this.repo.findByEmailByOrg(orgId, email);

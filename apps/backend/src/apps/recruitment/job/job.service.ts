@@ -39,6 +39,7 @@ export class JobService {
 
   async list(query: ListJobsDto) {
     const orgId = this.ctx.requireOrg();
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
     const where: Prisma.JobWhereInput = {};
     if (query.status) where.status = query.status;
     if (query.departmentId) where.departmentId = query.departmentId;
@@ -67,7 +68,7 @@ export class JobService {
   async create(dto: CreateJobDto) {
     const orgId = this.ctx.requireOrg();
     const callerId = this.ctx.requireUserId();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     if (dto.experienceMin !== undefined && dto.experienceMax !== undefined) {
       if (dto.experienceMax < dto.experienceMin) {

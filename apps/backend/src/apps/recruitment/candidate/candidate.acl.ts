@@ -11,16 +11,13 @@ export type CandidateAclSubject = Pick<
  * Candidate ACL.
  *
  * Candidates carry sensitive PII (expected salary, contact, resume).
- * Only recruiters (RECRUITMENT/HRM appadmin) and the creator can view
+ * Only recruiters (HRM appadmin) and the creator can view
  * by default. Phase 2 may relax to hiring managers of jobs they're
  * applied to — defer until we have that data preloaded cheaply.
  */
 export class CandidateAcl extends BaseAcl<CandidateAclSubject> {
   private isAdmin(): boolean {
-    return (
-      this.ctx.isAppAdmin('RECRUITMENT', this.obj.organizationId) ||
-      this.ctx.isAppAdmin('HRM', this.obj.organizationId)
-    );
+    return this.ctx.isAppAdmin('HRM', this.obj.organizationId);
   }
 
   private isCreator(): boolean {

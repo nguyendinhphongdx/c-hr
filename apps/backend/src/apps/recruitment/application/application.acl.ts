@@ -13,10 +13,7 @@ export interface ApplicationAclSubject {
  */
 export class ApplicationAcl extends BaseAcl<ApplicationAclSubject> {
   private isAdmin(): boolean {
-    return (
-      this.ctx.isAppAdmin('RECRUITMENT', this.obj.organizationId) ||
-      this.ctx.isAppAdmin('HRM', this.obj.organizationId)
-    );
+    return this.ctx.isAppAdmin('HRM', this.obj.organizationId);
   }
 
   private isJobOwner(): boolean {

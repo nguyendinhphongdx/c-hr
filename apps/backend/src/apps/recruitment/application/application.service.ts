@@ -45,7 +45,7 @@ export class ApplicationService {
 
   async list(query: ListApplicationsDto) {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const where: Prisma.ApplicationWhereInput = {};
     if (query.jobId) where.jobId = query.jobId;
@@ -71,7 +71,7 @@ export class ApplicationService {
   async create(dto: CreateApplicationDto) {
     const orgId = this.ctx.requireOrg();
     const callerId = this.ctx.requireUserId();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const [candidate, job] = await Promise.all([
       this.prisma.candidate.findFirst({

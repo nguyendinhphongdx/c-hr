@@ -13,19 +13,13 @@ export interface JobAclView extends AclView {
 }
 
 /**
- * Job ACL.
- *
- * - canView   = same-org user (no row-level secrets; public listing).
- * - canEdit   = RECRUITMENT/HRM appadmin | hiringManager | createdBy
- * - canDelete = RECRUITMENT/HRM appadmin | createdBy
- * - canPublish/canClose = canEdit
+ * Job ACL — HRM appadmin only. Regular users can't see recruitment
+ * data at all (jobs, candidates, pipeline). Hiring manager assigned
+ * on a job still gets edit access even if they're not an HRM admin.
  */
 export class JobAcl extends BaseAcl<JobAclSubject, JobAclView> {
   private isAdmin(): boolean {
-    return (
-      this.ctx.isAppAdmin('RECRUITMENT', this.obj.organizationId) ||
-      this.ctx.isAppAdmin('HRM', this.obj.organizationId)
-    );
+    return this.ctx.isAppAdmin('HRM', this.obj.organizationId);
   }
 
   private isOwner(): boolean {
@@ -35,7 +29,7 @@ export class JobAcl extends BaseAcl<JobAclSubject, JobAclView> {
   }
 
   canView(): boolean {
-    return this.ctx.organizationId === this.obj.organizationId;
+    return this.isAdmin() || this.isOwner();
   }
 
   canEdit(): boolean {

@@ -55,7 +55,7 @@ export class PostingService {
    */
   async pushJob(jobId: string, board: JobBoard) {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const job = await this.prisma.job.findFirst({
       where: { id: jobId, organizationId: orgId, deletedAt: null },
@@ -119,7 +119,7 @@ export class PostingService {
 
   async closePosting(jobId: string, board: JobBoard) {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const integration = await this.integrations.getCredentials(orgId, board);
     const existing = await this.prisma.jobBoardPosting.findUnique({

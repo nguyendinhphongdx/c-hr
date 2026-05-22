@@ -102,8 +102,18 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Tuyển dụng",
     items: [
-      { href: "/recruitment/jobs", label: "Jobs", icon: Briefcase },
-      { href: "/recruitment/candidates", label: "Ứng viên", icon: UserPlus },
+      {
+        href: "/recruitment/jobs",
+        label: "Jobs",
+        icon: Briefcase,
+        adminOnly: true,
+      },
+      {
+        href: "/recruitment/candidates",
+        label: "Ứng viên",
+        icon: UserPlus,
+        adminOnly: true,
+      },
       {
         href: "/recruitment/integrations",
         label: "Kết nối job board",

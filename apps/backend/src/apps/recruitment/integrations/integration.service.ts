@@ -39,7 +39,7 @@ export class IntegrationService {
 
   async list(): Promise<IntegrationSummary[]> {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const rows = await this.prisma.jobBoardIntegration.findMany({
       where: { organizationId: orgId },
@@ -51,7 +51,7 @@ export class IntegrationService {
   async upsert(dto: UpsertIntegrationDto): Promise<IntegrationSummary> {
     const orgId = this.ctx.requireOrg();
     const callerId = this.ctx.requireUserId();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     // Fail fast: if no adapter is implemented for this board, refuse
     // the save — would just be dead data sitting in the DB.
@@ -108,7 +108,7 @@ export class IntegrationService {
 
   async toggle(board: JobBoard): Promise<IntegrationSummary> {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const row = await this.prisma.jobBoardIntegration.findUnique({
       where: { organizationId_board: { organizationId: orgId, board } },
@@ -124,7 +124,7 @@ export class IntegrationService {
 
   async remove(board: JobBoard): Promise<void> {
     const orgId = this.ctx.requireOrg();
-    await requireAppAdmin(this.ctx, 'RECRUITMENT', orgId, this.prisma);
+    await requireAppAdmin(this.ctx, 'HRM', orgId, this.prisma);
 
     const existing = await this.prisma.jobBoardIntegration.findUnique({
       where: { organizationId_board: { organizationId: orgId, board } },
