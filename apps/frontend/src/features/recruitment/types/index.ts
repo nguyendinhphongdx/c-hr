@@ -280,3 +280,11 @@ export interface MoveStageInput {
 export interface RejectApplicationInput {
   reason?: string;
 }
+
+export interface HireApplicationInput {
+  code: string;
+  hireDate?: string;
+  departmentId?: ID;
+  title?: string;
+  baseSalary?: number;
+}

@@ -18,6 +18,7 @@ import { ParseUUIDPipe } from '@/common/pipes';
 import { ApplicationService } from './application.service';
 import {
   CreateApplicationDto,
+  HireApplicationDto,
   ListApplicationsDto,
   MoveStageDto,
   RejectApplicationDto,
@@ -71,5 +72,15 @@ export class ApplicationController {
   @Auditable({ action: 'APPLICATION_WITHDRAW', entity: 'Application' })
   withdraw(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.withdraw(id);
+  }
+
+  @Post(':id/hire')
+  @HttpCode(HttpStatus.OK)
+  @Auditable({ action: 'APPLICATION_HIRE', entity: 'Application' })
+  hire(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: HireApplicationDto,
+  ) {
+    return this.service.hire(id, dto);
   }
 }

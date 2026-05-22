@@ -5,6 +5,7 @@ export { JobStatusBadge } from "./components/job/JobStatusBadge";
 export { JobCreateDialog } from "./components/job/JobCreateDialog";
 export { CandidateCreateDialog } from "./components/candidate/CandidateCreateDialog";
 export { ApplyDialog } from "./components/application/ApplyDialog";
+export { HireDialog } from "./components/application/HireDialog";
 export { PipelineBoard } from "./components/application/PipelineBoard";
 export { ApplicationCard } from "./components/application/ApplicationCard";
 export { jobService } from "./services/jobService";
@@ -35,6 +36,7 @@ export {
   useMoveApplicationStage,
   useRejectApplication,
   useWithdrawApplication,
+  useHireApplication,
 } from "./hooks/useApplications";
 export type {
   Application,
@@ -46,6 +48,7 @@ export type {
   CreateApplicationInput,
   CreateCandidateInput,
   CreateJobInput,
+  HireApplicationInput,
   Job,
   JobAclView,
   JobStage,

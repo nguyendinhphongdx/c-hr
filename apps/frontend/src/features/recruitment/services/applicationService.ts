@@ -4,6 +4,7 @@ import type { ID } from "@/lib/types";
 import type {
   Application,
   CreateApplicationInput,
+  HireApplicationInput,
   ListApplicationsQuery,
   MoveStageInput,
   RejectApplicationInput,
@@ -58,6 +59,14 @@ export const applicationService = {
   withdraw: async (id: ID): Promise<Application> => {
     const res = await apiClient.post<Application>(
       `/applications/${id}/withdraw`,
+    );
+    return res.data;
+  },
+
+  hire: async (id: ID, data: HireApplicationInput): Promise<Application> => {
+    const res = await apiClient.post<Application>(
+      `/applications/${id}/hire`,
+      data,
     );
     return res.data;
   },

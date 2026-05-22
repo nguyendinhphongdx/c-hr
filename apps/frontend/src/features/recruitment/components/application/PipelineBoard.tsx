@@ -27,12 +27,14 @@ interface PipelineBoardProps {
   jobId: ID;
   stages: JobStage[];
   onOpenApplication?: (application: Application) => void;
+  onHireApplication?: (application: Application) => void;
 }
 
 export function PipelineBoard({
   jobId,
   stages,
   onOpenApplication,
+  onHireApplication,
 }: PipelineBoardProps) {
   const appsQuery = useApplications({ jobId });
   const moveStage = useMoveApplicationStage();
@@ -111,6 +113,7 @@ export function PipelineBoard({
             stage={stage}
             applications={byStage.get(stage.id) ?? []}
             onOpenApplication={onOpenApplication}
+            onHireApplication={onHireApplication}
           />
         ))}
       </div>

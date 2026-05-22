@@ -8,6 +8,7 @@ import type { ID } from "@/lib/types";
 import { applicationService } from "../services/applicationService";
 import type {
   CreateApplicationInput,
+  HireApplicationInput,
   ListApplicationsQuery,
   MoveStageInput,
   RejectApplicationInput,
@@ -95,6 +96,27 @@ export function useWithdrawApplication() {
     onSuccess: () => qc.invalidateQueries({ queryKey: applicationKeys.all }),
     onError: (err: Error) => {
       toast.error("Không rút được", { description: err.message });
+    },
+  });
+}
+
+export function useHireApplication() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: ID;
+      data: HireApplicationInput;
+    }) => applicationService.hire(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: applicationKeys.all });
+      qc.invalidateQueries({ queryKey: ["employees"] });
+      toast.success("Đã chuyển thành nhân viên");
+    },
+    onError: (err: Error) => {
+      toast.error("Không tạo nhân viên được", { description: err.message });
     },
   });
 }

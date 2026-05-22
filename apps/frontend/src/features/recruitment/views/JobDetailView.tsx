@@ -19,9 +19,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ApplyDialog } from "../components/application/ApplyDialog";
+import { HireDialog } from "../components/application/HireDialog";
 import { PipelineBoard } from "../components/application/PipelineBoard";
 import { JobStatusBadge } from "../components/job/JobStatusBadge";
 import { useJob, useJobTransition } from "../hooks/useJobs";
+import type { Application } from "../types";
 
 interface JobDetailViewProps {
   slug: string;
@@ -42,6 +44,7 @@ export function JobDetailView({ slug }: JobDetailViewProps) {
   const jobQuery = useJob(slug);
   const transition = useJobTransition();
   const [applyOpen, setApplyOpen] = useState(false);
+  const [hireTarget, setHireTarget] = useState<Application | null>(null);
 
   if (jobQuery.isLoading) {
     return (
@@ -172,7 +175,11 @@ export function JobDetailView({ slug }: JobDetailViewProps) {
             value="pipeline"
             className="flex-1 overflow-hidden p-0"
           >
-            <PipelineBoard jobId={job.id} stages={orderedStages} />
+            <PipelineBoard
+              jobId={job.id}
+              stages={orderedStages}
+              onHireApplication={(app) => setHireTarget(app)}
+            />
           </TabsContent>
 
           <TabsContent value="info" className="flex-1 overflow-y-auto p-6">
@@ -237,6 +244,12 @@ export function JobDetailView({ slug }: JobDetailViewProps) {
         open={applyOpen}
         onClose={() => setApplyOpen(false)}
         jobId={job.id}
+      />
+
+      <HireDialog
+        open={!!hireTarget}
+        onClose={() => setHireTarget(null)}
+        application={hireTarget}
       />
     </PageContainer>
   );

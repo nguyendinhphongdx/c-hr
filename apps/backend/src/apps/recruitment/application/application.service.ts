@@ -5,7 +5,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { JobStageKind, Prisma } from '@prisma/client';
+import { randomBytes } from 'crypto';
 
+import { EmployeeService } from '@/apps/hrm/employee/employee.service';
 import { requireAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
@@ -14,6 +16,7 @@ import { ApplicationAcl } from './application.acl';
 import { ApplicationRepository } from './application.repository';
 import {
   CreateApplicationDto,
+  HireApplicationDto,
   ListApplicationsDto,
   MoveStageDto,
   RejectApplicationDto,
@@ -33,6 +36,7 @@ export class ApplicationService {
     private readonly prisma: PrismaService,
     private readonly repo: ApplicationRepository,
     private readonly ctx: RequestContextService,
+    private readonly employees: EmployeeService,
   ) {}
 
   async list(query: ListApplicationsDto) {
@@ -219,6 +223,95 @@ export class ApplicationService {
     const updated = await this.repo.findByIdByOrg(orgId, id);
     if (!updated) {
       throw new NotFoundException('Application vanished after withdraw');
+    }
+    return updated;
+  }
+
+  /**
+   * Convert a HIRED application into an Employee record. Reuses
+   * EmployeeService.create so the employee.created event still fires
+   * (F10 Onboarding listens) and the EMP- code uniqueness is enforced
+   * by the same path as manual creation.
+   *
+   * Returns the updated application; the new employeeId is reachable
+   * via `candidate.employeeId` on the response payload.
+   */
+  async hire(id: string, dto: HireApplicationDto) {
+    const orgId = this.ctx.requireOrg();
+    const row = await this.repo.findByIdByOrg(orgId, id);
+    if (!row) throw new NotFoundException('Application not found');
+
+    const job = await this.loadJobSubject(row.jobId);
+    await new ApplicationAcl({
+      id: row.id,
+      organizationId: row.organizationId,
+      job,
+    }).require('canEdit');
+
+    const candidate = await this.prisma.candidate.findFirst({
+      where: { id: row.candidateId, organizationId: orgId, deletedAt: null },
+    });
+    if (!candidate) {
+      throw new BadRequestException('Candidate not found');
+    }
+    if (candidate.employeeId) {
+      throw new ConflictException('Candidate already linked to an employee');
+    }
+
+    const stage = await this.prisma.jobStage.findUnique({
+      where: { id: row.stageId },
+      select: { kind: true },
+    });
+    if (stage?.kind !== JobStageKind.HIRED) {
+      throw new BadRequestException(
+        'Application must be in HIRED stage before converting to employee',
+      );
+    }
+
+    const jobRow = await this.prisma.job.findUnique({
+      where: { id: row.jobId },
+      select: { departmentId: true, title: true },
+    });
+
+    // Reuse EmployeeService.create (link-existing-user mode when the
+    // candidate already has a User, else "new-user" mode with a random
+    // initial password — HR sends a reset link separately).
+    const created = candidate.userId
+      ? await this.employees.create({
+          code: dto.code,
+          userId: candidate.userId,
+          departmentId: dto.departmentId ?? jobRow?.departmentId ?? undefined,
+          title: dto.title ?? jobRow?.title ?? undefined,
+          hireDate: dto.hireDate,
+        })
+      : await this.employees.create({
+          code: dto.code,
+          email: candidate.email,
+          name: candidate.fullName,
+          password: randomBytes(12).toString('hex'),
+          departmentId: dto.departmentId ?? jobRow?.departmentId ?? undefined,
+          title: dto.title ?? jobRow?.title ?? undefined,
+          hireDate: dto.hireDate,
+        });
+
+    // Apply baseSalary post-create — not in CreateEmployeeDto.
+    const updates: Prisma.EmployeeUncheckedUpdateInput = {};
+    if (dto.baseSalary !== undefined) updates.baseSalary = dto.baseSalary;
+    if (Object.keys(updates).length > 0) {
+      await this.prisma.employee.update({
+        where: { id: created.id },
+        data: updates,
+      });
+    }
+
+    await this.prisma.candidate.update({
+      where: { id: candidate.id },
+      data: { employeeId: created.id },
+    });
+
+    const updated = await this.repo.findByIdByOrg(orgId, id);
+    if (!updated) {
+      throw new NotFoundException('Application vanished after hire');
     }
     return updated;
   }
