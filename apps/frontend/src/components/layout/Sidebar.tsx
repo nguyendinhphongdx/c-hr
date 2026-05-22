@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  Briefcase,
   Building2,
   CalendarClock,
   Calendar,
@@ -16,6 +17,7 @@ import {
   Settings,
   Shield,
   Sparkles,
+  UserPlus,
   Users,
   Wallet,
   type LucideIcon,
@@ -94,6 +96,18 @@ const NAV_SECTIONS: NavSection[] = [
         exact: true,
       },
       { href: "/projects", label: "Dự án", icon: FolderKanban },
+    ],
+  },
+  {
+    label: "Tuyển dụng",
+    items: [
+      { href: "/recruitment/jobs", label: "Jobs", icon: Briefcase },
+      {
+        href: "/recruitment/candidates",
+        label: "Ứng viên",
+        icon: UserPlus,
+        disabled: true,
+      },
     ],
   },
   {
