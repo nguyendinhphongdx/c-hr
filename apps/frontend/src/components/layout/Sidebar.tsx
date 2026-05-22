@@ -102,12 +102,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Tuyển dụng",
     items: [
       { href: "/recruitment/jobs", label: "Jobs", icon: Briefcase },
-      {
-        href: "/recruitment/candidates",
-        label: "Ứng viên",
-        icon: UserPlus,
-        disabled: true,
-      },
+      { href: "/recruitment/candidates", label: "Ứng viên", icon: UserPlus },
     ],
   },
   {

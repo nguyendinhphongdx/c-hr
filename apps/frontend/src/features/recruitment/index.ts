@@ -1,6 +1,12 @@
 export { JobListView } from "./views/JobListView";
+export { JobDetailView } from "./views/JobDetailView";
+export { CandidateListView } from "./views/CandidateListView";
 export { JobStatusBadge } from "./components/job/JobStatusBadge";
 export { JobCreateDialog } from "./components/job/JobCreateDialog";
+export { CandidateCreateDialog } from "./components/candidate/CandidateCreateDialog";
+export { ApplyDialog } from "./components/application/ApplyDialog";
+export { PipelineBoard } from "./components/application/PipelineBoard";
+export { ApplicationCard } from "./components/application/ApplicationCard";
 export { jobService } from "./services/jobService";
 export { candidateService } from "./services/candidateService";
 export { applicationService } from "./services/applicationService";
