@@ -193,12 +193,16 @@ export interface IncomingApplication {
 - **Webhook inbound**: signature HMAC-SHA256 header `X-Talent-Signature`. Events: `application.created`, `application.withdrawn`, `job.expired`. Verify với `webhookSecret` đã setup.
 - **Setup flow**: admin C-HR vào `/settings/recruitment/integrations` → "talent.vn" → paste token + webhookSecret (admin lấy từ trang "Kết nối API" trên talent.vn) → C-HR validate bằng cách gọi `GET /open-api/categories`.
 
-#### TopCV (không public docs)
+#### TopCV (cùng pattern talent.vn)
 
-- TopCV cung cấp "Access Token" + "Secret Key" trong trang "Kết nối API" — nhưng phải mua gói + liên hệ BD team mới có. **API spec không công khai** — phải hỏi TopCV team khi triển khai thực tế.
-- Pattern giống Base Hiring tích hợp TopCV: ATS đăng ký webhook URL trên TopCV → TopCV push CV về khi candidate apply.
-- **Triển khai**: stub adapter trước, `publish()` throw NotImplemented nếu C-HR chưa có API key. Khi user vào setup, hiển thị thông báo "Liên hệ TopCV để lấy API access" + link. Khi có access, fill spec adapter sau.
-- **Fallback**: cho phép user dán XML job URL từ TopCV (đăng tin manual trên TopCV, copy URL vào C-HR để track) — đây là pattern "shadow tracking" khi không có push API.
+- TopCV dùng **cùng mô hình** talent.vn: Access Token + Secret Key trong trang "Kết nối API" của TopCV, header `X-Api-Key`, webhook outbound ký HMAC. Adapter triển khai song song với talent.vn — chỉ khác base URL + endpoint path + payload field naming.
+- Setup flow: admin org login vào tài khoản nhà tuyển dụng trên TopCV → "Kết nối API" → tạo token + webhookSecret → paste vào `/settings/recruitment/integrations` trên C-HR.
+- Endpoint dự kiến (xác nhận lại với TopCV BD khi build):
+  - `POST /open-api/jobs` — tạo job
+  - `PUT /open-api/jobs/:id` — cập nhật
+  - `POST /open-api/jobs/:id/close` — đóng
+  - `GET /open-api/jobs/:id/applications` — pull CV
+  - Webhook: `application.created`, `application.withdrawn`
 
 #### ITviec (chưa có public API)
 
@@ -622,9 +626,9 @@ Pipeline Kanban giống `BoardView` của F8 Work (drag-drop, optimistic update)
 | 3 | Offer | Đơn giản: form salary + start date + expires. Status DRAFT/SENT/ACCEPTED/DECLINED. PDF Phase 4. |
 | 4 | InterviewCalendarView | Tab "Lịch phỏng vấn" — filter event nơi `objectType='Interview'`. |
 
-### Phase 4 — TopCV + ITviec (each 3 ngày khi có access)
+### Phase 4 — TopCV + ITviec (2–3 ngày TopCV, 3 ngày ITviec)
 
-- TopCV: liên hệ BD lấy spec → fill adapter. Pattern giống talent.vn.
+- TopCV: copy talent.vn adapter, đổi base URL + path mapping. Test bằng tài khoản TopCV thật. Gần như free vì share interface.
 - ITviec: email-forwarding pattern (mailbox parser) — đòi hỏi infra mail receive (SES inbound / Postmark inbound). Cân nhắc khi có user yêu cầu thực tế.
 
 ### Phase 5 — Polish (ad-hoc)
