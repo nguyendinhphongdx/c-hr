@@ -22,6 +22,7 @@ import { CoreModule } from './apps/core/core.module';
 import { HrmModule } from './apps/hrm/hrm.module';
 import { OnboardingModule } from './apps/onboarding/onboarding.module';
 import { PayrollModule } from './apps/payroll/payroll.module';
+import { RecruitmentModule } from './apps/recruitment/recruitment.module';
 import { RequestsModule } from './apps/requests/requests.module';
 import { WorkModule } from './apps/work/work.module';
 
@@ -64,6 +65,7 @@ import { WorkModule } from './apps/work/work.module';
     WorkModule,
     PayrollModule,
     OnboardingModule,
+    RecruitmentModule,
   ],
 })
 export class AppModule {}
