@@ -1,6 +1,7 @@
 export { JobListView } from "./views/JobListView";
 export { JobDetailView } from "./views/JobDetailView";
 export { CandidateListView } from "./views/CandidateListView";
+export { IntegrationsSettingsView } from "./views/IntegrationsSettingsView";
 export { JobStatusBadge } from "./components/job/JobStatusBadge";
 export { JobCreateDialog } from "./components/job/JobCreateDialog";
 export { CandidateCreateDialog } from "./components/candidate/CandidateCreateDialog";
@@ -11,6 +12,7 @@ export { ApplicationCard } from "./components/application/ApplicationCard";
 export { jobService } from "./services/jobService";
 export { candidateService } from "./services/candidateService";
 export { applicationService } from "./services/applicationService";
+export { integrationService } from "./services/integrationService";
 export {
   jobKeys,
   useJobs,
@@ -38,6 +40,16 @@ export {
   useWithdrawApplication,
   useHireApplication,
 } from "./hooks/useApplications";
+export {
+  integrationKeys,
+  useIntegrations,
+  useUpsertIntegration,
+  useToggleIntegration,
+  useDeleteIntegration,
+  useJobPostings,
+  usePushJobToBoard,
+  useClosePostingOnBoard,
+} from "./hooks/useIntegrations";
 export type {
   Application,
   ApplicationAclView,
@@ -49,6 +61,11 @@ export type {
   CreateCandidateInput,
   CreateJobInput,
   HireApplicationInput,
+  JobBoard,
+  JobBoardIntegration,
+  JobBoardPosting,
+  PostingSyncStatus,
+  UpsertIntegrationInput,
   Job,
   JobAclView,
   JobStage,

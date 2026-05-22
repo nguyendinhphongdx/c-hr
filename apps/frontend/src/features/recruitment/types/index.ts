@@ -288,3 +288,44 @@ export interface HireApplicationInput {
   title?: string;
   baseSalary?: number;
 }
+
+export type JobBoard = "TOPCV" | "ITVIEC" | "TALENT_VN";
+
+export type PostingSyncStatus =
+  | "PENDING"
+  | "SUCCESS"
+  | "FAILED"
+  | "CLOSED";
+
+export interface JobBoardIntegration {
+  id: ID;
+  board: JobBoard;
+  isActive: boolean;
+  apiKeyPreview: string;
+  hasWebhookSecret: boolean;
+  lastSyncAt: Nullable<ISODate>;
+  lastError: Nullable<string>;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface UpsertIntegrationInput {
+  board: JobBoard;
+  apiKey: string;
+  webhookSecret?: string;
+}
+
+export interface JobBoardPosting {
+  id: ID;
+  jobId: ID;
+  integrationId: ID;
+  externalId: string;
+  externalUrl: Nullable<string>;
+  lastSyncStatus: PostingSyncStatus;
+  lastSyncError: Nullable<string>;
+  publishedAt: Nullable<ISODate>;
+  closedAt: Nullable<ISODate>;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+  integration: { id: ID; board: JobBoard; isActive: boolean };
+}

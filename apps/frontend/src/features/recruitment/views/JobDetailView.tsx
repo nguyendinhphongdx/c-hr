@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ApplyDialog } from "../components/application/ApplyDialog";
 import { HireDialog } from "../components/application/HireDialog";
+import { JobPostingsTab } from "../components/application/JobPostingsTab";
 import { PipelineBoard } from "../components/application/PipelineBoard";
 import { JobStatusBadge } from "../components/job/JobStatusBadge";
 import { useJob, useJobTransition } from "../hooks/useJobs";
@@ -168,6 +169,7 @@ export function JobDetailView({ slug }: JobDetailViewProps) {
         >
           <TabsList className="mx-4 mt-3 w-fit">
             <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+            <TabsTrigger value="postings">Đăng tin</TabsTrigger>
             <TabsTrigger value="info">Thông tin</TabsTrigger>
           </TabsList>
 
@@ -180,6 +182,13 @@ export function JobDetailView({ slug }: JobDetailViewProps) {
               stages={orderedStages}
               onHireApplication={(app) => setHireTarget(app)}
             />
+          </TabsContent>
+
+          <TabsContent
+            value="postings"
+            className="flex-1 overflow-y-auto p-6"
+          >
+            <JobPostingsTab jobId={job.id} canPush={canEdit} />
           </TabsContent>
 
           <TabsContent value="info" className="flex-1 overflow-y-auto p-6">

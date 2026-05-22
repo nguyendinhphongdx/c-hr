@@ -14,6 +14,7 @@ import {
   Inbox,
   ListChecks,
   Network,
+  Plug,
   Settings,
   Shield,
   Sparkles,
@@ -103,6 +104,12 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/recruitment/jobs", label: "Jobs", icon: Briefcase },
       { href: "/recruitment/candidates", label: "Ứng viên", icon: UserPlus },
+      {
+        href: "/recruitment/integrations",
+        label: "Kết nối job board",
+        icon: Plug,
+        adminOnly: true,
+      },
     ],
   },
   {
