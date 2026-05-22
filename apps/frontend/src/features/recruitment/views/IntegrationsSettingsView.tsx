@@ -2,7 +2,15 @@
 
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { Eye, EyeOff, Loader2, Trash2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Loader2,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -18,33 +26,68 @@ import {
 } from "../hooks/useIntegrations";
 import type { JobBoard, JobBoardIntegration } from "../types";
 
-const BOARDS: Array<{
+interface BoardMeta {
   board: JobBoard;
   label: string;
   description: string;
+  /** Whether C-HR has an adapter implementation for this board. */
   available: boolean;
-}> = [
+  /** Board's docs/help link. */
+  docsUrl?: string;
+  /** Step-by-step setup hint shown above the form. */
+  steps: string[];
+  /** Show the paired Secret-key input (TopCV, etc.). */
+  hasSecretKey?: boolean;
+}
+
+const BOARDS: BoardMeta[] = [
   {
     board: "TALENT_VN",
     label: "Talent.vn",
     description: "Job board của Rework — Open API có sẵn.",
     available: true,
+    docsUrl: "https://talent.rework.vn",
+    steps: [
+      'Đăng nhập tài khoản nhà tuyển dụng trên talent.vn → "Cài đặt" → "Kết nối API".',
+      "Bấm Tạo token. Copy giá trị API key + Webhook secret.",
+      "Quay lại đây, dán cả hai vào ô bên dưới + Lưu & kích hoạt.",
+      'Copy "URL webhook" sinh ra phía dưới, paste vào ô "Webhook URL" trên talent.vn để hoàn tất.',
+    ],
   },
   {
     board: "TOPCV",
     label: "TopCV",
-    description:
-      "Cần liên hệ TopCV BD để mua gói + nhận API key. Cùng pattern X-Api-Key + HMAC webhook như Talent.vn.",
-    available: false,
+    description: "Job board IT lớn nhất VN. Cần liên hệ BD để mở API access.",
+    available: true,
+    hasSecretKey: true,
+    docsUrl: "https://tuyendung.topcv.vn",
+    steps: [
+      "Mở tài khoản nhà tuyển dụng trên TopCV, mua gói có API access.",
+      'Vào "Cài đặt" → "Kết nối HRM/ATS" → Lấy API key + Secret key + Webhook secret.',
+      "Dán cả 3 giá trị vào form bên dưới + Lưu & kích hoạt.",
+      'Copy "URL webhook" và dán vào ô "Webhook URL" trên TopCV để nhận thông báo ứng viên apply.',
+    ],
   },
   {
     board: "ITVIEC",
     label: "ITviec",
     description:
-      "Chưa có public API. Phase 4 sẽ tích hợp qua email-forwarding.",
+      "Chưa có public API. Phase 4 sẽ tích hợp qua email-forwarding (mailbox parser).",
     available: false,
+    steps: [],
   },
 ];
+
+const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+
+/** Build the webhook URL the partner board needs to call. */
+function buildWebhookUrl(board: JobBoard, integrationId: string): string {
+  const boardSlug = board.toLowerCase().replace(/_/g, "-");
+  // NEXT_PUBLIC_API_URL is usually ".../api" — append v1 if not already there.
+  const base = apiBase.replace(/\/+$/, "");
+  const withV1 = /\/v\d+$/.test(base) ? base : `${base}/v1`;
+  return `${withV1}/webhooks/recruitment/${boardSlug}/${integrationId}`;
+}
 
 export function IntegrationsSettingsView() {
   const integrationsQuery = useIntegrations();
@@ -78,15 +121,13 @@ export function IntegrationsSettingsView() {
               {BOARDS.map((b) => (
                 <IntegrationCard
                   key={b.board}
-                  board={b.board}
-                  label={b.label}
-                  description={b.description}
-                  available={b.available}
+                  meta={b}
                   existing={byBoard.get(b.board)}
-                  onUpsert={async (apiKey, webhookSecret) => {
+                  onUpsert={async (apiKey, secretKey, webhookSecret) => {
                     await upsert.mutateAsync({
                       board: b.board,
                       apiKey,
+                      secretKey: secretKey || undefined,
                       webhookSecret: webhookSecret || undefined,
                     });
                   }}
@@ -113,21 +154,20 @@ export function IntegrationsSettingsView() {
 }
 
 interface IntegrationCardProps {
-  board: JobBoard;
-  label: string;
-  description: string;
-  available: boolean;
+  meta: BoardMeta;
   existing: JobBoardIntegration | undefined;
   saving: boolean;
-  onUpsert: (apiKey: string, webhookSecret: string) => Promise<void>;
+  onUpsert: (
+    apiKey: string,
+    secretKey: string,
+    webhookSecret: string,
+  ) => Promise<void>;
   onToggle: () => void;
   onDelete: () => void;
 }
 
 function IntegrationCard({
-  label,
-  description,
-  available,
+  meta,
   existing,
   saving,
   onUpsert,
@@ -136,21 +176,26 @@ function IntegrationCard({
 }: IntegrationCardProps) {
   const [editing, setEditing] = useState(false);
   const [apiKey, setApiKey] = useState("");
+  const [secretKey, setSecretKey] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
+  const [hintsOpen, setHintsOpen] = useState(!existing && meta.available);
 
-  const canSave = available && apiKey.trim().length >= 8;
+  const canSave = meta.available && apiKey.trim().length >= 8;
+  const webhookUrl = existing
+    ? buildWebhookUrl(meta.board, existing.id)
+    : null;
 
   return (
     <section
       className={cn(
         "rounded-lg border bg-background p-4",
-        !available && "opacity-70",
+        !meta.available && "opacity-70",
       )}
     >
       <header className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold">{label}</h2>
+            <h2 className="text-base font-semibold">{meta.label}</h2>
             {existing && (
               <span
                 className={cn(
@@ -163,13 +208,15 @@ function IntegrationCard({
                 {existing.isActive ? "Đang bật" : "Đang tắt"}
               </span>
             )}
-            {!available && (
+            {!meta.available && (
               <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
                 Sắp có
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {meta.description}
+          </p>
         </div>
         {existing && (
           <div className="flex shrink-0 gap-1">
@@ -199,6 +246,44 @@ function IntegrationCard({
         )}
       </header>
 
+      {meta.available && meta.steps.length > 0 && (
+        <details
+          className="mt-3 rounded-md border bg-muted/30 px-3 py-2"
+          open={hintsOpen}
+          onToggle={(e) => setHintsOpen((e.target as HTMLDetailsElement).open)}
+        >
+          <summary className="flex cursor-pointer items-center gap-2 text-xs font-medium text-foreground">
+            Hướng dẫn lấy API key
+            {meta.docsUrl && (
+              <a
+                href={meta.docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Mở {meta.label}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+            {meta.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </details>
+      )}
+
+      {existing && webhookUrl && (
+        <div className="mt-3 rounded-md border border-dashed bg-muted/20 p-3">
+          <p className="text-[11px] font-medium text-muted-foreground">
+            Webhook URL — paste vào trang Kết nối API trên {meta.label}
+          </p>
+          <CopyableUrl url={webhookUrl} />
+        </div>
+      )}
+
       {existing && !editing ? (
         <dl className="mt-3 grid grid-cols-2 gap-y-1 text-xs">
           <dt className="text-muted-foreground">API key</dt>
@@ -222,17 +307,30 @@ function IntegrationCard({
         </dl>
       ) : null}
 
-      {available && (editing || !existing) && (
+      {meta.available && (editing || !existing) && (
         <div className="mt-3 space-y-2">
           <div>
             <label className="text-xs text-muted-foreground">API key</label>
             <Input
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Dán API key từ trang Kết nối API"
+              placeholder={`Dán API key từ trang Kết nối API ${meta.label}`}
               className="mt-1 font-mono"
             />
           </div>
+          {meta.hasSecretKey && (
+            <div>
+              <label className="text-xs text-muted-foreground">
+                Secret key (cặp với API key)
+              </label>
+              <Input
+                value={secretKey}
+                onChange={(e) => setSecretKey(e.target.value)}
+                placeholder={`Secret key từ ${meta.label}`}
+                className="mt-1 font-mono"
+              />
+            </div>
+          )}
           <div>
             <label className="text-xs text-muted-foreground">
               Webhook secret (tuỳ chọn — auto-gen nếu để trống)
@@ -252,6 +350,7 @@ function IntegrationCard({
                 onClick={() => {
                   setEditing(false);
                   setApiKey("");
+                  setSecretKey("");
                   setWebhookSecret("");
                 }}
               >
@@ -263,9 +362,14 @@ function IntegrationCard({
               size="sm"
               disabled={!canSave || saving}
               onClick={async () => {
-                await onUpsert(apiKey.trim(), webhookSecret.trim());
+                await onUpsert(
+                  apiKey.trim(),
+                  secretKey.trim(),
+                  webhookSecret.trim(),
+                );
                 setEditing(false);
                 setApiKey("");
+                setSecretKey("");
                 setWebhookSecret("");
               }}
             >
@@ -276,7 +380,7 @@ function IntegrationCard({
         </div>
       )}
 
-      {available && existing && !editing && (
+      {meta.available && existing && !editing && (
         <Button
           type="button"
           variant="outline"
@@ -288,5 +392,36 @@ function IntegrationCard({
         </Button>
       )}
     </section>
+  );
+}
+
+function CopyableUrl({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="mt-1 flex items-center gap-2">
+      <code className="min-w-0 flex-1 truncate rounded bg-background px-2 py-1 font-mono text-[11px]">
+        {url}
+      </code>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(url);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1500);
+          } catch {
+            // clipboard blocked — fall through silently
+          }
+        }}
+      >
+        {copied ? (
+          <Check className="h-3.5 w-3.5 text-emerald-600" />
+        ) : (
+          <Copy className="h-3.5 w-3.5" />
+        )}
+      </Button>
+    </div>
   );
 }

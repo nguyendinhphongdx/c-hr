@@ -63,6 +63,9 @@ export class IntegrationService {
 
     const creds: BoardCredentials = {
       apiKey: dto.apiKey.trim(),
+      ...(dto.secretKey
+        ? { secretKey: dto.secretKey.trim() }
+        : {}),
       ...(dto.webhookSecret
         ? { webhookSecret: dto.webhookSecret.trim() }
         : {}),

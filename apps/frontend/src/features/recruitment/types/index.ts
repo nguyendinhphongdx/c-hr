@@ -341,6 +341,8 @@ export interface JobBoardIntegration {
 export interface UpsertIntegrationInput {
   board: JobBoard;
   apiKey: string;
+  /** Paired secret used by some boards (e.g. TopCV). */
+  secretKey?: string;
   webhookSecret?: string;
 }
 
