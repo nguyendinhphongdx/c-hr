@@ -126,9 +126,11 @@ export function CandidateListView() {
                   <TableRow className="text-xs">
                     <TableHead>Họ tên</TableHead>
                     <TableHead>Liên hệ</TableHead>
-                    <TableHead className="w-40">Nguồn</TableHead>
-                    <TableHead className="w-28 text-right">Đơn</TableHead>
-                    <TableHead className="w-32">Thêm lúc</TableHead>
+                    <TableHead>Kỹ năng</TableHead>
+                    <TableHead className="w-24 text-right">KN</TableHead>
+                    <TableHead className="w-32">Nguồn</TableHead>
+                    <TableHead className="w-20 text-right">Đơn</TableHead>
+                    <TableHead className="w-28">Thêm lúc</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -153,6 +155,19 @@ export function CandidateListView() {
                             {c.phone}
                           </div>
                         )}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {c.skills.length === 0 ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : (
+                          <span className="line-clamp-2">
+                            {c.skills.slice(0, 5).join(", ")}
+                            {c.skills.length > 5 ? "…" : ""}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">
+                        {c.yearsOfExperience !== null ? `${c.yearsOfExperience}y` : "—"}
                       </TableCell>
                       <TableCell className="text-xs">
                         {SOURCE_LABEL[c.source]}

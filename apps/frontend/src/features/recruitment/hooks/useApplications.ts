@@ -12,6 +12,7 @@ import type {
   ListApplicationsQuery,
   MoveStageInput,
   RejectApplicationInput,
+  SendApplicationEmailInput,
 } from "../types";
 
 export const applicationKeys = {
@@ -117,6 +118,29 @@ export function useHireApplication() {
     },
     onError: (err: Error) => {
       toast.error("Không tạo nhân viên được", { description: err.message });
+    },
+  });
+}
+
+export function useSendApplicationEmail() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: ID;
+      data: SendApplicationEmailInput;
+    }) => applicationService.sendEmail(id, data),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: applicationKeys.all });
+      qc.invalidateQueries({
+        queryKey: applicationKeys.detail(vars.id),
+      });
+      toast.success("Đã gửi email");
+    },
+    onError: (err: Error) => {
+      toast.error("Không gửi được email", { description: err.message });
     },
   });
 }

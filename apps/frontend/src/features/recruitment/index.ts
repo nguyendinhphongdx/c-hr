@@ -7,8 +7,10 @@ export { JobCreateDialog } from "./components/job/JobCreateDialog";
 export { CandidateCreateDialog } from "./components/candidate/CandidateCreateDialog";
 export { ApplyDialog } from "./components/application/ApplyDialog";
 export { HireDialog } from "./components/application/HireDialog";
+export { SendEmailDialog } from "./components/application/SendEmailDialog";
 export { PipelineBoard } from "./components/application/PipelineBoard";
 export { ApplicationCard } from "./components/application/ApplicationCard";
+export { MatchScoreBadge } from "./components/application/MatchScoreBadge";
 export { jobService } from "./services/jobService";
 export { candidateService } from "./services/candidateService";
 export { applicationService } from "./services/applicationService";
@@ -39,6 +41,7 @@ export {
   useRejectApplication,
   useWithdrawApplication,
   useHireApplication,
+  useSendApplicationEmail,
 } from "./hooks/useApplications";
 export {
   integrationKeys,
@@ -57,6 +60,7 @@ export type {
   CandidateAclView,
   CandidateResume,
   CandidateSource,
+  ApplicationEmailEntry,
   CreateApplicationInput,
   CreateCandidateInput,
   CreateJobInput,
@@ -64,7 +68,9 @@ export type {
   JobBoard,
   JobBoardIntegration,
   JobBoardPosting,
+  MatchBreakdown,
   PostingSyncStatus,
+  SendApplicationEmailInput,
   UpsertIntegrationInput,
   Job,
   JobAclView,

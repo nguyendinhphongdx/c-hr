@@ -35,6 +35,8 @@ export function ApplyDialog({ open, onClose, jobId }: ApplyDialogProps) {
   const [newFullName, setNewFullName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [newSkills, setNewSkills] = useState("");
+  const [newYoe, setNewYoe] = useState("");
 
   const candidatesQuery = useCandidates(
     { q: search.trim() || undefined },
@@ -55,10 +57,17 @@ export function ApplyDialog({ open, onClose, jobId }: ApplyDialogProps) {
   const handleSubmit = async () => {
     let candidateId = selectedCandidateId;
     if (tab === "new") {
+      const skills = newSkills
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const yoe = newYoe.trim();
       const created = await createCandidate.mutateAsync({
         fullName: newFullName.trim(),
         email: newEmail.trim(),
         phone: newPhone.trim() || undefined,
+        skills: skills.length > 0 ? skills : undefined,
+        yearsOfExperience: yoe === "" ? undefined : Number(yoe),
       });
       candidateId = created.id;
     }
@@ -78,6 +87,8 @@ export function ApplyDialog({ open, onClose, jobId }: ApplyDialogProps) {
     setNewFullName("");
     setNewEmail("");
     setNewPhone("");
+    setNewSkills("");
+    setNewYoe("");
     setSearch("");
     setTab("existing");
   };
@@ -190,6 +201,30 @@ export function ApplyDialog({ open, onClose, jobId }: ApplyDialogProps) {
                 <Input
                   value={newPhone}
                   onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="(tuỳ chọn)"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">
+                  Kỹ năng (dùng cho điểm match) — cách nhau bởi dấu phẩy
+                </label>
+                <Input
+                  value={newSkills}
+                  onChange={(e) => setNewSkills(e.target.value)}
+                  placeholder="Node.js, PostgreSQL, Redis"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">
+                  Số năm kinh nghiệm
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={newYoe}
+                  onChange={(e) => setNewYoe(e.target.value)}
                   placeholder="(tuỳ chọn)"
                   className="mt-1"
                 />

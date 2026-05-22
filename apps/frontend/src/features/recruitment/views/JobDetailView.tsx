@@ -22,6 +22,7 @@ import { ApplyDialog } from "../components/application/ApplyDialog";
 import { HireDialog } from "../components/application/HireDialog";
 import { JobPostingsTab } from "../components/application/JobPostingsTab";
 import { PipelineBoard } from "../components/application/PipelineBoard";
+import { SendEmailDialog } from "../components/application/SendEmailDialog";
 import { JobStatusBadge } from "../components/job/JobStatusBadge";
 import { useJob, useJobTransition } from "../hooks/useJobs";
 import type { Application } from "../types";
@@ -46,6 +47,7 @@ export function JobDetailView({ slug }: JobDetailViewProps) {
   const transition = useJobTransition();
   const [applyOpen, setApplyOpen] = useState(false);
   const [hireTarget, setHireTarget] = useState<Application | null>(null);
+  const [emailTarget, setEmailTarget] = useState<Application | null>(null);
 
   if (jobQuery.isLoading) {
     return (
@@ -181,6 +183,7 @@ export function JobDetailView({ slug }: JobDetailViewProps) {
               jobId={job.id}
               stages={orderedStages}
               onHireApplication={(app) => setHireTarget(app)}
+              onEmailApplication={(app) => setEmailTarget(app)}
             />
           </TabsContent>
 
@@ -259,6 +262,12 @@ export function JobDetailView({ slug }: JobDetailViewProps) {
         open={!!hireTarget}
         onClose={() => setHireTarget(null)}
         application={hireTarget}
+      />
+
+      <SendEmailDialog
+        open={!!emailTarget}
+        onClose={() => setEmailTarget(null)}
+        application={emailTarget}
       />
     </PageContainer>
   );

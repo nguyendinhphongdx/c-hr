@@ -14,6 +14,7 @@ interface PipelineColumnProps {
   applications: Application[];
   onOpenApplication?: (application: Application) => void;
   onHireApplication?: (application: Application) => void;
+  onEmailApplication?: (application: Application) => void;
 }
 
 const STAGE_COLOR: Record<string, string> = {
@@ -30,6 +31,7 @@ export function PipelineColumn({
   applications,
   onOpenApplication,
   onHireApplication,
+  onEmailApplication,
 }: PipelineColumnProps) {
   const droppable = useDroppable({
     id: stage.id,
@@ -66,6 +68,7 @@ export function PipelineColumn({
               application={app}
               onOpen={onOpenApplication}
               onHire={onHireApplication}
+              onEmail={onEmailApplication}
             />
           ))}
         </SortableContext>

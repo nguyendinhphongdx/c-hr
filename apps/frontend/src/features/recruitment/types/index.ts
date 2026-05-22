@@ -167,6 +167,8 @@ export interface Candidate {
   location: Nullable<string>;
   linkedinUrl: Nullable<string>;
   source: CandidateSource;
+  skills: string[];
+  yearsOfExperience: Nullable<number>;
   userId: Nullable<ID>;
   employeeId: Nullable<ID>;
   createdAt: ISODate;
@@ -187,6 +189,8 @@ export interface CreateCandidateInput {
   location?: string;
   linkedinUrl?: string;
   source?: CandidateSource;
+  skills?: string[];
+  yearsOfExperience?: number;
 }
 
 export type UpdateCandidateInput = Partial<Omit<CreateCandidateInput, "email">>;
@@ -228,6 +232,22 @@ export interface StageHistoryEntry {
   at: ISODate;
 }
 
+export interface MatchBreakdown {
+  skillsMatched: string[];
+  skillsMissing: string[];
+  skillScore: number;
+  experienceScore: Nullable<number>;
+  experienceSkipped: boolean;
+}
+
+export interface ApplicationEmailEntry {
+  subject: string;
+  sentAt: ISODate;
+  sentByUserId: ID;
+  sentByName: Nullable<string>;
+  snippet: string;
+}
+
 export interface Application {
   id: ID;
   organizationId: ID;
@@ -244,6 +264,9 @@ export interface Application {
   externalId: Nullable<string>;
   externalSource: Nullable<CandidateSource>;
   stageHistory: StageHistoryEntry[];
+  matchScore: Nullable<number>;
+  matchBreakdown: Nullable<MatchBreakdown>;
+  emails: ApplicationEmailEntry[];
   createdAt: ISODate;
   updatedAt: ISODate;
   candidate: ApplicationCandidateSummary;
@@ -287,6 +310,12 @@ export interface HireApplicationInput {
   departmentId?: ID;
   title?: string;
   baseSalary?: number;
+}
+
+export interface SendApplicationEmailInput {
+  subject: string;
+  bodyHtml: string;
+  replyTo?: string;
 }
 
 export type JobBoard = "TOPCV" | "ITVIEC" | "TALENT_VN";

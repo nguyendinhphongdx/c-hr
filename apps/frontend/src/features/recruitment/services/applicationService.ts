@@ -8,6 +8,7 @@ import type {
   ListApplicationsQuery,
   MoveStageInput,
   RejectApplicationInput,
+  SendApplicationEmailInput,
 } from "../types";
 
 export const applicationService = {
@@ -66,6 +67,17 @@ export const applicationService = {
   hire: async (id: ID, data: HireApplicationInput): Promise<Application> => {
     const res = await apiClient.post<Application>(
       `/applications/${id}/hire`,
+      data,
+    );
+    return res.data;
+  },
+
+  sendEmail: async (
+    id: ID,
+    data: SendApplicationEmailInput,
+  ): Promise<Application> => {
+    const res = await apiClient.post<Application>(
+      `/applications/${id}/email`,
       data,
     );
     return res.data;

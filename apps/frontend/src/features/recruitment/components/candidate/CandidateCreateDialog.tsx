@@ -50,6 +50,8 @@ export function CandidateCreateDialog({
   const [location, setLocation] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [source, setSource] = useState<CandidateSource>("MANUAL");
+  const [skills, setSkills] = useState("");
+  const [yearsOfExperience, setYearsOfExperience] = useState("");
 
   const canSubmit = fullName.trim().length > 0 && email.trim().length > 0;
 
@@ -61,9 +63,16 @@ export function CandidateCreateDialog({
     setLocation("");
     setLinkedinUrl("");
     setSource("MANUAL");
+    setSkills("");
+    setYearsOfExperience("");
   };
 
   const handleSubmit = async () => {
+    const parsedSkills = skills
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const yoe = yearsOfExperience.trim();
     await create.mutateAsync({
       fullName: fullName.trim(),
       email: email.trim(),
@@ -72,6 +81,8 @@ export function CandidateCreateDialog({
       location: location.trim() || undefined,
       linkedinUrl: linkedinUrl.trim() || undefined,
       source,
+      skills: parsedSkills.length > 0 ? parsedSkills : undefined,
+      yearsOfExperience: yoe === "" ? undefined : Number(yoe),
     });
     reset();
     onClose();
@@ -175,6 +186,30 @@ export function CandidateCreateDialog({
                 className="mt-1"
               />
             </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">
+              Kỹ năng (cách nhau bởi dấu phẩy)
+            </label>
+            <Input
+              value={skills}
+              onChange={(e) => setSkills(e.target.value)}
+              placeholder="Node.js, PostgreSQL, Redis"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">
+              Số năm kinh nghiệm
+            </label>
+            <Input
+              type="number"
+              min={0}
+              value={yearsOfExperience}
+              onChange={(e) => setYearsOfExperience(e.target.value)}
+              placeholder="(tuỳ chọn)"
+              className="mt-1"
+            />
           </div>
         </div>
 
