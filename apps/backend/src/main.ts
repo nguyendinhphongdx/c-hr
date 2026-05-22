@@ -10,7 +10,12 @@ import { HttpExceptionFilter, AllExceptionsFilter } from './common/filters';
 import { TransformInterceptor, LoggingInterceptor } from './common/interceptors';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // `rawBody: true` exposes `req.rawBody` on every request — used by
+  // F11 recruitment webhook controller to verify HMAC signatures
+  // from job boards (talent.vn / TopCV).
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
 
   app.use(cookieParser());
 
