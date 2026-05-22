@@ -1353,6 +1353,11 @@ model Candidate {
   /// Board-specific metadata kept opaque (externalApplicationId, raw
   /// payload). Not used for joins — search by externalId on Application.
   sourceMeta      Json?           @map("source_meta")
+  /// Skills the candidate has — populated from resume parsing or HR
+  /// manual entry. Plain string list (case-insensitive matched against
+  /// Job.requiredSkills for the per-application match score).
+  skills              String[]    @default([])
+  yearsOfExperience   Int?        @map("years_of_experience")
   /// Set when candidate is hired and a User account is created.
   userId          String?         @unique @map("user_id")
   /// Set when candidate is hired and an Employee record is created.
@@ -1417,6 +1422,17 @@ model Application {
   /// [{ fromStageId: string|null, toStageId: string, userId: string,
   ///    reason?: string, at: ISO }]
   stageHistory    Json             @default("[]") @map("stage_history")
+  /// Heuristic fit score 0..100. Null when not yet computed (legacy
+  /// rows pre-Phase-3 / no skills on candidate).
+  matchScore      Int?             @map("match_score")
+  /// Breakdown that produced `matchScore` — `{ skillsMatched: string[],
+  /// skillsMissing: string[], skillScore: number, experienceScore: number }`.
+  /// Surfaced in the UI tooltip so recruiters trust the number.
+  matchBreakdown  Json?            @map("match_breakdown")
+  /// Outbound emails sent to the candidate from this application's
+  /// context. Append-only `[{ subject, sentAt, sentByUserId,
+  /// snippet }]`.
+  emails          Json             @default("[]") @map("emails")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
 

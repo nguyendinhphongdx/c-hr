@@ -14,6 +14,7 @@ import { PrismaService } from '@libs/database/prisma.service';
 
 import { ApplicationAcl } from './application.acl';
 import { ApplicationRepository } from './application.repository';
+import { computeMatch } from './matching';
 import {
   CreateApplicationDto,
   HireApplicationDto,
@@ -72,11 +73,16 @@ export class ApplicationService {
     const [candidate, job] = await Promise.all([
       this.prisma.candidate.findFirst({
         where: { id: dto.candidateId, organizationId: orgId, deletedAt: null },
-        select: { id: true },
+        select: { id: true, skills: true, yearsOfExperience: true },
       }),
       this.prisma.job.findFirst({
         where: { id: dto.jobId, organizationId: orgId, deletedAt: null },
-        select: { id: true },
+        select: {
+          id: true,
+          requiredSkills: true,
+          experienceMin: true,
+          experienceMax: true,
+        },
       }),
     ]);
     if (!candidate) throw new BadRequestException('Candidate not in org');
@@ -116,6 +122,18 @@ export class ApplicationService {
       },
     ];
 
+    const match = computeMatch({
+      job: {
+        requiredSkills: job.requiredSkills,
+        experienceMin: job.experienceMin,
+        experienceMax: job.experienceMax,
+      },
+      candidate: {
+        skills: candidate.skills,
+        yearsOfExperience: candidate.yearsOfExperience,
+      },
+    });
+
     const created = await this.prisma.application.create({
       data: {
         organizationId: orgId,
@@ -126,6 +144,8 @@ export class ApplicationService {
         coverLetter: dto.coverLetter ?? null,
         expectedSalary: dto.expectedSalary ?? null,
         stageHistory: history as unknown as Prisma.JsonArray,
+        matchScore: match.score,
+        matchBreakdown: match.breakdown as unknown as Prisma.JsonObject,
       },
     });
     const full = await this.repo.findByIdByOrg(orgId, created.id);

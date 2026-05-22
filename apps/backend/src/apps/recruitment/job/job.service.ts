@@ -10,6 +10,8 @@ import { requireAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
+import { computeMatch } from '../application/matching';
+
 import { CreateJobDto, ListJobsDto, UpdateJobDto } from './dto';
 import { JobAcl } from './job.acl';
 import { JobRepository } from './job.repository';
@@ -182,10 +184,62 @@ export class JobService {
       data.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
     }
 
+    const matchInputsChanged =
+      dto.requiredSkills !== undefined ||
+      dto.experienceMin !== undefined ||
+      dto.experienceMax !== undefined;
+
     await this.repo.update(id, data);
+    if (matchInputsChanged) {
+      await this.recomputeMatchForJob(id);
+    }
     const updated = await this.repo.findByIdByOrg(orgId, id);
     if (!updated) throw new NotFoundException('Job vanished after update');
     return { ...this.shape(updated), view: await new JobAcl(updated).getAcl() };
+  }
+
+  /**
+   * Recompute every application's matchScore for this job — called when
+   * requiredSkills / experienceMin / experienceMax change so older
+   * applications don't drift out of sync with the new criteria.
+   */
+  private async recomputeMatchForJob(jobId: string) {
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+      select: {
+        requiredSkills: true,
+        experienceMin: true,
+        experienceMax: true,
+      },
+    });
+    if (!job) return;
+    const applications = await this.prisma.application.findMany({
+      where: { jobId },
+      select: {
+        id: true,
+        candidate: { select: { skills: true, yearsOfExperience: true } },
+      },
+    });
+    for (const app of applications) {
+      const match = computeMatch({
+        job: {
+          requiredSkills: job.requiredSkills,
+          experienceMin: job.experienceMin,
+          experienceMax: job.experienceMax,
+        },
+        candidate: {
+          skills: app.candidate.skills,
+          yearsOfExperience: app.candidate.yearsOfExperience,
+        },
+      });
+      await this.prisma.application.update({
+        where: { id: app.id },
+        data: {
+          matchScore: match.score,
+          matchBreakdown: match.breakdown as unknown as Prisma.JsonObject,
+        },
+      });
+    }
   }
 
   async publish(id: string) {

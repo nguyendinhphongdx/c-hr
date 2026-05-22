@@ -10,6 +10,8 @@ import { requireAppAdmin } from '@/common/auth/access';
 import { RequestContextService } from '@/common/context';
 import { PrismaService } from '@libs/database/prisma.service';
 
+import { computeMatch } from '../application/matching';
+
 import { CandidateAcl } from './candidate.acl';
 import { CandidateRepository } from './candidate.repository';
 import {
@@ -78,6 +80,8 @@ export class CandidateService {
         location: dto.location ?? null,
         linkedinUrl: dto.linkedinUrl ?? null,
         source: dto.source ?? 'MANUAL',
+        skills: dto.skills ?? [],
+        yearsOfExperience: dto.yearsOfExperience ?? null,
         createdById: callerId,
       },
     });
@@ -99,11 +103,66 @@ export class CandidateService {
     if (dto.location !== undefined) data.location = dto.location;
     if (dto.linkedinUrl !== undefined) data.linkedinUrl = dto.linkedinUrl;
     if (dto.source !== undefined) data.source = dto.source;
+    const skillsChanged = dto.skills !== undefined;
+    const yoeChanged = dto.yearsOfExperience !== undefined;
+    if (skillsChanged) data.skills = dto.skills;
+    if (yoeChanged) data.yearsOfExperience = dto.yearsOfExperience;
 
     await this.repo.update(id, data);
+    if (skillsChanged || yoeChanged) {
+      await this.recomputeMatchForCandidate(id);
+    }
     const updated = await this.repo.findByIdByOrg(orgId, id);
     if (!updated) throw new BadRequestException('Candidate vanished');
     return { ...updated, view: await new CandidateAcl(updated).getAcl() };
+  }
+
+  /**
+   * Recompute matchScore on every Application this candidate has —
+   * called when their skills or experience change. Each job is fetched
+   * once so the math stays cheap.
+   */
+  private async recomputeMatchForCandidate(candidateId: string) {
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { skills: true, yearsOfExperience: true },
+    });
+    if (!candidate) return;
+
+    const applications = await this.prisma.application.findMany({
+      where: { candidateId },
+      select: {
+        id: true,
+        job: {
+          select: {
+            requiredSkills: true,
+            experienceMin: true,
+            experienceMax: true,
+          },
+        },
+      },
+    });
+
+    for (const app of applications) {
+      const match = computeMatch({
+        job: {
+          requiredSkills: app.job.requiredSkills,
+          experienceMin: app.job.experienceMin,
+          experienceMax: app.job.experienceMax,
+        },
+        candidate: {
+          skills: candidate.skills,
+          yearsOfExperience: candidate.yearsOfExperience,
+        },
+      });
+      await this.prisma.application.update({
+        where: { id: app.id },
+        data: {
+          matchScore: match.score,
+          matchBreakdown: match.breakdown as unknown as Prisma.JsonObject,
+        },
+      });
+    }
   }
 
   async softDelete(id: string) {
@@ -139,6 +198,8 @@ export class CandidateService {
         location: input.location ?? null,
         linkedinUrl: input.linkedinUrl ?? null,
         source: input.source ?? 'MANUAL',
+        skills: input.skills ?? [],
+        yearsOfExperience: input.yearsOfExperience ?? null,
         createdById,
       },
     });
