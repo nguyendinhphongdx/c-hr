@@ -83,10 +83,11 @@ model Organization {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  users        User[]
-  jobs         Job[]
-  candidates   Candidate[]
-  applications Application[]
+  users                User[]
+  jobs                 Job[]
+  candidates           Candidate[]
+  applications         Application[]
+  jobBoardIntegrations JobBoardIntegration[]
 
   @@map("organizations")
 }
@@ -1313,6 +1314,7 @@ model Job {
   createdBy      User         @relation("JobCreatedBy", fields: [createdById], references: [id])
   stages         JobStage[]
   applications   Application[]
+  postings       JobBoardPosting[]
 
   @@unique([organizationId, code])
   @@index([organizationId, status])
@@ -1429,4 +1431,71 @@ model Application {
   @@index([organizationId, jobId])
   @@index([externalSource, externalId])
   @@map("applications")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// F11 Phase 2 — Job board integration (talent.vn + TopCV + ITviec).
+// 1 OrgApiKey-like row per (org, board); JobBoardPosting tracks which
+// jobs have been pushed where, plus the latest sync status.
+// See docs/plans/f11-ats.md §6 + §3.3.
+// ─────────────────────────────────────────────────────────────────────
+
+enum JobBoard {
+  TOPCV
+  ITVIEC
+  TALENT_VN
+}
+
+enum PostingSyncStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CLOSED
+}
+
+model JobBoardIntegration {
+  id                   String   @id @default(uuid())
+  organizationId       String   @map("organization_id")
+  board                JobBoard
+  /// AES-256-GCM ciphertext of `{ apiKey, ...board-specific }`. Stored
+  /// encrypted because tokens are write-mostly secrets — the FE only
+  /// shows the last 4 chars.
+  credentialsEncrypted String   @map("credentials_encrypted")
+  /// Optional: secret used to verify the HMAC signature on inbound
+  /// webhooks from the board.
+  webhookSecret        String?  @map("webhook_secret")
+  isActive             Boolean  @default(false) @map("is_active")
+  lastSyncAt           DateTime? @map("last_sync_at")
+  lastError            String?   @map("last_error")
+  createdById          String    @map("created_by_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  postings     JobBoardPosting[]
+
+  @@unique([organizationId, board])
+  @@map("job_board_integrations")
+}
+
+model JobBoardPosting {
+  id             String            @id @default(uuid())
+  jobId          String            @map("job_id")
+  integrationId  String            @map("integration_id")
+  /// ID assigned by the external board after a successful publish.
+  externalId     String            @map("external_id")
+  externalUrl    String?           @map("external_url")
+  lastSyncStatus PostingSyncStatus @default(PENDING) @map("last_sync_status")
+  lastSyncError  String?           @map("last_sync_error")
+  publishedAt    DateTime?         @map("published_at")
+  closedAt       DateTime?         @map("closed_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  job         Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  integration JobBoardIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, integrationId])
+  @@unique([integrationId, externalId])
+  @@map("job_board_postings")
 }
