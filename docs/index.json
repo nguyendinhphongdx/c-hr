@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-12T01:52:20.578Z",
+  "generatedAt": "2026-05-22T06:44:06.072Z",
   "repoRelativeRoot": ".",
-  "count": 66,
+  "count": 67,
   "entries": [
     {
       "id": "AGENTS",
@@ -304,6 +304,46 @@
         "Updating docs"
       ],
       "summary": "Single source of truth cho cả monorepo. Không nhân bản theo app — `apps/<name>/CLAUDE.md` chỉ là entry point trỏ về đây."
+    },
+    {
+      "id": "docs:plans:f11-ats",
+      "path": "docs/plans/f11-ats.md",
+      "title": "F11 — ATS (Applicant Tracking System)",
+      "description": "Module tuyển dụng end-to-end — Job posting, Candidate database, Application pipeline, Interview, Offer. Tích hợp đăng tin lên TopCV / ITviec / talent.vn qua adapter pattern.",
+      "tags": [
+        "ats",
+        "recruitment",
+        "plan",
+        "integration",
+        "topcv",
+        "itviec",
+        "talent"
+      ],
+      "scope": "plan",
+      "category": "plans",
+      "headings": [
+        "Vì sao cần",
+        "Domain model",
+        "Entity chính",
+        "Quyết định kiến trúc cứng",
+        "Layout",
+        "Adapter pattern cho job board",
+        "Interface chung",
+        "Adapter cụ thể",
+        "Job board posting flow",
+        "Inbound webhook",
+        "Database — Prisma sketch (chính)",
+        "FE routes + UX",
+        "Phase rollout",
+        "Phase 1 — Core ATS (5–7 ngày)",
+        "Phase 2 — Job-board push: talent.vn (3–5 ngày)",
+        "Phase 3 — Interview + Scorecard + Offer (3–5 ngày)",
+        "Phase 4 — TopCV + ITviec (each 3 ngày khi có access)",
+        "Phase 5 — Polish (ad-hoc)",
+        "Open questions / chốt trước khi build",
+        "Lý do chọn từng quyết định"
+      ],
+      "summary": "> **Trạng thái**: 📋 planned. MVP scope: Phase 1 (~5–7 ngày). Phase 2 job-board push (~3–5 ngày/board). > > **Vị trí**: BE bounded context `apps/backend/src/apps/recruitment/` (mới). FE `apps/frontend/src/features/recruitment/`. Job-board adapters ở `apps/backend/src/apps/recruitment/integrations/<board>/`. > > **Routes**: `/recruitment/jobs` · `/recruitment/jobs/[slug]` · `/recruitment/candidates` · `/recruitment/candidates/[id]` · `/recruitment/applications` · `/settings/recruitment/integrations`."
     },
     {
       "id": "docs:plans:f3-multi-event-idempotency",
