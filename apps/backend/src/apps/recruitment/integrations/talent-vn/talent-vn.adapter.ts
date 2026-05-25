@@ -111,6 +111,8 @@ export class TalentVnAdapter implements JobBoardAdapter {
       data: {
         externalApplicationId: String(data.applicationId ?? ''),
         externalJobId: String(data.jobId ?? ''),
+        externalJobTitle:
+          typeof data.jobTitle === 'string' ? data.jobTitle : undefined,
         candidate: {
           fullName: String(data.candidateName ?? 'Unknown'),
           email: String(data.candidateEmail ?? ''),

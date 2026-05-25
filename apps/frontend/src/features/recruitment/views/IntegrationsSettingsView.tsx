@@ -62,10 +62,11 @@ const BOARDS: BoardMeta[] = [
     hasSecretKey: true,
     docsUrl: "https://tuyendung.topcv.vn",
     steps: [
-      "Mở tài khoản nhà tuyển dụng trên TopCV, mua gói có API access.",
-      'Vào "Cài đặt" → "Kết nối HRM/ATS" → Lấy API key + Secret key + Webhook secret.',
-      "Dán cả 3 giá trị vào form bên dưới + Lưu & kích hoạt.",
-      'Copy "URL webhook" và dán vào ô "Webhook URL" trên TopCV để nhận thông báo ứng viên apply.',
+      "Đăng nhập tài khoản Nhà tuyển dụng trên TopCV, mua gói có API access.",
+      'Vào "Cài đặt tài khoản" → "Kết nối API" → copy Access Token (= API key) và Secret Key.',
+      "Dán cả 2 giá trị vào form bên dưới + Lưu & kích hoạt (bỏ trống Webhook secret — TopCV dùng Secret Key để ký webhook).",
+      'Copy "URL webhook" sinh ra phía dưới, paste vào ô "Webhook URL" trên TopCV.',
+      'Với các job đã có sẵn trên TopCV: chưa hỗ trợ tự link, sẽ về tab Đăng tin để bấm "Đăng lại" — C-HR sẽ tạo mới trên TopCV. (Bản kế: nút "Link job có sẵn".)',
     ],
   },
   {

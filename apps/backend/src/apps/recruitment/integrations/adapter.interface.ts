@@ -53,6 +53,13 @@ export interface PublishJobResult {
 export interface IncomingApplication {
   externalApplicationId: string;
   externalJobId: string;
+  /**
+   * Title of the job as the board knows it — used as a fallback when
+   * the externalJobId can't be resolved to a local JobBoardPosting
+   * (recruiter posted manually on the board first, then connected
+   * C-HR later without linking the existing post). Optional.
+   */
+  externalJobTitle?: string;
   candidate: {
     fullName: string;
     email: string;

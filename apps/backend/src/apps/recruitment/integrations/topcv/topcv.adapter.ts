@@ -86,10 +86,18 @@ export class TopCvAdapter implements JobBoardAdapter {
         'Missing X-TopCV-Signature / X-Signature header',
       );
     }
-    const secret = creds.webhookSecret;
+    // TopCV doesn't expose a separate "webhook secret" field in their
+    // partner UI — they sign with the same Secret Key the partner
+    // pastes into Base Hiring / similar ATSes. Prefer the explicit
+    // webhookSecret when set (some accounts may roll one out later),
+    // else fall back to the secretKey, else apiKey as a last resort.
+    const secret =
+      creds.webhookSecret ??
+      (typeof creds.secretKey === 'string' ? creds.secretKey : undefined) ??
+      creds.apiKey;
     if (!secret) {
       throw new BadRequestException(
-        'Webhook secret not configured for this integration',
+        'No secret available to verify TopCV webhook',
       );
     }
     const expected = createHmac('sha256', secret)
@@ -127,6 +135,12 @@ export class TopCvAdapter implements JobBoardAdapter {
           data.applicationId ?? data.application_id ?? '',
         ),
         externalJobId: String(data.jobId ?? data.job_id ?? ''),
+        externalJobTitle:
+          typeof data.jobTitle === 'string'
+            ? data.jobTitle
+            : typeof data.job_title === 'string'
+              ? (data.job_title as string)
+              : undefined,
         candidate: {
           fullName: String(
             candidate.fullName ?? candidate.name ?? 'Unknown',

@@ -85,19 +85,39 @@ export class WebhookService {
     board: JobBoard,
     incoming: IncomingApplication,
   ) {
-    // Resolve internal job via the JobBoardPosting that owns the
-    // externalJobId. If we can't find it, refuse — the board pushed
-    // an application for a job we don't track.
-    const posting = await this.prisma.jobBoardPosting.findFirst({
-      where: { integrationId, externalId: incoming.externalJobId },
-      include: { job: { select: { id: true, organizationId: true } } },
-    });
-    if (!posting || posting.job.organizationId !== organizationId) {
-      throw new BadRequestException(
-        `Unknown external job ${incoming.externalJobId}`,
+    // 1. Primary resolution: JobBoardPosting created when C-HR pushed
+    //    the job to the board (or via manual "Add posted job" later).
+    let jobId = await this.resolveJobByPosting(
+      integrationId,
+      organizationId,
+      incoming.externalJobId,
+    );
+
+    // 2. Fallback: title match (Base Hiring parity). Recruiter may have
+    //    posted manually on the board long before connecting C-HR and
+    //    not yet linked the posting — title is the best soft signal.
+    if (!jobId && incoming.externalJobTitle) {
+      jobId = await this.resolveJobByTitle(
+        organizationId,
+        incoming.externalJobTitle,
       );
     }
-    const jobId = posting.job.id;
+
+    // 3. No match — return 200 OK and log; do NOT 4xx (would make the
+    //    board retry forever and lose the candidate). Phase 4 of F11
+    //    will land a "Pending pool" for these orphan CVs so HR can
+    //    attach them by hand. For now, drop with a structured log line.
+    if (!jobId) {
+      this.logger.warn(
+        `Orphan ${board} application — externalJobId="${incoming.externalJobId}" title="${incoming.externalJobTitle ?? ''}" candidateEmail="${incoming.candidate.email}". Pending-pool not implemented; dropped.`,
+      );
+      return {
+        received: true,
+        ingested: false,
+        orphan: true,
+        reason: 'no_matching_job',
+      };
+    }
 
     // Idempotency — if we've already ingested this externalApplicationId
     // for the same source, return the existing row.
@@ -204,6 +224,49 @@ export class WebhookService {
       applicationId: created.id,
       candidateId: candidate.id,
     };
+  }
+
+  private async resolveJobByPosting(
+    integrationId: string,
+    organizationId: string,
+    externalJobId: string,
+  ): Promise<string | null> {
+    if (!externalJobId) return null;
+    const posting = await this.prisma.jobBoardPosting.findFirst({
+      where: { integrationId, externalId: externalJobId },
+      include: { job: { select: { id: true, organizationId: true } } },
+    });
+    if (!posting || posting.job.organizationId !== organizationId) {
+      return null;
+    }
+    return posting.job.id;
+  }
+
+  /**
+   * Soft fallback when a board pushes an application for a job we
+   * weren't told about — recruiter may have created the posting on
+   * the partner site outside C-HR. Matches case-insensitive on title
+   * within the same org. Returns null when ambiguous (2+ matches) so
+   * we don't accidentally land the CV on the wrong job.
+   */
+  private async resolveJobByTitle(
+    organizationId: string,
+    title: string,
+  ): Promise<string | null> {
+    const normalised = title.trim();
+    if (!normalised) return null;
+    const matches = await this.prisma.job.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        status: { in: ['PUBLISHED', 'PAUSED'] },
+        title: { equals: normalised, mode: 'insensitive' },
+      },
+      select: { id: true },
+      take: 2,
+    });
+    if (matches.length !== 1) return null;
+    return matches[0].id;
   }
 }
 
