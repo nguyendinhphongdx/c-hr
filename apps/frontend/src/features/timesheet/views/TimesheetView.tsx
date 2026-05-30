@@ -7,10 +7,10 @@ import {
   CircleX,
   Clock,
   Coffee,
-  FilePlus2,
   Hourglass,
   Loader2,
   LogOut,
+  Plus,
   type LucideIcon,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -19,12 +19,6 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useAuth, useIsAppAdmin } from "@/features/auth";
 import { EmployeePicker, useEmployee } from "@/features/employees";
@@ -108,33 +102,17 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Per-status menu items for "Tạo đơn" actions on timesheet cells. Each
- *  item navigates to `/requests/new?groupCode=...&date=YYYY-MM-DD` —
- *  RequestCreateView reads those query params and skips the group picker.
- *  When approved, the side-effect registry upserts AttendanceLog so the
- *  cell auto-refreshes (useApproveRequest invalidates `["timesheet"]`). */
-interface DayAction {
-  groupCode: "checkin" | "checkout" | "leave";
-  label: string;
-}
-
-const ACTIONS_BY_STATUS: Record<DayStatus, DayAction[]> = {
-  PRESENT: [],
-  WEEKEND: [],
-  LATE: [
-    { groupCode: "checkin", label: "Giải trình đi muộn / sửa giờ vào" },
-    { groupCode: "leave", label: "Xin nghỉ ngày này" },
-  ],
-  EARLY_LEAVE: [
-    { groupCode: "checkout", label: "Giải trình về sớm / sửa giờ ra" },
-    { groupCode: "leave", label: "Xin nghỉ ngày này" },
-  ],
-  ABSENT: [
-    { groupCode: "checkin", label: "Quên chấm vào" },
-    { groupCode: "checkout", label: "Quên chấm ra" },
-    { groupCode: "leave", label: "Xin nghỉ ngày này" },
-  ],
-};
+/** Status badge doubles as a "Tạo đơn" trigger for actionable days.
+ *  Click navigates to `/requests/new?date=YYYY-MM-DD` — the dialog opens
+ *  at the group picker step (user chooses checkin/checkout/leave) with
+ *  the date already seeded into `data`. When approved, the side-effect
+ *  registry upserts AttendanceLog so the cell auto-refreshes
+ *  (useApproveRequest invalidates `["timesheet"]`). */
+const ACTIONABLE_STATUSES: ReadonlySet<DayStatus> = new Set<DayStatus>([
+  "LATE",
+  "EARLY_LEAVE",
+  "ABSENT",
+]);
 
 interface MonthStats {
   present: number;
@@ -504,8 +482,10 @@ function DayCell({
   const displayStatus = deriveDisplayStatus(day);
   const hasLog = !!(day.checkInAt || day.checkOutAt);
   const duration = workedDuration(day.checkInAt, day.checkOutAt);
-  const actions = ACTIONS_BY_STATUS[displayStatus];
-  const showActions = canCreateRequest && actions.length > 0;
+  const isActionable =
+    canCreateRequest && ACTIONABLE_STATUSES.has(displayStatus);
+  const openCreate = () =>
+    router.push(`/requests/new?date=${day.date}`);
   return (
     <div
       className={cn(
@@ -522,21 +502,39 @@ function DayCell({
         >
           {dayNum}
         </span>
-        {displayStatus !== "WEEKEND" && (() => {
-          const Icon = STATUS_ICON[displayStatus];
-          return (
-            <Badge
-              variant="outline"
-              className={cn(
-                "gap-1 text-[10px] font-medium",
-                STATUS_BADGE_CLASSES[displayStatus],
-              )}
-            >
-              <Icon className="h-3 w-3" />
-              {STATUS_LABEL[displayStatus]}
-            </Badge>
-          );
-        })()}
+        {displayStatus !== "WEEKEND" &&
+          (() => {
+            const Icon = STATUS_ICON[displayStatus];
+            const badgeClasses = cn(
+              "gap-1 text-[10px] font-medium",
+              STATUS_BADGE_CLASSES[displayStatus],
+              isActionable &&
+                "cursor-pointer transition-colors hover:brightness-95 hover:ring-1 hover:ring-current/30",
+            );
+            if (isActionable) {
+              return (
+                <button
+                  type="button"
+                  onClick={openCreate}
+                  className="inline-flex items-center"
+                  aria-label={`Tạo đơn cho ngày ${day.date}`}
+                  title="Click để tạo đơn"
+                >
+                  <Badge variant="outline" className={badgeClasses}>
+                    <Icon className="h-3 w-3" />
+                    {STATUS_LABEL[displayStatus]}
+                    <Plus className="h-2.5 w-2.5 opacity-70" />
+                  </Badge>
+                </button>
+              );
+            }
+            return (
+              <Badge variant="outline" className={badgeClasses}>
+                <Icon className="h-3 w-3" />
+                {STATUS_LABEL[displayStatus]}
+              </Badge>
+            );
+          })()}
       </div>
       {(day.shift || hasLog) && (
         <div className="mt-2 space-y-1">
@@ -573,36 +571,6 @@ function DayCell({
               {duration}
             </div>
           )}
-        </div>
-      )}
-      {showActions && (
-        <div className="mt-1.5 border-t border-current/10 pt-1.5">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex w-full items-center justify-center gap-1 rounded-sm px-1 py-0.5 text-[10px] font-medium text-current/80 hover:bg-current/10"
-                aria-label={`Tạo đơn cho ngày ${day.date}`}
-              >
-                <FilePlus2 className="h-3 w-3" />
-                Tạo đơn
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {actions.map((a) => (
-                <DropdownMenuItem
-                  key={a.groupCode}
-                  onSelect={() =>
-                    router.push(
-                      `/requests/new?groupCode=${a.groupCode}&date=${day.date}`,
-                    )
-                  }
-                >
-                  {a.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       )}
     </div>
