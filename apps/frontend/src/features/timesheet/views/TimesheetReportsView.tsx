@@ -18,7 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDepartments } from "@/features/departments";
 
-import { EmployeeReportDrawer } from "../components/EmployeeReportDrawer";
+import { EmployeeReportDialog } from "../components/EmployeeReportDialog";
 import { EmployeeSummaryTable } from "../components/EmployeeSummaryTable";
 import { MonthRangePicker } from "../components/MonthRangePicker";
 import { TimesheetOverviewPanel } from "../components/TimesheetOverviewPanel";
@@ -199,7 +199,7 @@ export function TimesheetReportsView() {
         </Tabs>
       </div>
 
-      <EmployeeReportDrawer
+      <EmployeeReportDialog
         range={range}
         row={selectedRow}
         onClose={() => setSelectedRow(null)}
