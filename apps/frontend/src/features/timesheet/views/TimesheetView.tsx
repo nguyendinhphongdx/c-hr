@@ -7,6 +7,7 @@ import {
   CircleX,
   Clock,
   Coffee,
+  FileText,
   Hourglass,
   Loader2,
   LogOut,
@@ -14,14 +15,25 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useAuth, useIsAppAdmin } from "@/features/auth";
 import { EmployeePicker, useEmployee } from "@/features/employees";
+import {
+  RequestCreateDialog,
+  useRequests,
+  type RequestRow,
+  type RequestStatus,
+} from "@/features/requests";
 import type { ID } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -102,17 +114,67 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Status badge doubles as a "Tạo đơn" trigger for actionable days.
- *  Click navigates to `/requests/new?date=YYYY-MM-DD` — the dialog opens
- *  at the group picker step (user chooses checkin/checkout/leave) with
- *  the date already seeded into `data`. When approved, the side-effect
- *  registry upserts AttendanceLog so the cell auto-refreshes
- *  (useApproveRequest invalidates `["timesheet"]`). */
+/** Status badge + "+" button are CTAs for actionable days. Click opens
+ *  the RequestCreateDialog inline (group picker step) with the date
+ *  pre-seeded. When approved, the side-effect registry upserts
+ *  AttendanceLog so the cell auto-refreshes (useApproveRequest
+ *  invalidates `["timesheet"]`). */
 const ACTIONABLE_STATUSES: ReadonlySet<DayStatus> = new Set<DayStatus>([
   "LATE",
   "EARLY_LEAVE",
   "ABSENT",
 ]);
+
+/** Higher number = takes precedence when a day has multiple requests.
+ *  APPROVED > PENDING > REJECTED — CANCELLED is excluded (treated as
+ *  "no request" for the indicator). */
+const REQUEST_PRIORITY: Record<RequestStatus, number> = {
+  APPROVED: 3,
+  PENDING: 2,
+  REJECTED: 1,
+  CANCELLED: 0,
+};
+
+const REQUEST_INDICATOR_CLASSES: Record<RequestStatus, string> = {
+  APPROVED:
+    "text-emerald-700 dark:text-emerald-400",
+  PENDING:
+    "text-amber-700 dark:text-amber-400",
+  REJECTED:
+    "text-rose-700 dark:text-rose-400",
+  CANCELLED: "",
+};
+
+const REQUEST_INDICATOR_LABEL: Record<RequestStatus, string> = {
+  APPROVED: "Đơn đã duyệt",
+  PENDING: "Đơn chờ duyệt",
+  REJECTED: "Đơn bị từ chối",
+  CANCELLED: "",
+};
+
+/** Date string(s) that a request "covers" for the timesheet overlay.
+ *  - `checkin` / `checkout`: single `data.date`
+ *  - `leave`: range `[data.startDate, data.endDate]` inclusive
+ *  Custom groups fall through to single `data.date` when present. */
+function extractRequestDates(r: RequestRow): string[] {
+  const code = r.group.code;
+  if (code === "leave") {
+    const start = r.data.startDate;
+    const end = r.data.endDate ?? r.data.startDate;
+    if (typeof start !== "string" || typeof end !== "string") return [];
+    if (start === end) return [start];
+    const out: string[] = [];
+    const s = new Date(`${start}T00:00:00Z`);
+    const e = new Date(`${end}T00:00:00Z`);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return [];
+    for (const d = new Date(s); d <= e; d.setUTCDate(d.getUTCDate() + 1)) {
+      out.push(d.toISOString().slice(0, 10));
+    }
+    return out;
+  }
+  const single = r.data.date;
+  return typeof single === "string" ? [single] : [];
+}
 
 interface MonthStats {
   present: number;
@@ -297,6 +359,31 @@ export function TimesheetView() {
   const employee = useEmployee(selectedEmployeeId);
   const sheet = useTimesheet(selectedEmployeeId, year, month);
 
+  // Track which day's cell triggered the "Tạo đơn" dialog. Set on click,
+  // cleared on close. RequestCreateDialog reads `prefill.date` and opens
+  // at the group picker step with the date seeded into `data`.
+  const [createDate, setCreateDate] = useState<string | null>(null);
+
+  // Only pull "mine" requests when viewing own sheet — HR viewing
+  // someone else's sheet doesn't need (or have permission for) the
+  // indicator. Saves a query and avoids a confusing UX.
+  const isOwnSheet = selectedEmployeeId === ownEmployeeId;
+  const myRequests = useRequests(isOwnSheet ? { scope: "mine" } : {});
+  const requestByDate = useMemo(() => {
+    const map = new Map<string, RequestStatus>();
+    if (!isOwnSheet || !myRequests.data) return map;
+    for (const r of myRequests.data) {
+      if (REQUEST_PRIORITY[r.status] === 0) continue;
+      for (const d of extractRequestDates(r)) {
+        const cur = map.get(d);
+        if (!cur || REQUEST_PRIORITY[r.status] > REQUEST_PRIORITY[cur]) {
+          map.set(d, r.status);
+        }
+      }
+    }
+    return map;
+  }, [isOwnSheet, myRequests.data]);
+
   const stats = useMemo(() => computeStats(sheet.data?.days ?? []), [sheet.data?.days]);
 
   const updateParams = (mutate: (p: URLSearchParams) => void) => {
@@ -388,11 +475,19 @@ export function TimesheetView() {
           ) : sheet.data ? (
             <CalendarGrid
               days={sheet.data.days}
-              canCreateRequest={selectedEmployeeId === ownEmployeeId}
+              canCreateRequest={isOwnSheet}
+              onCreateRequest={setCreateDate}
+              requestByDate={requestByDate}
             />
           ) : null}
         </CardContent>
       </Card>
+
+      <RequestCreateDialog
+        open={!!createDate}
+        onClose={() => setCreateDate(null)}
+        prefill={createDate ? { date: createDate } : undefined}
+      />
     </PageContainer>
   );
 }
@@ -400,9 +495,13 @@ export function TimesheetView() {
 function CalendarGrid({
   days,
   canCreateRequest,
+  onCreateRequest,
+  requestByDate,
 }: {
   days: TimesheetDay[];
   canCreateRequest: boolean;
+  onCreateRequest: (date: string) => void;
+  requestByDate: Map<string, RequestStatus>;
 }) {
   if (days.length === 0) return null;
   const today = todayKey();
@@ -451,6 +550,8 @@ function CalendarGrid({
               day={cell.day}
               isToday={cell.day.date === today}
               canCreateRequest={canCreateRequest}
+              onCreateRequest={onCreateRequest}
+              requestStatus={requestByDate.get(cell.day.date) ?? null}
             />
           ) : (
             <div
@@ -472,20 +573,22 @@ function DayCell({
   day,
   isToday,
   canCreateRequest,
+  onCreateRequest,
+  requestStatus,
 }: {
   day: TimesheetDay;
   isToday: boolean;
   canCreateRequest: boolean;
+  onCreateRequest: (date: string) => void;
+  requestStatus: RequestStatus | null;
 }) {
-  const router = useRouter();
   const dayNum = Number(day.date.slice(8, 10));
   const displayStatus = deriveDisplayStatus(day);
   const hasLog = !!(day.checkInAt || day.checkOutAt);
   const duration = workedDuration(day.checkInAt, day.checkOutAt);
   const isActionable =
     canCreateRequest && ACTIONABLE_STATUSES.has(displayStatus);
-  const openCreate = () =>
-    router.push(`/requests/new?date=${day.date}`);
+  const openCreate = () => onCreateRequest(day.date);
   return (
     <div
       className={cn(
@@ -493,7 +596,7 @@ function DayCell({
         STATUS_CLASSES[displayStatus],
       )}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-1">
         <span
           className={cn(
             "inline-flex h-6 w-6 items-center justify-center rounded text-xs font-semibold",
@@ -502,16 +605,23 @@ function DayCell({
         >
           {dayNum}
         </span>
-        {displayStatus !== "WEEKEND" &&
-          (() => {
-            const Icon = STATUS_ICON[displayStatus];
-            const badgeClasses = cn(
-              "gap-1 text-[10px] font-medium",
-              STATUS_BADGE_CLASSES[displayStatus],
-              isActionable &&
-                "cursor-pointer transition-colors hover:brightness-95 hover:ring-1 hover:ring-current/30",
-            );
-            if (isActionable) {
+        <div className="flex items-center gap-1">
+          {displayStatus !== "WEEKEND" &&
+            (() => {
+              const Icon = STATUS_ICON[displayStatus];
+              const badgeClasses = cn(
+                "gap-1 text-[10px] font-medium",
+                STATUS_BADGE_CLASSES[displayStatus],
+                isActionable &&
+                  "cursor-pointer transition-colors hover:brightness-95 hover:ring-1 hover:ring-current/30",
+              );
+              const inner = (
+                <Badge variant="outline" className={badgeClasses}>
+                  <Icon className="h-3 w-3" />
+                  {STATUS_LABEL[displayStatus]}
+                </Badge>
+              );
+              if (!isActionable) return inner;
               return (
                 <button
                   type="button"
@@ -520,21 +630,26 @@ function DayCell({
                   aria-label={`Tạo đơn cho ngày ${day.date}`}
                   title="Click để tạo đơn"
                 >
-                  <Badge variant="outline" className={badgeClasses}>
-                    <Icon className="h-3 w-3" />
-                    {STATUS_LABEL[displayStatus]}
-                    <Plus className="h-2.5 w-2.5 opacity-70" />
-                  </Badge>
+                  {inner}
                 </button>
               );
-            }
-            return (
-              <Badge variant="outline" className={badgeClasses}>
-                <Icon className="h-3 w-3" />
-                {STATUS_LABEL[displayStatus]}
-              </Badge>
-            );
-          })()}
+            })()}
+          {isActionable && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={openCreate}
+                  aria-label={`Tạo đơn cho ngày ${day.date}`}
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-current/70 transition-colors hover:bg-current/10 hover:text-current"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Tạo đơn</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
       </div>
       {(day.shift || hasLog) && (
         <div className="mt-2 space-y-1">
@@ -571,6 +686,19 @@ function DayCell({
               {duration}
             </div>
           )}
+        </div>
+      )}
+      {requestStatus && (
+        <div
+          className={cn(
+            "mt-1.5 flex items-center gap-1 border-t border-current/10 pt-1 text-[10px] font-medium",
+            REQUEST_INDICATOR_CLASSES[requestStatus],
+          )}
+        >
+          <FileText className="h-3 w-3" />
+          <span className="truncate">
+            {REQUEST_INDICATOR_LABEL[requestStatus]}
+          </span>
         </div>
       )}
     </div>
