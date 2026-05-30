@@ -494,10 +494,13 @@ function StatusBreakdownCard({ data }: { data: StatusBreakdownPoint[] }) {
                   borderRadius: 6,
                   fontSize: 12,
                 }}
-                formatter={(value: number, name: string) => [
-                  `${value} ngày (${((value / total) * 100).toFixed(0)}%)`,
-                  name,
-                ]}
+                formatter={(value, name) => {
+                  const n = Number(value);
+                  return [
+                    `${n} ngày (${((n / total) * 100).toFixed(0)}%)`,
+                    String(name ?? ""),
+                  ];
+                }}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -643,10 +646,10 @@ function DailyHoursCard({ data }: { data: DailyHoursPoint[] }) {
                 borderRadius: 6,
                 fontSize: 12,
               }}
-              formatter={(value: number, _name, ctx) => {
-                const payload = ctx.payload as DailyHoursPoint | undefined;
+              formatter={(value, _name, ctx) => {
+                const payload = ctx?.payload as DailyHoursPoint | undefined;
                 return [
-                  `${value}h · ${payload ? STATUS_LABEL[payload.status] : ""}`,
+                  `${Number(value)}h · ${payload ? STATUS_LABEL[payload.status] : ""}`,
                   "Giờ làm",
                 ];
               }}
@@ -744,15 +747,16 @@ function CheckInScatterCard({
                 borderRadius: 6,
                 fontSize: 12,
               }}
-              formatter={(value: number, name: string, ctx) => {
-                const payload = ctx.payload as CheckInScatterPoint | undefined;
+              formatter={(value, name, ctx) => {
+                const payload = ctx?.payload as CheckInScatterPoint | undefined;
+                const n = Number(value);
                 if (name === "time") {
                   return [
-                    `${fmtClock(Math.round(value * 60))} · ${payload ? STATUS_LABEL[payload.status] : ""}`,
+                    `${fmtClock(Math.round(n * 60))} · ${payload ? STATUS_LABEL[payload.status] : ""}`,
                     "Giờ vào",
                   ];
                 }
-                return [value, name];
+                return [String(value ?? ""), String(name ?? "")];
               }}
               labelFormatter={(label) => `Ngày ${label}`}
             />
