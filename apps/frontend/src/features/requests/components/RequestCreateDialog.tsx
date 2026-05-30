@@ -273,6 +273,13 @@ export function RequestCreateDialog({
 
         {step === "pick-group" && (
           <div className="flex max-h-[60vh] flex-col gap-2 py-1">
+            {prefill?.date && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
+                Chỉ <strong>Đơn quên chấm vào</strong> / <strong>quên chấm ra</strong> sẽ
+                cập nhật giờ chấm trên bảng giờ làm khi được duyệt. Đơn xin
+                nghỉ chỉ ghi nhận, <strong>không thay đổi giờ chấm</strong>.
+              </div>
+            )}
             {groups.length > 0 && (
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />

@@ -30,10 +30,18 @@ import { useAuth, useIsAppAdmin } from "@/features/auth";
 import { EmployeePicker, useEmployee } from "@/features/employees";
 import {
   RequestCreateDialog,
+  RequestPreview,
+  useRequest,
   useRequests,
   type RequestRow,
   type RequestStatus,
 } from "@/features/requests";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { ID } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -363,6 +371,10 @@ export function TimesheetView() {
   // cleared on close. RequestCreateDialog reads `prefill.date` and opens
   // at the group picker step with the date seeded into `data`.
   const [createDate, setCreateDate] = useState<string | null>(null);
+  // ID of request opened in the "Xem đơn" preview dialog (click footer
+  // indicator). Null = dialog closed.
+  const [viewRequestId, setViewRequestId] = useState<ID | null>(null);
+  const viewRequest = useRequest(viewRequestId);
 
   // Only pull "mine" requests when viewing own sheet — HR viewing
   // someone else's sheet doesn't need (or have permission for) the
@@ -370,14 +382,14 @@ export function TimesheetView() {
   const isOwnSheet = selectedEmployeeId === ownEmployeeId;
   const myRequests = useRequests(isOwnSheet ? { scope: "mine" } : {});
   const requestByDate = useMemo(() => {
-    const map = new Map<string, RequestStatus>();
+    const map = new Map<string, { id: ID; status: RequestStatus }>();
     if (!isOwnSheet || !myRequests.data) return map;
     for (const r of myRequests.data) {
       if (REQUEST_PRIORITY[r.status] === 0) continue;
       for (const d of extractRequestDates(r)) {
         const cur = map.get(d);
-        if (!cur || REQUEST_PRIORITY[r.status] > REQUEST_PRIORITY[cur]) {
-          map.set(d, r.status);
+        if (!cur || REQUEST_PRIORITY[r.status] > REQUEST_PRIORITY[cur.status]) {
+          map.set(d, { id: r.id, status: r.status });
         }
       }
     }
@@ -477,6 +489,7 @@ export function TimesheetView() {
               days={sheet.data.days}
               canCreateRequest={isOwnSheet}
               onCreateRequest={setCreateDate}
+              onViewRequest={setViewRequestId}
               requestByDate={requestByDate}
             />
           ) : null}
@@ -488,6 +501,20 @@ export function TimesheetView() {
         onClose={() => setCreateDate(null)}
         prefill={createDate ? { date: createDate } : undefined}
       />
+
+      <Dialog
+        open={!!viewRequestId}
+        onOpenChange={(o) => !o && setViewRequestId(null)}
+      >
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Chi tiết đơn</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[70vh] overflow-y-auto">
+            <RequestPreview request={viewRequest.data ?? null} />
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }
@@ -496,12 +523,14 @@ function CalendarGrid({
   days,
   canCreateRequest,
   onCreateRequest,
+  onViewRequest,
   requestByDate,
 }: {
   days: TimesheetDay[];
   canCreateRequest: boolean;
   onCreateRequest: (date: string) => void;
-  requestByDate: Map<string, RequestStatus>;
+  onViewRequest: (id: ID) => void;
+  requestByDate: Map<string, { id: ID; status: RequestStatus }>;
 }) {
   if (days.length === 0) return null;
   const today = todayKey();
@@ -551,7 +580,8 @@ function CalendarGrid({
               isToday={cell.day.date === today}
               canCreateRequest={canCreateRequest}
               onCreateRequest={onCreateRequest}
-              requestStatus={requestByDate.get(cell.day.date) ?? null}
+              onViewRequest={onViewRequest}
+              requestRef={requestByDate.get(cell.day.date) ?? null}
             />
           ) : (
             <div
@@ -574,13 +604,15 @@ function DayCell({
   isToday,
   canCreateRequest,
   onCreateRequest,
-  requestStatus,
+  onViewRequest,
+  requestRef,
 }: {
   day: TimesheetDay;
   isToday: boolean;
   canCreateRequest: boolean;
   onCreateRequest: (date: string) => void;
-  requestStatus: RequestStatus | null;
+  onViewRequest: (id: ID) => void;
+  requestRef: { id: ID; status: RequestStatus } | null;
 }) {
   const dayNum = Number(day.date.slice(8, 10));
   const displayStatus = deriveDisplayStatus(day);
@@ -688,18 +720,21 @@ function DayCell({
           )}
         </div>
       )}
-      {requestStatus && (
-        <div
+      {requestRef && (
+        <button
+          type="button"
+          onClick={() => onViewRequest(requestRef.id)}
           className={cn(
-            "mt-1.5 flex items-center gap-1 border-t border-current/10 pt-1 text-[10px] font-medium",
-            REQUEST_INDICATOR_CLASSES[requestStatus],
+            "mt-1.5 flex w-full items-center gap-1 border-t border-current/10 pt-1 text-left text-[10px] font-medium transition-colors hover:bg-current/5",
+            REQUEST_INDICATOR_CLASSES[requestRef.status],
           )}
+          aria-label={`Xem đơn ngày ${day.date}`}
         >
           <FileText className="h-3 w-3" />
           <span className="truncate">
-            {REQUEST_INDICATOR_LABEL[requestStatus]}
+            {REQUEST_INDICATOR_LABEL[requestRef.status]}
           </span>
-        </div>
+        </button>
       )}
     </div>
   );
