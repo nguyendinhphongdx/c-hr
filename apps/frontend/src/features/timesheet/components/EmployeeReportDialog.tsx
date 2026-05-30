@@ -326,8 +326,8 @@ export function EmployeeReportDialog({
 
   return (
     <Dialog open={!!row} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-5xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+        <DialogHeader className="border-b px-6 pt-6 pb-4">
           <DialogTitle>{row?.name ?? row?.code ?? ""}</DialogTitle>
           {row && (
             <p className="text-xs text-muted-foreground">
@@ -341,7 +341,7 @@ export function EmployeeReportDialog({
         </DialogHeader>
 
         {row && (
-          <div className="space-y-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
             <KpiStrip row={row} />
 
             {isLoading ? (
