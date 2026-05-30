@@ -38,17 +38,30 @@ import { DynamicForm } from "./DynamicForm";
 
 type Step = "pick-group" | "fill-form";
 
+/**
+ * Deep-link prefill for "Tạo đơn" buttons in timesheet cells. `groupCode`
+ * selects the group (e.g. `checkin` for LATE/ABSENT), `date` seeds the
+ * date-shaped fields so user only has to fill time + reason.
+ */
+export interface RequestCreatePrefill {
+  groupCode?: string;
+  date?: string;
+}
+
 interface RequestCreateDialogProps {
   open: boolean;
   onClose: () => void;
   /** When set, skip step 1 and prefill form from the source request. */
   cloneFromId?: ID;
+  /** Deep-link prefill from timesheet/calendar. Ignored when cloneFromId set. */
+  prefill?: RequestCreatePrefill;
 }
 
 export function RequestCreateDialog({
   open,
   onClose,
   cloneFromId,
+  prefill,
 }: RequestCreateDialogProps) {
   const { user } = useAuth();
   const employeeId = user?.employeeId ?? null;
@@ -58,8 +71,10 @@ export function RequestCreateDialog({
   const create = useCreateRequest();
   const cloneSource = useRequest(cloneFromId ?? null);
 
+  const hasPrefill = !cloneFromId && !!(prefill?.groupCode || prefill?.date);
+
   const [step, setStep] = useState<Step>(
-    cloneFromId ? "fill-form" : "pick-group",
+    cloneFromId || prefill?.groupCode ? "fill-form" : "pick-group",
   );
   const [groupId, setGroupId] = useState<string | null>(null);
   const [data, setData] = useState<Record<string, unknown>>({});
@@ -69,18 +84,25 @@ export function RequestCreateDialog({
   // Track which clone source we already applied so we don't keep
   // overwriting user edits across re-renders.
   const [clonedFrom, setClonedFrom] = useState<string | null>(null);
+  const [prefilledKey, setPrefilledKey] = useState<string | null>(null);
   // Reset local form state on each fresh open. Render-time conditional
   // init — see ADR react-hooks/set-state-in-effect.
-  const wantedSyncKey = open ? `${cloneFromId ?? "new"}` : "closed";
+  const prefillKey = hasPrefill
+    ? `${prefill?.groupCode ?? ""}|${prefill?.date ?? ""}`
+    : "";
+  const wantedSyncKey = open
+    ? `${cloneFromId ?? "new"}|${prefillKey}`
+    : "closed";
   const [syncKey, setSyncKey] = useState<string>(wantedSyncKey);
   if (open && syncKey !== wantedSyncKey) {
     setSyncKey(wantedSyncKey);
-    setStep(cloneFromId ? "fill-form" : "pick-group");
+    setStep(cloneFromId || prefill?.groupCode ? "fill-form" : "pick-group");
     setGroupId(null);
     setData({});
     setTitle("");
     setApproverId("");
     setClonedFrom(null);
+    setPrefilledKey(null);
     setGroupSearch("");
   }
 
@@ -111,11 +133,36 @@ export function RequestCreateDialog({
     setClonedFrom(cloneFromId);
   }
 
+  // Apply deep-link prefill once groups have loaded. One-shot via
+  // prefilledKey guard. Seeds every date-shaped field key the 3 MVP
+  // groups use (`date`, `startDate`, `endDate`) so the dialog works for
+  // checkin/checkout AND single-day leave from one call site.
+  if (
+    open &&
+    hasPrefill &&
+    prefilledKey !== prefillKey &&
+    groups.length > 0
+  ) {
+    if (prefill?.groupCode) {
+      const match = groups.find((g) => g.code === prefill.groupCode);
+      if (match) setGroupId(match.id);
+    }
+    if (prefill?.date) {
+      setData((prev) => ({
+        ...prev,
+        date: prefill.date,
+        startDate: prefill.date,
+        endDate: prefill.date,
+      }));
+    }
+    setPrefilledKey(prefillKey);
+  }
+
   // Default approver = suggested. One-shot. Skip for clones — force re-pick.
   if (
     open &&
     !approverId &&
-    !cloneFromId &&
+    !cloneFromId && !prefill?.groupCode &&
     candidates.data?.suggested?.employeeId
   ) {
     setApproverId(candidates.data.suggested.employeeId);
@@ -131,7 +178,7 @@ export function RequestCreateDialog({
   };
 
   const handleBack = () => {
-    if (cloneFromId) return;
+    if (cloneFromId || prefill?.groupCode) return;
     setGroupId(null);
     setStep("pick-group");
   };
@@ -208,7 +255,7 @@ export function RequestCreateDialog({
       <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            {step === "fill-form" && !cloneFromId && (
+            {step === "fill-form" && !cloneFromId && !prefill?.groupCode && (
               <button
                 type="button"
                 onClick={handleBack}
@@ -360,7 +407,7 @@ export function RequestCreateDialog({
             </Button>
           ) : (
             <>
-              {!cloneFromId && (
+              {!cloneFromId && !prefill?.groupCode && (
                 <Button
                   type="button"
                   variant="outline"
@@ -370,7 +417,7 @@ export function RequestCreateDialog({
                   Quay lại
                 </Button>
               )}
-              {cloneFromId && (
+              {(cloneFromId || prefill?.groupCode) && (
                 <Button
                   type="button"
                   variant="outline"
