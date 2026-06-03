@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import type { ID } from "@/lib/types";
 
@@ -24,5 +24,9 @@ export function useTimesheet(
       timesheetService.get({ employeeId: employeeId as ID, year, month }),
     enabled: !!employeeId,
     staleTime: 30 * 1000,
+    // Keep the prior month/employee's grid visible while refetching so
+    // the page doesn't flicker on month-nav or employee-switch. The
+    // consumer uses `isPlaceholderData` to dim the stale view.
+    placeholderData: keepPreviousData,
   });
 }

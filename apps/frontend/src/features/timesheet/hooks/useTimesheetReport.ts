@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { timesheetReportService } from "../services/reportService";
 import type { TimesheetSummaryQuery } from "../types/report";
@@ -18,6 +18,7 @@ export function useTimesheetSummary(query: TimesheetSummaryQuery, enabled = true
     queryFn: () => timesheetReportService.summary(query),
     enabled,
     staleTime: 30 * 1000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -27,5 +28,6 @@ export function useTimesheetOverview(query: TimesheetSummaryQuery, enabled = tru
     queryFn: () => timesheetReportService.overview(query),
     enabled,
     staleTime: 30 * 1000,
+    placeholderData: keepPreviousData,
   });
 }

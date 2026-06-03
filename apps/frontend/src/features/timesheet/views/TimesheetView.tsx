@@ -9,7 +9,6 @@ import {
   Coffee,
   FileText,
   Hourglass,
-  Loader2,
   LogOut,
   Plus,
   type LucideIcon,
@@ -397,6 +396,11 @@ export function TimesheetView() {
   }, [isOwnSheet, myRequests.data]);
 
   const stats = useMemo(() => computeStats(sheet.data?.days ?? []), [sheet.data?.days]);
+  // `isPlaceholderData` is true while a refetch (employee/month switch)
+  // is in flight and we're showing the previous result. Drives the
+  // subtle dim/cursor change so the user knows new data is coming.
+  const isRefetching = sheet.isPlaceholderData && sheet.isFetching;
+  const hasData = !!sheet.data;
 
   const updateParams = (mutate: (p: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -468,31 +472,48 @@ export function TimesheetView() {
         </div>
       </header>
 
-      <StatsRow stats={stats} loading={sheet.isLoading} />
+      <StatsRow stats={stats} loading={!hasData && sheet.isLoading} />
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between text-base">
-            <span>{sheet.data?.workSchedule?.name ?? "Chưa cấu hình lịch"}</span>
+            <span className="inline-flex items-center gap-2">
+              {sheet.data?.workSchedule?.name ?? "Chưa cấu hình lịch"}
+              {isRefetching && (
+                <span className="text-[11px] font-normal text-muted-foreground">
+                  Đang đồng bộ…
+                </span>
+              )}
+            </span>
             <Legend />
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {sheet.isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Đang tải…
+          {sheet.error ? (
+            <p className="py-6 text-sm text-destructive">
+              Không tải được bảng giờ làm.
+            </p>
+          ) : (
+            <div
+              aria-busy={sheet.isFetching || undefined}
+              className={cn(
+                "transition-opacity",
+                isRefetching && "opacity-60",
+              )}
+            >
+              {hasData ? (
+                <CalendarGrid
+                  days={sheet.data!.days}
+                  canCreateRequest={isOwnSheet}
+                  onCreateRequest={setCreateDate}
+                  onViewRequest={setViewRequestId}
+                  requestByDate={requestByDate}
+                />
+              ) : (
+                <CalendarSkeleton year={year} month={month} />
+              )}
             </div>
-          ) : sheet.error ? (
-            <p className="py-6 text-sm text-destructive">Không tải được bảng giờ làm.</p>
-          ) : sheet.data ? (
-            <CalendarGrid
-              days={sheet.data.days}
-              canCreateRequest={isOwnSheet}
-              onCreateRequest={setCreateDate}
-              onViewRequest={setViewRequestId}
-              requestByDate={requestByDate}
-            />
-          ) : null}
+          )}
         </CardContent>
       </Card>
 
@@ -736,6 +757,35 @@ function DayCell({
           </span>
         </button>
       )}
+    </div>
+  );
+}
+
+/**
+ * Empty-state grid with the same shape as a real month — used on the
+ * very first load before any data exists, so the page doesn't jump
+ * from a spinner to a full-height grid.
+ */
+function CalendarSkeleton({ year, month }: { year: number; month: number }) {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  const padFront = firstWeekday === 0 ? 6 : firstWeekday - 1;
+  const total = Math.ceil((padFront + daysInMonth) / 7) * 7;
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-7 gap-2 text-center text-xs font-medium text-muted-foreground">
+        {DAY_LABELS.map((d) => (
+          <div key={d}>{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-2">
+        {Array.from({ length: total }).map((_, i) => (
+          <div
+            key={i}
+            className="min-h-28 animate-pulse rounded-md border border-border/40 bg-muted/30"
+          />
+        ))}
+      </div>
     </div>
   );
 }
