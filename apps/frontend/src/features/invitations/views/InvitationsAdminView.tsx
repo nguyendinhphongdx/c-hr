@@ -177,6 +177,12 @@ const KIND_LABEL: Record<InvitationKind, string> = {
   SELF_REQUEST: "Yêu cầu",
 };
 
+const ROLE_LABEL: Record<string, string> = {
+  user: "Thành viên",
+  admin: "Admin tổ chức",
+  sysowner: "Sysowner",
+};
+
 function InvitationRow({
   row,
   historical,
@@ -213,6 +219,11 @@ function InvitationRow({
             <span className="rounded-sm border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
               {KIND_LABEL[row.kind]}
             </span>
+            {row.invitedRole && row.invitedRole !== "user" && (
+              <span className="rounded-sm border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
+                {ROLE_LABEL[row.invitedRole] ?? row.invitedRole}
+              </span>
+            )}
           </div>
           {row.name && (
             <div className="text-xs text-muted-foreground">{row.email}</div>

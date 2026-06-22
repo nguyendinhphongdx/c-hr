@@ -9,12 +9,16 @@ export type InvitationStatus =
   | "CANCELLED"
   | "EXPIRED";
 
+/** Mirrors Prisma `Role` enum — keep in sync. */
+export type InvitedRole = "sysowner" | "admin" | "user";
+
 export interface Invitation {
   id: ID;
   organizationId: ID;
   email: string;
   name: Nullable<string>;
   kind: InvitationKind;
+  invitedRole: InvitedRole;
   inviteToken: Nullable<string>;
   expiresAt: Nullable<ISODate>;
   invitedById: Nullable<ID>;
@@ -37,6 +41,7 @@ export interface CreateInviteInput {
   email: string;
   name?: string;
   message?: string;
+  role?: InvitedRole;
 }
 
 export interface ListInvitationsQuery {
@@ -58,6 +63,7 @@ export interface PublicInvitationView {
   email: string;
   name: Nullable<string>;
   message: Nullable<string>;
+  invitedRole: InvitedRole;
   status: InvitationStatus;
   expiresAt: Nullable<ISODate>;
 }

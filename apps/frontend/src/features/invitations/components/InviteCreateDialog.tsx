@@ -15,10 +15,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 import { useCreateInvitation } from "../hooks/useInvitations";
-import type { InvitationCreateResponse } from "../types";
+import type { InvitationCreateResponse, InvitedRole } from "../types";
 
 interface InviteCreateDialogProps {
   open: boolean;
@@ -31,6 +38,7 @@ export function InviteCreateDialog({ open, onClose }: InviteCreateDialogProps) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
+  const [role, setRole] = useState<InvitedRole>("user");
   const [created, setCreated] = useState<InvitationCreateResponse | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -42,6 +50,7 @@ export function InviteCreateDialog({ open, onClose }: InviteCreateDialogProps) {
     setEmail("");
     setName("");
     setMessage("");
+    setRole("user");
     setCreated(null);
     setCopied(false);
   }
@@ -57,6 +66,7 @@ export function InviteCreateDialog({ open, onClose }: InviteCreateDialogProps) {
         email: email.trim(),
         name: name.trim() || undefined,
         message: message.trim() || undefined,
+        role,
       });
       setCreated(result);
       toast.success("Đã tạo lời mời");
@@ -97,11 +107,22 @@ export function InviteCreateDialog({ open, onClose }: InviteCreateDialogProps) {
             <div className="rounded-md border bg-muted/40 p-3 text-sm">
               <div className="text-xs text-muted-foreground">Email được mời</div>
               <div className="font-medium">{created.email}</div>
-              {created.expiresAt && (
-                <div className="mt-1 text-[11px] text-muted-foreground">
-                  Hết hạn: {new Date(created.expiresAt).toLocaleString("vi-VN")}
-                </div>
-              )}
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                Quyền:{" "}
+                <span className="font-medium text-foreground">
+                  {created.invitedRole === "admin"
+                    ? "Admin tổ chức"
+                    : created.invitedRole === "sysowner"
+                      ? "Sysowner"
+                      : "Thành viên"}
+                </span>
+                {created.expiresAt && (
+                  <>
+                    {" · "}Hết hạn:{" "}
+                    {new Date(created.expiresAt).toLocaleString("vi-VN")}
+                  </>
+                )}
+              </div>
             </div>
             <div className="grid gap-1.5">
               <Label className="text-xs">Link kích hoạt</Label>
@@ -158,6 +179,30 @@ export function InviteCreateDialog({ open, onClose }: InviteCreateDialogProps) {
                 placeholder="vd: Nguyễn Văn Tuấn"
                 disabled={create.isPending}
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="invite-role">Quyền trong tổ chức</Label>
+              <Select
+                value={role}
+                onValueChange={(v) => setRole(v as InvitedRole)}
+                disabled={create.isPending}
+              >
+                <SelectTrigger id="invite-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">
+                    Thành viên — quyền cơ bản (xem dữ liệu của mình)
+                  </SelectItem>
+                  <SelectItem value="admin">
+                    Admin tổ chức — toàn quyền (mời, đổi cấu hình, đổi role)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Có thể đổi sau qua trang Nhân sự. Quyền HRM appadmin gán
+                riêng qua Settings sau khi user vào tổ chức.
+              </p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="invite-message">

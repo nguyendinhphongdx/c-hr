@@ -22,6 +22,7 @@ export type {
   InvitationCreateResponse,
   InvitationKind,
   InvitationStatus,
+  InvitedRole,
   ListInvitationsQuery,
   PublicInvitationView,
 } from "./types";

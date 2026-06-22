@@ -34,6 +34,7 @@ export interface PublicInvitationView {
   email: string;
   name: string | null;
   message: string | null;
+  invitedRole: Role;
   status: InvitationStatus;
   expiresAt: Date | null;
 }
@@ -57,11 +58,23 @@ export class InvitationService {
     email: string;
     name?: string;
     message?: string;
+    role?: Role;
   }): Promise<Invitation> {
     const orgId = this.ctx.requireOrg();
     this.ctx.requireAdmin(orgId);
     const userId = this.ctx.requireUserId();
+    const callerRole = this.ctx.role;
     const normalizedEmail = input.email.trim().toLowerCase();
+    const invitedRole = input.role ?? Role.user;
+
+    // Authority check: admin can grant admin/user (within their Org);
+    // sysowner can grant anything. Block invites granting sysowner
+    // from an Org-scoped admin — that would be a privilege escalation.
+    if (invitedRole === Role.sysowner && callerRole !== Role.sysowner) {
+      throw new BadRequestException(
+        'Chỉ sysowner mới mời được sysowner. Chọn Admin hoặc Thành viên.',
+      );
+    }
 
     // Refuse when an active User already exists in this Org for the
     // same email — admin should be using /employees to manage them.
@@ -99,6 +112,7 @@ export class InvitationService {
       email: normalizedEmail,
       name: input.name?.trim() || null,
       kind: InvitationKind.ADMIN_INVITE,
+      invitedRole,
       inviteToken,
       expiresAt,
       invitedById: userId,
@@ -197,7 +211,7 @@ export class InvitationService {
           email: row.email,
           password: placeholderPassword,
           name: row.name,
-          role: Role.user,
+          role: row.invitedRole,
           organizationId: orgId,
           ssoLinks: {
             create: {
@@ -268,6 +282,7 @@ export class InvitationService {
       email: row.email,
       name: row.name,
       message: row.message,
+      invitedRole: row.invitedRole,
       status: row.status,
       expiresAt: row.expiresAt,
     };
@@ -306,7 +321,7 @@ export class InvitationService {
           email: row.email,
           password: passwordHash,
           name: input.name?.trim() || row.name,
-          role: Role.user,
+          role: row.invitedRole,
           organizationId: row.organizationId,
         },
       });
@@ -385,7 +400,7 @@ export class InvitationService {
           email: row.email,
           password: placeholder,
           name: input.name || row.name,
-          role: Role.user,
+          role: row.invitedRole,
           organizationId: row.organizationId,
           ssoLinks: {
             create: {

@@ -50,7 +50,12 @@ export class InvitationController {
   @Post()
   @Auditable({ action: 'INVITATION_CREATE', entity: 'Invitation' })
   async create(@Body() dto: CreateAdminInviteDto) {
-    const row = await this.service.createAdminInvite(dto);
+    const row = await this.service.createAdminInvite({
+      email: dto.email,
+      name: dto.name,
+      message: dto.message,
+      role: dto.role,
+    });
     return {
       ...row,
       /** Pre-built URL the admin can copy / share. Frontend reads

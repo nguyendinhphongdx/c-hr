@@ -1448,6 +1448,10 @@ model Invitation {
   email           String            @db.VarChar(320)
   name            String?           @db.VarChar(255)
   kind            InvitationKind
+  /// Role granted to the resulting User on accept/approve. Defaults to
+  /// `user`. ADMIN_INVITE lets the inviter override (subject to their
+  /// own authority); SELF_REQUEST always uses `user`.
+  invitedRole     Role              @default(user) @map("invited_role")
 
   /// ADMIN_INVITE only — random URL-safe token, used in /invite/<token>.
   inviteToken     String?           @unique @map("invite_token")

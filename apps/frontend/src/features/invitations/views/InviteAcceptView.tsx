@@ -93,6 +93,16 @@ export function InviteAcceptView({ token }: InviteAcceptViewProps) {
           <div className="space-y-1 text-sm">
             <div className="text-muted-foreground">Bạn được mời với email</div>
             <div className="font-medium">{inv.email}</div>
+            <div className="mt-1 text-xs">
+              <span className="text-muted-foreground">Quyền: </span>
+              <span className="font-medium">
+                {inv.invitedRole === "admin"
+                  ? "Admin tổ chức"
+                  : inv.invitedRole === "sysowner"
+                    ? "Sysowner"
+                    : "Thành viên"}
+              </span>
+            </div>
             {inv.message && (
               <blockquote className="mt-2 border-l-2 border-border pl-3 text-xs italic text-muted-foreground">
                 {inv.message}
