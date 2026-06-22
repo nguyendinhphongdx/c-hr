@@ -17,7 +17,6 @@ import {
   Shield,
   UserPlus,
   Users,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -118,10 +117,6 @@ const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
-  {
-    label: "Lương",
-    items: [{ href: "/payroll", label: "Bảng lương", icon: Wallet }],
-  },
 ];
 
 interface SidebarProps {
@@ -153,7 +148,6 @@ export function Sidebar({ collapsed }: SidebarProps) {
 
       <nav className="flex-1 space-y-3 overflow-y-auto p-2 scrollbar-thin">
         {NAV_SECTIONS.map((section, idx) => {
-          if (section.label === "Lương" && !showAdmin) return null;
           // Filter section-defined items by adminOnly flag — admin-gated
           // links collapse out for regular users.
           const items = section.items.filter(
