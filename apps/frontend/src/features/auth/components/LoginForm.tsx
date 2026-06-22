@@ -95,17 +95,7 @@ export function LoginForm() {
     <div className="space-y-5">
       <SocialAuthButtons />
 
-      <details className="group rounded-md border border-border bg-card/50">
-        <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground">
-          Đăng nhập SSO doanh nghiệp (Microsoft Entra)
-          <span className="text-[10px] transition-transform group-open:rotate-180">
-            ▾
-          </span>
-        </summary>
-        <div className="px-3 pb-3 pt-1">
-          <MicrosoftLoginButton />
-        </div>
-      </details>
+      <MicrosoftLoginButton className="w-full" />
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">

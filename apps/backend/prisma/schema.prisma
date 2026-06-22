@@ -88,7 +88,6 @@ model Organization {
   candidates           Candidate[]
   applications         Application[]
   jobBoardIntegrations JobBoardIntegration[]
-  ssoConfig            OrgSsoConfig?
 
   @@map("organizations")
 }
@@ -1396,9 +1395,10 @@ model JobBoardPosting {
 // ─────────────────────────────────────────────────────────────────────
 // SSO — single sign-on integrations (Phase 1: OIDC via Microsoft Entra ID)
 //
-// OrgSsoConfig = per-Org Entra tenant config. Admin Org đăng ký app
-// trong Azure portal của họ, paste tenantId/clientId/clientSecret vào
-// /settings/sso. Secret được AES-256-GCM encrypt at rest qua libs/crypto.
+// C-HR registers ONE multi-tenant Entra app in its own Azure tenant;
+// client_id/secret/tenant come from env. User just clicks "Login with
+// Microsoft" — Entra picks the account, BE matches the returned email
+// against an existing User row to resolve the Org.
 //
 // SsoLink = liên kết 1 User C-HR với 1 Entra account (`oid` claim làm
 // stable identifier — bền hơn email vì user có thể đổi email Entra).
@@ -1406,25 +1406,6 @@ model JobBoardPosting {
 
 enum SsoProvider {
   ENTRA
-}
-
-model OrgSsoConfig {
-  id              String      @id @default(uuid())
-  organizationId  String      @unique @map("organization_id")
-  provider        SsoProvider @default(ENTRA)
-  /// Entra tenant GUID (vd "72f988bf-86f1-41af-91ab-2d7cd011db47") hoặc "common"
-  /// cho multi-tenant. Single-tenant khuyến nghị cho enterprise security.
-  tenantId        String      @map("tenant_id") @db.VarChar(255)
-  clientId        String      @map("client_id") @db.VarChar(255)
-  /// AES-256-GCM ciphertext, base64. Decrypt qua CryptoService chỉ lúc cần.
-  clientSecretEnc String      @map("client_secret_enc") @db.Text
-  isActive        Boolean     @default(true) @map("is_active")
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@map("org_sso_configs")
 }
 
 model SsoLink {

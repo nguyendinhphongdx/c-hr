@@ -2,16 +2,15 @@ import {
   BadRequestException,
   Injectable,
   Logger,
-  NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OrgSsoConfig, Role, SsoProvider } from '@prisma/client';
+import { Role, SsoProvider } from '@prisma/client';
 
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { AuthService } from '../../auth/auth.service';
-import { SsoConfigService } from '../sso-config.service';
 import { EntraStateStore } from './entra-state.store';
 
 interface MicrosoftGraphMe {
@@ -21,16 +20,22 @@ interface MicrosoftGraphMe {
   displayName: string | null;
 }
 
+interface MicrosoftConfig {
+  tenantId: string;
+  clientId: string;
+  clientSecret: string;
+}
+
 /**
- * Authorization-code OAuth flow against Microsoft Entra ID. We exchange
- * code → access_token and then call Microsoft Graph `/me` for user
- * profile, which avoids the cost (and depedency on `jose`) of verifying
- * the id_token JWT locally — Microsoft Graph itself enforces the token
- * was issued for our client.
+ * Authorization-code OAuth flow against Microsoft Entra ID, shared
+ * multi-tenant pattern: one Entra app registered in the SaaS Azure
+ * tenant serves every C-HR Org. The user clicks "Login with Microsoft",
+ * Entra picks the account, we get the email back, and we resolve the
+ * Org by matching that email to an existing User row.
  *
- * Provisioning policy: JIT-create the User on first successful SSO if
- * the email is unknown for this Org (per user decision). Production
- * deployments may want a domain allowlist — leave a TODO.
+ * No JIT here — admin must invite (create the User row) first. JIT
+ * doesn't fit a shared multi-tenant app because we'd need a separate
+ * signal (email domain → Org) to know which Org to provision into.
  */
 @Injectable()
 export class EntraSsoService {
@@ -39,24 +44,17 @@ export class EntraSsoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
-    private readonly ssoConfig: SsoConfigService,
     private readonly stateStore: EntraStateStore,
     private readonly auth: AuthService,
   ) {}
 
   /** Build the Microsoft authorize URL + persist CSRF state. */
   async buildAuthorizeUrl(input: {
-    orgSlug: string;
     returnTo?: string;
     userAgent?: string;
   }): Promise<{ authorizeUrl: string }> {
-    const cfg = await this.ssoConfig.findByOrgSlug(input.orgSlug);
-    if (!cfg) {
-      throw new NotFoundException('Tổ chức chưa cấu hình SSO');
-    }
+    const cfg = this.requireConfig();
     const state = await this.stateStore.issue({
-      orgId: cfg.organizationId,
-      orgSlug: input.orgSlug,
       returnTo: input.returnTo,
       ua: input.userAgent,
     });
@@ -76,42 +74,40 @@ export class EntraSsoService {
     return { authorizeUrl };
   }
 
-  /** Complete the callback: exchange code, resolve/create user, issue tokens. */
+  /** Complete the callback: exchange code, resolve user, issue tokens. */
   async completeCallback(input: {
     code: string;
     state: string;
     userAgent?: string;
   }): Promise<{
-    user: { id: string; email: string; role: Role; organizationId: string | null; employeeId: string | null };
+    user: {
+      id: string;
+      email: string;
+      role: Role;
+      organizationId: string | null;
+      employeeId: string | null;
+    };
     accessToken: string;
     refreshToken: string;
     returnTo: string;
   }> {
+    const cfg = this.requireConfig();
     const payload = await this.stateStore.consume(input.state);
     if (!payload) {
       throw new UnauthorizedException('Phiên SSO không hợp lệ hoặc đã hết hạn');
     }
     if (payload.ua && input.userAgent && payload.ua !== input.userAgent) {
-      // Soft check — different browsers along the redirect (proxy etc.)
-      // are common; only log, don't reject.
       this.logger.warn(
         `SSO state UA mismatch — expected="${payload.ua}" got="${input.userAgent}"`,
       );
     }
 
-    const cfg = await this.ssoConfig.findRawByOrg(payload.orgId);
-    if (!cfg || !cfg.isActive) {
-      throw new NotFoundException('Tổ chức chưa cấu hình SSO');
-    }
-
     const tokenResp = await this.exchangeCode(cfg, input.code);
     const profile = await this.fetchGraphMe(tokenResp.access_token);
 
-    const user = await this.resolveOrProvisionUser({
-      orgId: cfg.organizationId,
+    const user = await this.resolveUserByEmail({
       externalUserId: profile.id,
       email: profile.mail || profile.userPrincipalName,
-      name: profile.displayName,
     });
 
     const tokens = await this.auth.issueTokens({
@@ -136,17 +132,28 @@ export class EntraSsoService {
     };
   }
 
+  private requireConfig(): MicrosoftConfig {
+    const tenantId = this.configService.get<string>('sso.microsoft.tenantId') || 'common';
+    const clientId = this.configService.get<string>('sso.microsoft.clientId');
+    const clientSecret = this.configService.get<string>('sso.microsoft.clientSecret');
+    if (!clientId || !clientSecret) {
+      throw new ServiceUnavailableException(
+        'SSO Microsoft chưa được cấu hình — liên hệ admin hệ thống',
+      );
+    }
+    return { tenantId, clientId, clientSecret };
+  }
+
   private async exchangeCode(
-    cfg: OrgSsoConfig,
+    cfg: MicrosoftConfig,
     code: string,
   ): Promise<{ access_token: string; refresh_token?: string; expires_in: number }> {
     const url = `https://login.microsoftonline.com/${encodeURIComponent(
       cfg.tenantId,
     )}/oauth2/v2.0/token`;
-    const clientSecret = this.ssoConfig.decryptSecret(cfg);
     const body = new URLSearchParams({
       client_id: cfg.clientId,
-      client_secret: clientSecret,
+      client_secret: cfg.clientSecret,
       code,
       grant_type: 'authorization_code',
       redirect_uri: this.redirectUri(),
@@ -162,7 +169,11 @@ export class EntraSsoService {
       this.logger.error(`Entra token exchange failed: ${resp.status} ${text}`);
       throw new UnauthorizedException('Đăng nhập Microsoft thất bại');
     }
-    return (await resp.json()) as { access_token: string; refresh_token?: string; expires_in: number };
+    return (await resp.json()) as {
+      access_token: string;
+      refresh_token?: string;
+      expires_in: number;
+    };
   }
 
   private async fetchGraphMe(accessToken: string): Promise<MicrosoftGraphMe> {
@@ -177,20 +188,18 @@ export class EntraSsoService {
     return (await resp.json()) as MicrosoftGraphMe;
   }
 
-  private async resolveOrProvisionUser(input: {
-    orgId: string;
+  private async resolveUserByEmail(input: {
     externalUserId: string;
     email: string | null | undefined;
-    name: string | null | undefined;
   }) {
     if (!input.email) {
       throw new BadRequestException(
-        'Tài khoản Microsoft không có email — không thể đăng ký vào C-HR',
+        'Tài khoản Microsoft không có email — không thể đăng nhập vào C-HR',
       );
     }
     const normalizedEmail = input.email.toLowerCase();
 
-    // 1. Existing SsoLink → fastest path. Use stable Entra `oid`, not email.
+    // 1. Existing SsoLink → fastest path. Stable across email changes.
     const existingLink = await this.prisma.ssoLink.findUnique({
       where: {
         provider_externalUserId: {
@@ -200,57 +209,31 @@ export class EntraSsoService {
       },
       include: { user: true },
     });
-    if (existingLink) {
-      if (existingLink.user.organizationId !== input.orgId) {
-        // Same Entra account linked under a different Org — refuse to
-        // log them into this Org. Multi-Org SSO is out of scope.
-        throw new UnauthorizedException(
-          'Tài khoản Microsoft này đã được liên kết với tổ chức khác',
-        );
-      }
-      return existingLink.user;
-    }
+    if (existingLink) return existingLink.user;
 
-    // 2. Match by email within the same Org → link an existing user.
+    // 2. Match by email → first-time link. User must have been invited
+    //    by an admin (no JIT in shared-app mode — we'd have no signal
+    //    for which Org to provision into).
     const userByEmail = await this.prisma.user.findFirst({
-      where: { email: normalizedEmail, organizationId: input.orgId },
+      where: { email: normalizedEmail },
     });
-    if (userByEmail) {
-      await this.prisma.ssoLink.create({
-        data: {
-          userId: userByEmail.id,
-          provider: SsoProvider.ENTRA,
-          externalUserId: input.externalUserId,
-          externalEmail: normalizedEmail,
-        },
-      });
-      return userByEmail;
+    if (!userByEmail) {
+      throw new UnauthorizedException(
+        'Email chưa được thêm vào hệ thống C-HR — liên hệ admin của doanh nghiệp để được mời',
+      );
     }
-
-    // 3. JIT provision — create User + SsoLink. role=user (lowest), no
-    //    Employee link yet (HR provisions employee row separately).
-    //    TODO: enforce email domain allowlist before JIT in production.
-    const placeholderHash = `sso:${Date.now()}:${input.externalUserId}`;
-    const created = await this.prisma.user.create({
+    await this.prisma.ssoLink.create({
       data: {
-        email: normalizedEmail,
-        password: placeholderHash,
-        name: input.name ?? null,
-        role: Role.user,
-        organizationId: input.orgId,
-        ssoLinks: {
-          create: {
-            provider: SsoProvider.ENTRA,
-            externalUserId: input.externalUserId,
-            externalEmail: normalizedEmail,
-          },
-        },
+        userId: userByEmail.id,
+        provider: SsoProvider.ENTRA,
+        externalUserId: input.externalUserId,
+        externalEmail: normalizedEmail,
       },
     });
     this.logger.log(
-      `JIT-provisioned User ${created.id} via Entra SSO (org=${input.orgId}, email=${normalizedEmail})`,
+      `Linked existing User ${userByEmail.id} to Entra account on first SSO (email=${normalizedEmail})`,
     );
-    return created;
+    return userByEmail;
   }
 
   private redirectUri(): string {

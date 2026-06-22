@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 
 import { setAuthCookies } from '../../auth/auth.cookies';
-import { StartSsoDto } from '../dto/start-sso.dto';
 import { EntraSsoService } from './entra-sso.service';
 
 @ApiTags('sso-entra')
@@ -17,12 +16,14 @@ export class EntraSsoController {
 
   /** FE calls before redirecting to Microsoft. Returns the URL rather
    *  than a 302 so the FE can decide how to navigate (popup vs full
-   *  redirect). No JwtAuthGuard — user is anonymous at this point. */
+   *  redirect). Public — user is anonymous at this point. */
   @Get('start')
-  async start(@Query() query: StartSsoDto, @Req() req: Request) {
+  async start(
+    @Query('returnTo') returnTo: string | undefined,
+    @Req() req: Request,
+  ) {
     return this.service.buildAuthorizeUrl({
-      orgSlug: query.orgSlug,
-      returnTo: query.returnTo,
+      returnTo,
       userAgent: req.headers['user-agent'] as string | undefined,
     });
   }

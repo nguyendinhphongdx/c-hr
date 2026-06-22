@@ -5,13 +5,10 @@ import { RedisService } from '@libs/redis/redis.service';
 
 /** CSRF / replay protection for the OAuth round-trip. State token is
  *  generated on /sso/entra/start, embedded in the authorize URL, and
- *  validated (one-time) on /sso/entra/callback.
- *
- *  Payload travels with the state so the callback knows which Org / Entra
- *  tenant it relates to, even when the user is anonymous mid-flow. */
+ *  validated (one-time) on /sso/entra/callback. Org is resolved from
+ *  the email returned by Microsoft Graph after token exchange — no
+ *  per-Org info travels in the state. */
 export interface EntraStatePayload {
-  orgId: string;
-  orgSlug: string;
   returnTo?: string;
   /** Used as PKCE-lite — bound to the original request's user-agent. */
   ua?: string;

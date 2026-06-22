@@ -4,8 +4,9 @@ import cacheConfig from './cache.config';
 import databaseConfig from './database.config';
 import storageConfig from './storage.config';
 import mailConfig from './mail.config';
+import ssoConfig from './sso.config';
 
-export { appConfig, authConfig, cacheConfig, databaseConfig, storageConfig, mailConfig };
+export { appConfig, authConfig, cacheConfig, databaseConfig, storageConfig, mailConfig, ssoConfig };
 
 export const configs = [
   appConfig,
@@ -14,4 +15,5 @@ export const configs = [
   databaseConfig,
   storageConfig,
   mailConfig,
+  ssoConfig,
 ];
