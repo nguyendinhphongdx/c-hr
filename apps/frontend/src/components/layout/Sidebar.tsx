@@ -6,8 +6,6 @@ import {
   Building2,
   CalendarClock,
   Calendar,
-  ClipboardCheck,
-  ClipboardList,
   DoorOpen,
   FolderKanban,
   Home,
@@ -31,8 +29,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAuth, useIsAdmin, useIsAppAdmin } from "@/features/auth";
-import { useMyOnboardingPlan } from "@/features/onboarding";
+import { useIsAdmin, useIsAppAdmin } from "@/features/auth";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -125,20 +122,6 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Lương",
     items: [{ href: "/payroll", label: "Bảng lương", icon: Wallet }],
   },
-  {
-    // Self-service item is rendered inline below (visibility depends on
-    // whether the current user has an active plan); admin item lives in
-    // the section's items list and is filtered out for non-admins.
-    label: "Onboarding",
-    items: [
-      {
-        href: "/onboarding",
-        label: "Quản lý onboarding",
-        icon: ClipboardList,
-        adminOnly: true,
-      },
-    ],
-  },
 ];
 
 interface SidebarProps {
@@ -147,17 +130,9 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed }: SidebarProps) {
   const pathname = usePathname();
-  const { user } = useAuth();
   const isAdmin = useIsAdmin();
   const isHrmAdmin = useIsAppAdmin("HRM");
   const showAdmin = isAdmin || isHrmAdmin;
-
-  // Drives visibility of the non-admin "Việc onboard của tôi" link. The
-  // hook short-circuits on missing employeeId so orphan users skip the
-  // network round-trip entirely.
-  const { hasActivePlan: showMyOnboarding } = useMyOnboardingPlan(
-    user?.employeeId ?? null,
-  );
 
   return (
     <aside
@@ -179,22 +154,11 @@ export function Sidebar({ collapsed }: SidebarProps) {
       <nav className="flex-1 space-y-3 overflow-y-auto p-2 scrollbar-thin">
         {NAV_SECTIONS.map((section, idx) => {
           if (section.label === "Lương" && !showAdmin) return null;
-          // Filter section-defined items by adminOnly flag — keeps the
-          // "Quản lý onboarding" link admin-gated without nesting a
-          // separate section.
+          // Filter section-defined items by adminOnly flag — admin-gated
+          // links collapse out for regular users.
           const items = section.items.filter(
             (it) => !it.adminOnly || showAdmin,
           );
-          // Onboarding section header should disappear when neither the
-          // admin link nor the self-service link are visible.
-          const isOnboardingSection = section.label === "Onboarding";
-          if (
-            isOnboardingSection &&
-            items.length === 0 &&
-            !showMyOnboarding
-          ) {
-            return null;
-          }
           return (
           <div key={section.label ?? idx} className="space-y-1">
             {section.label &&
@@ -205,20 +169,6 @@ export function Sidebar({ collapsed }: SidebarProps) {
                   {section.label}
                 </div>
               ))}
-            {isOnboardingSection && showMyOnboarding && (
-              <NavLink
-                item={{
-                  href: "/my-onboarding",
-                  label: "Việc onboard của tôi",
-                  icon: ClipboardCheck,
-                }}
-                collapsed={collapsed}
-                active={
-                  pathname === "/my-onboarding" ||
-                  pathname.startsWith("/my-onboarding/")
-                }
-              />
-            )}
             {items.map((item) => (
               <NavLink
                 key={item.href}

@@ -256,9 +256,6 @@ model Employee {
 
   payrollItems PayrollItem[] @relation("EmployeePayroll")
 
-  /// 1-1 back-relation. FK is on OnboardingPlan.employeeId (unique).
-  onboardingPlan OnboardingPlan?
-
   /// 1-1 back-relation when this employee was promoted from a candidate.
   /// FK is on Candidate.employeeId (unique).
   fromCandidate Candidate? @relation("CandidateEmployee")
@@ -1093,129 +1090,6 @@ model PayrollItem {
   @@unique([periodId, employeeId])
   @@index([organizationId, employeeId])
   @@map("payroll_items")
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// Onboarding (F10) — Phase 1 schema foundation.
-//
-// OnboardingTemplate = bộ task khuôn mẫu admin HRM cấu hình ở /settings/
-// onboarding. Mỗi org có thể tạo nhiều mẫu (vd "Dev mới", "Sales mới"),
-// 1 mẫu được đánh dấu isDefault để auto-apply khi Employee được tạo.
-//
-// OnboardingPlan = instance áp 1 template lên 1 Employee. SNAPSHOT
-// templateName để khi mẫu gốc bị đổi/xoá vẫn truy lại được.
-//
-// OnboardingTask = task cụ thể trong 1 plan. assigneeId resolved từ
-// defaultAssigneeRole của template-task (HR / MANAGER / EMPLOYEE / IT /
-// CUSTOM) lúc plan được tạo (Phase 2).
-// ──────────────────────────────────────────────────────────────────────
-
-enum AssigneeRole {
-  HR
-  MANAGER
-  EMPLOYEE
-  IT
-  CUSTOM
-}
-
-enum OnboardingPlanStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  ARCHIVED
-}
-
-enum OnboardingTaskStatus {
-  TODO
-  DONE
-}
-
-model OnboardingTemplate {
-  id             String    @id @default(uuid())
-  organizationId String    @map("organization_id")
-  name           String    @db.VarChar(127)
-  description    String?   @db.Text
-  isActive       Boolean   @default(true) @map("is_active")
-  /// 1 template per org có isDefault=true. Auto-apply khi Employee created.
-  isDefault      Boolean   @default(false) @map("is_default")
-  createdById    String    @map("created_by_id")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  deletedAt      DateTime? @map("deleted_at")
-
-  tasks OnboardingTemplateTask[]
-  plans OnboardingPlan[]
-
-  @@index([organizationId, isActive, deletedAt])
-  @@map("onboarding_templates")
-}
-
-model OnboardingTemplateTask {
-  id                    String       @id @default(uuid())
-  templateId            String       @map("template_id")
-  title                 String       @db.VarChar(255)
-  /// Richtext HTML (Tiptap). Can paste images as base64.
-  description           String?      @db.Text
-  order                 Float        @default(0)
-  defaultAssigneeRole   AssigneeRole @default(HR) @map("default_assignee_role")
-  /// Only used when role=CUSTOM. Reference to User.id.
-  defaultAssigneeUserId String?      @map("default_assignee_user_id")
-  /// Days from employee.hireDate. 0 = same day, 7 = within a week, -3 = 3 days before.
-  dueOffsetDays         Int          @default(0) @map("due_offset_days")
-  createdAt             DateTime     @default(now()) @map("created_at")
-  updatedAt             DateTime     @updatedAt @map("updated_at")
-
-  template OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  @@index([templateId, order])
-  @@map("onboarding_template_tasks")
-}
-
-model OnboardingPlan {
-  id                   String               @id @default(uuid())
-  organizationId       String               @map("organization_id")
-  employeeId           String               @unique @map("employee_id")
-  templateId           String               @map("template_id")
-  /// Snapshot of template name at create time — original template can be renamed/deleted.
-  templateNameSnapshot String               @map("template_name_snapshot") @db.VarChar(127)
-  status               OnboardingPlanStatus @default(PENDING)
-  startedAt            DateTime?            @map("started_at")
-  completedAt          DateTime?            @map("completed_at")
-  createdById          String               @map("created_by_id")
-  createdAt            DateTime             @default(now()) @map("created_at")
-  updatedAt            DateTime             @updatedAt @map("updated_at")
-
-  template OnboardingTemplate @relation(fields: [templateId], references: [id])
-  employee Employee           @relation(fields: [employeeId], references: [id])
-  tasks    OnboardingTask[]
-
-  @@index([organizationId, status])
-  @@map("onboarding_plans")
-}
-
-model OnboardingTask {
-  id             String               @id @default(uuid())
-  organizationId String               @map("organization_id")
-  planId         String               @map("plan_id")
-  /// Audit pointer back to template task. Null if HR added the task manually after plan creation.
-  templateTaskId String?              @map("template_task_id")
-  title          String               @db.VarChar(255)
-  description    String?              @db.Text
-  order          Float                @default(0)
-  assigneeId     String               @map("assignee_id")
-  dueDate        DateTime?            @map("due_date") @db.Date
-  status         OnboardingTaskStatus @default(TODO)
-  completedAt    DateTime?            @map("completed_at")
-  completedById  String?              @map("completed_by_id")
-  completedNote  String?              @map("completed_note") @db.Text
-  createdAt      DateTime             @default(now()) @map("created_at")
-  updatedAt      DateTime             @updatedAt @map("updated_at")
-
-  plan OnboardingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-
-  @@index([planId, order])
-  @@index([assigneeId, status])
-  @@map("onboarding_tasks")
 }
 
 // ─────────────────────────────────────────────────────────────────────

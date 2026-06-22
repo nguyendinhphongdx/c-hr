@@ -253,8 +253,8 @@ export class ApplicationService {
   /**
    * Convert a HIRED application into an Employee record. Reuses
    * EmployeeService.create so the employee.created event still fires
-   * (F10 Onboarding listens) and the EMP- code uniqueness is enforced
-   * by the same path as manual creation.
+   * and the EMP- code uniqueness is enforced by the same path as
+   * manual creation.
    *
    * Returns the updated application; the new employeeId is reachable
    * via `candidate.employeeId` on the response payload.

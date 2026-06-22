@@ -5,7 +5,6 @@ import { useIsAppAdmin } from "@/features/auth";
 
 import { BirthdaysCard } from "../components/BirthdaysCard";
 import { Hero } from "../components/Hero";
-import { OnboardingCard } from "../components/OnboardingCard";
 import { PendingApprovalsCard } from "../components/PendingApprovalsCard";
 import { Shortcuts } from "../components/Shortcuts";
 import { StatTiles } from "../components/StatTiles";
@@ -20,13 +19,6 @@ export function HomeView() {
 
       <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
         <StatTiles />
-      </div>
-
-      {/* OnboardingCard self-hides when the user has no active plan; we
-          still mount it inside the animation wrapper so first-render
-          ordering is stable when a plan is present. */}
-      <div className="animate-fade-up" style={{ animationDelay: "90ms" }}>
-        <OnboardingCard />
       </div>
 
       <div

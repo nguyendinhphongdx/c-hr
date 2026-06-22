@@ -1,12 +1,10 @@
 "use client";
 
 import {
-  Archive,
   CheckCircle2,
   Clock,
   History,
   MessageSquare,
-  PartyPopper,
   PlusCircle,
   Settings2,
   Users,
@@ -63,31 +61,6 @@ const ACTION_META: Record<string, ActionMeta> = {
     icon: Settings2,
     label: "Đã áp dụng chấm công",
     iconClass: "text-amber-600 dark:text-amber-400",
-  },
-  "onboarding.plan_created": {
-    icon: PlusCircle,
-    label: "Đã tạo quy trình onboarding",
-    iconClass: "text-sky-600 dark:text-sky-400",
-  },
-  "onboarding.plan_archived": {
-    icon: Archive,
-    label: "Đã đóng quy trình",
-    iconClass: "text-muted-foreground",
-  },
-  "onboarding.plan_completed": {
-    icon: PartyPopper,
-    label: "Hoàn thành onboarding 🎉",
-    iconClass: "text-emerald-600 dark:text-emerald-400",
-  },
-  "onboarding.task_completed": {
-    icon: CheckCircle2,
-    label: "Đã hoàn thành nhiệm vụ",
-    iconClass: "text-emerald-600 dark:text-emerald-400",
-  },
-  "onboarding.task_reassigned": {
-    icon: Users,
-    label: "Đã giao lại nhiệm vụ",
-    iconClass: "text-indigo-600 dark:text-indigo-400",
   },
 };
 
