@@ -12,6 +12,7 @@ import { PrismaService } from '@libs/database/prisma.service';
 
 import { AuthService } from '../../auth/auth.service';
 import { InvitationService } from '../../invitation/invitation.service';
+import { EntraOrphanStore } from './entra-orphan.store';
 import { EntraStateStore } from './entra-state.store';
 
 interface MicrosoftGraphMe {
@@ -25,6 +26,39 @@ interface MicrosoftConfig {
   tenantId: string;
   clientId: string;
   clientSecret: string;
+}
+
+export type CallbackResult =
+  | {
+      kind: 'authenticated';
+      user: {
+        id: string;
+        email: string;
+        role: Role;
+        organizationId: string | null;
+        employeeId: string | null;
+      };
+      accessToken: string;
+      refreshToken: string;
+      returnTo: string;
+    }
+  | {
+      kind: 'orphan';
+      orphanToken: string;
+      email: string;
+      returnTo: string;
+    };
+
+type ResolveResult =
+  | { kind: 'user'; user: ResolvedUser }
+  | { kind: 'orphan'; email: string };
+
+interface ResolvedUser {
+  id: string;
+  email: string;
+  role: Role;
+  organizationId: string | null;
+  employeeId: string | null;
 }
 
 /**
@@ -46,6 +80,7 @@ export class EntraSsoService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly stateStore: EntraStateStore,
+    private readonly orphanStore: EntraOrphanStore,
     private readonly auth: AuthService,
     private readonly invitations: InvitationService,
   ) {}
@@ -76,23 +111,14 @@ export class EntraSsoService {
     return { authorizeUrl };
   }
 
-  /** Complete the callback: exchange code, resolve user, issue tokens. */
+  /** Complete the callback: exchange code, then either log the user in
+   *  or hand the controller an orphan-session token to set as a cookie
+   *  so /no-org can drive the SELF_REQUEST flow. */
   async completeCallback(input: {
     code: string;
     state: string;
     userAgent?: string;
-  }): Promise<{
-    user: {
-      id: string;
-      email: string;
-      role: Role;
-      organizationId: string | null;
-      employeeId: string | null;
-    };
-    accessToken: string;
-    refreshToken: string;
-    returnTo: string;
-  }> {
+  }): Promise<CallbackResult> {
     const cfg = this.requireConfig();
     const payload = await this.stateStore.consume(input.state);
     if (!payload) {
@@ -106,12 +132,30 @@ export class EntraSsoService {
 
     const tokenResp = await this.exchangeCode(cfg, input.code);
     const profile = await this.fetchGraphMe(tokenResp.access_token);
+    const email = (profile.mail || profile.userPrincipalName || '').toLowerCase();
+    const name = profile.displayName ?? null;
 
-    const user = await this.resolveUserByEmail({
+    const resolved = await this.resolveOrCreateUserViaInvite({
       externalUserId: profile.id,
-      email: profile.mail || profile.userPrincipalName,
+      email,
+      name,
     });
 
+    if (resolved.kind === 'orphan') {
+      const orphanToken = await this.orphanStore.issue({
+        email: resolved.email,
+        name,
+        externalUserId: profile.id,
+      });
+      return {
+        kind: 'orphan',
+        orphanToken,
+        email: resolved.email,
+        returnTo: payload.returnTo || '/home',
+      };
+    }
+
+    const user = resolved.user;
     const tokens = await this.auth.issueTokens({
       id: user.id,
       email: user.email,
@@ -121,6 +165,7 @@ export class EntraSsoService {
     });
 
     return {
+      kind: 'authenticated',
       user: {
         id: user.id,
         email: user.email,
@@ -190,10 +235,11 @@ export class EntraSsoService {
     return (await resp.json()) as MicrosoftGraphMe;
   }
 
-  private async resolveUserByEmail(input: {
+  private async resolveOrCreateUserViaInvite(input: {
     externalUserId: string;
     email: string | null | undefined;
-  }) {
+    name: string | null;
+  }): Promise<ResolveResult> {
     if (!input.email) {
       throw new BadRequestException(
         'Tài khoản Microsoft không có email — không thể đăng nhập vào C-HR',
@@ -211,41 +257,41 @@ export class EntraSsoService {
       },
       include: { user: true },
     });
-    if (existingLink) return existingLink.user;
+    if (existingLink) return { kind: 'user', user: existingLink.user };
 
     // 2. Match by email → first-time link.
     const userByEmail = await this.prisma.user.findFirst({
       where: { email: normalizedEmail },
     });
-    if (!userByEmail) {
-      // 3. No User yet — check pending ADMIN_INVITE matching email. If
-      //    found, auto-accept (create User + SsoLink + mark COMPLETED)
-      //    so the SSO login lands inside the Org without ever needing
-      //    the magic link.
-      const invited = await this.invitations.tryAcceptViaSso({
-        email: normalizedEmail,
-        name: null,
-        externalUserId: input.externalUserId,
+    if (userByEmail) {
+      await this.prisma.ssoLink.create({
+        data: {
+          userId: userByEmail.id,
+          provider: SsoProvider.ENTRA,
+          externalUserId: input.externalUserId,
+          externalEmail: normalizedEmail,
+        },
       });
-      if (invited) return invited;
-      // No invite either → SELF_REQUEST path will replace this throw
-      // (Phase 2). For now, reject.
-      throw new UnauthorizedException(
-        'Email chưa được thêm vào hệ thống C-HR — liên hệ admin của doanh nghiệp để được mời',
+      this.logger.log(
+        `Linked existing User ${userByEmail.id} to Entra account on first SSO (email=${normalizedEmail})`,
       );
+      return { kind: 'user', user: userByEmail };
     }
-    await this.prisma.ssoLink.create({
-      data: {
-        userId: userByEmail.id,
-        provider: SsoProvider.ENTRA,
-        externalUserId: input.externalUserId,
-        externalEmail: normalizedEmail,
-      },
+
+    // 3. No User yet — check pending ADMIN_INVITE matching email. If
+    //    found, auto-accept (create User + SsoLink + mark COMPLETED)
+    //    so the SSO login lands inside the Org without ever needing
+    //    the magic link.
+    const invited = await this.invitations.tryAcceptViaSso({
+      email: normalizedEmail,
+      name: input.name,
+      externalUserId: input.externalUserId,
     });
-    this.logger.log(
-      `Linked existing User ${userByEmail.id} to Entra account on first SSO (email=${normalizedEmail})`,
-    );
-    return userByEmail;
+    if (invited) return { kind: 'user', user: invited };
+
+    // 4. No User + no invite → orphan. Controller stashes the MS
+    //    profile in Redis + sets a cookie, redirects FE to /no-org.
+    return { kind: 'orphan', email: normalizedEmail };
   }
 
   private redirectUri(): string {
