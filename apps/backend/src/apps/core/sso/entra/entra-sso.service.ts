@@ -254,8 +254,7 @@ export class EntraSsoService {
   }
 
   private redirectUri(): string {
-    const apiUrl =
-      this.configService.get<string>('app.publicApiUrl') || 'http://localhost:8000';
+    const apiUrl = this.configService.get<string>('app.apiBaseURL') || 'http://localhost:8000';
     const prefix = this.configService.get<string>('app.apiPrefix') || 'api/v1';
     return `${apiUrl.replace(/\/$/, '')}/${prefix.replace(/^\/|\/$/g, '')}/sso/entra/callback`;
   }
