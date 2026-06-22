@@ -9,6 +9,7 @@ import { configs } from './config';
 import { AuditModule } from './common/audit';
 import { ContextModule } from './common/context';
 import { ImportModule } from './common/import';
+import { CryptoModule } from './libs/crypto';
 import { DatabaseModule } from './libs/database/database.module';
 import { LoggerModule } from './libs/logger/logger.module';
 import { RedisModule } from './libs/redis/redis.module';
@@ -52,6 +53,7 @@ import { WorkModule } from './apps/work/work.module';
     RedisModule,
     MailModule,
     StorageModule,
+    CryptoModule,
     AuditModule,
     ImportModule,
 

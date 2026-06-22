@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { OrganizationModule } from './organization/organization.module';
 import { PreferenceModule } from './preference/preference.module';
+import { SsoModule } from './sso/sso.module';
 import { UploadModule } from './upload/upload.module';
 import { UserModule } from './user/user.module';
 
@@ -22,9 +23,10 @@ import { UserModule } from './user/user.module';
     OrganizationModule,
     AppAdminModule,
     PreferenceModule,
+    SsoModule,
     UploadModule,
     HealthModule,
   ],
-  exports: [AuthModule, UserModule, OrganizationModule, AppAdminModule, PreferenceModule],
+  exports: [AuthModule, UserModule, OrganizationModule, AppAdminModule, PreferenceModule, SsoModule],
 })
 export class CoreModule {}

@@ -1,6 +1,8 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useSyncExternalStore } from "react";
+import { toast } from "sonner";
 
 import { AuthLayout } from "../components/AuthLayout";
 import { LoginForm } from "../components/LoginForm";
@@ -37,6 +39,16 @@ export function LoginView() {
     readClientGreeting,
     () => DEFAULT_GREETING,
   );
+
+  // BE SSO callback redirects here with ?ssoError=... when the OAuth
+  // round-trip fails (consent denied, state expired, etc.).
+  const params = useSearchParams();
+  const ssoError = params.get("ssoError");
+  useEffect(() => {
+    if (ssoError) {
+      toast.error(`Đăng nhập SSO thất bại: ${ssoError}`);
+    }
+  }, [ssoError]);
 
   return (
     <AuthLayout title={greeting} subtitle="Đăng nhập để tiếp tục vào C-HR.">
