@@ -11,6 +11,7 @@ import { Role, SsoProvider } from '@prisma/client';
 import { PrismaService } from '@libs/database/prisma.service';
 
 import { AuthService } from '../../auth/auth.service';
+import { InvitationService } from '../../invitation/invitation.service';
 import { EntraStateStore } from './entra-state.store';
 
 interface MicrosoftGraphMe {
@@ -46,6 +47,7 @@ export class EntraSsoService {
     private readonly configService: ConfigService,
     private readonly stateStore: EntraStateStore,
     private readonly auth: AuthService,
+    private readonly invitations: InvitationService,
   ) {}
 
   /** Build the Microsoft authorize URL + persist CSRF state. */
@@ -211,13 +213,23 @@ export class EntraSsoService {
     });
     if (existingLink) return existingLink.user;
 
-    // 2. Match by email → first-time link. User must have been invited
-    //    by an admin (no JIT in shared-app mode — we'd have no signal
-    //    for which Org to provision into).
+    // 2. Match by email → first-time link.
     const userByEmail = await this.prisma.user.findFirst({
       where: { email: normalizedEmail },
     });
     if (!userByEmail) {
+      // 3. No User yet — check pending ADMIN_INVITE matching email. If
+      //    found, auto-accept (create User + SsoLink + mark COMPLETED)
+      //    so the SSO login lands inside the Org without ever needing
+      //    the magic link.
+      const invited = await this.invitations.tryAcceptViaSso({
+        email: normalizedEmail,
+        name: null,
+        externalUserId: input.externalUserId,
+      });
+      if (invited) return invited;
+      // No invite either → SELF_REQUEST path will replace this throw
+      // (Phase 2). For now, reject.
       throw new UnauthorizedException(
         'Email chưa được thêm vào hệ thống C-HR — liên hệ admin của doanh nghiệp để được mời',
       );

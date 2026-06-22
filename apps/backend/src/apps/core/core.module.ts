@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { AppAdminModule } from './app-admin/app-admin.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
+import { InvitationModule } from './invitation/invitation.module';
 import { OrganizationModule } from './organization/organization.module';
 import { PreferenceModule } from './preference/preference.module';
 import { SsoModule } from './sso/sso.module';
@@ -22,11 +23,20 @@ import { UserModule } from './user/user.module';
     UserModule,
     OrganizationModule,
     AppAdminModule,
+    InvitationModule,
     PreferenceModule,
     SsoModule,
     UploadModule,
     HealthModule,
   ],
-  exports: [AuthModule, UserModule, OrganizationModule, AppAdminModule, PreferenceModule, SsoModule],
+  exports: [
+    AuthModule,
+    UserModule,
+    OrganizationModule,
+    AppAdminModule,
+    InvitationModule,
+    PreferenceModule,
+    SsoModule,
+  ],
 })
 export class CoreModule {}

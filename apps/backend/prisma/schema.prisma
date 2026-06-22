@@ -88,6 +88,7 @@ model Organization {
   candidates           Candidate[]
   applications         Application[]
   jobBoardIntegrations JobBoardIntegration[]
+  invitations          Invitation[]
 
   @@map("organizations")
 }
@@ -1406,6 +1407,80 @@ model JobBoardPosting {
 
 enum SsoProvider {
   ENTRA
+}
+
+enum InvitationKind {
+  /// Admin Org chủ động mời qua magic link (push model).
+  ADMIN_INVITE
+  /// User SSO orphan tự đề xuất tham gia (pull model).
+  SELF_REQUEST
+}
+
+enum InvitationStatus {
+  PENDING
+  /// ADMIN_INVITE: invitee đã click link + auth. SELF_REQUEST: admin approve.
+  COMPLETED
+  /// SELF_REQUEST: admin từ chối.
+  REJECTED
+  /// ADMIN_INVITE: admin revoke. SELF_REQUEST: user withdraw.
+  CANCELLED
+  /// ADMIN_INVITE: quá expiresAt (mặc định 7d sau create).
+  EXPIRED
+}
+
+/**
+ * Unified onboarding entity covering 2 directions:
+ *
+ *   ADMIN_INVITE (push) — admin tạo Invitation cho 1 email, hệ thống
+ *     sinh magic link `/invite/<token>`. Invitee click → auth → BE
+ *     tạo User + (optional SsoLink) → status COMPLETED.
+ *
+ *   SELF_REQUEST (pull) — user login SSO mà email chưa thuộc Org nào.
+ *     BE redirect /no-org. User chọn Org → tạo Invitation với
+ *     `externalUserId` từ MS profile. Admin approve → BE tạo User +
+ *     SsoLink (dùng oid đã lưu) → status COMPLETED.
+ *
+ * One table, kind-specific nullable fields, lifecycle status enum.
+ */
+model Invitation {
+  id              String            @id @default(uuid())
+  organizationId  String            @map("organization_id")
+  email           String            @db.VarChar(320)
+  name            String?           @db.VarChar(255)
+  kind            InvitationKind
+
+  /// ADMIN_INVITE only — random URL-safe token, used in /invite/<token>.
+  inviteToken     String?           @unique @map("invite_token")
+  /// ADMIN_INVITE only — defaults to created_at + 7 days.
+  expiresAt       DateTime?         @map("expires_at")
+  /// ADMIN_INVITE only — admin User id who created the invite.
+  invitedById     String?           @map("invited_by_id")
+
+  /// SELF_REQUEST only — Entra `oid` claim from MS profile. Pre-creates
+  /// SsoLink at approve time so the user's next MS login matches.
+  externalUserId  String?           @map("external_user_id") @db.VarChar(255)
+
+  /// Free-form message — admin to invitee (ADMIN_INVITE) or user to
+  /// admin (SELF_REQUEST).
+  message         String?           @db.Text
+
+  status          InvitationStatus  @default(PENDING)
+  /// User id of the actor who moved status off PENDING. For
+  /// ADMIN_INVITE: invitee on accept, admin on revoke. For
+  /// SELF_REQUEST: admin on approve/reject, user on withdraw.
+  decidedById     String?           @map("decided_by_id")
+  decidedAt       DateTime?         @map("decided_at")
+  decisionNote    String?           @map("decision_note") @db.Text
+
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status, createdAt])
+  @@index([email, status])
+  @@index([kind, status])
+  @@map("invitations")
 }
 
 model SsoLink {
