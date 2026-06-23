@@ -1,5 +1,6 @@
 import type { Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PublicEnvScript } from "next-runtime-env";
 import { Providers } from "@/components/providers/Providers";
 import { createMetadata, SITE } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,9 @@ export default function RootLayout({
         geistMono.variable,
       )}
     >
+      <head>
+        <PublicEnvScript />
+      </head>
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
       </body>

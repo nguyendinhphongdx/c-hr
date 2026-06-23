@@ -1,7 +1,8 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import { env } from "next-runtime-env";
 
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api",
+  baseURL: env("NEXT_PUBLIC_API_URL") ?? "http://localhost:8000/api",
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { env } from "next-runtime-env";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -79,7 +80,7 @@ const BOARDS: BoardMeta[] = [
   },
 ];
 
-const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+const apiBase = env("NEXT_PUBLIC_API_URL") ?? "http://localhost:8000/api";
 
 /** Build the webhook URL the partner board needs to call. */
 function buildWebhookUrl(board: JobBoard, integrationId: string): string {
