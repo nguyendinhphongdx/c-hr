@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-19T09:22:08.937Z",
+  "generatedAt": "2026-06-23T10:37:42.387Z",
   "repoRelativeRoot": ".",
   "count": 67,
   "entries": [
@@ -48,21 +48,24 @@
     {
       "id": "README",
       "path": "README.md",
-      "title": "C-HR",
-      "description": "**C-OpenAI Human Resource** — SaaS quản lý nhân sự cho doanh nghiệp.",
+      "title": "C-HR — Human Resource Management",
+      "description": "**C-OpenAI Human Resource** là SaaS quản lý nhân sự cho doanh nghiệp: nhân viên, phòng ban, chấm công, nghỉ phép, lương.",
       "tags": [],
       "scope": "root",
       "category": "root",
       "headings": [
-        "Cấu trúc",
+        "Stack",
+        "Cấu trúc monorepo",
         "Yêu cầu",
-        "Quick start",
-        "CLI",
-        "Gotchas / known issues",
-        "Tài liệu",
-        "Status"
+        "Quick start (dev)",
+        "Dev CLI",
+        "CI/CD",
+        "Biến CI/CD cần cấu hình",
+        "Lần đầu deploy lên server mới",
+        "Gotchas",
+        "Tài liệu"
       ],
-      "summary": "**C-OpenAI Human Resource** — SaaS quản lý nhân sự cho doanh nghiệp."
+      "summary": "**C-OpenAI Human Resource** là SaaS quản lý nhân sự cho doanh nghiệp: nhân viên, phòng ban, chấm công, nghỉ phép, lương."
     },
     {
       "id": "apps:backend:AGENTS",

@@ -1,5 +1,10 @@
 # GitLab CI/CD — C-HR
 #
+# Runners:
+#   build stage  — shared runner (bất kỳ, có Docker executor)
+#   deploy stage — runner nội bộ, đăng ký với tag "on-prem"
+#                  (phải cùng mạng với server deploy)
+#
 # Required CI/CD Variables (Settings → CI/CD → Variables):
 #   DEPLOY_SSH_PASSWORD      — password SSH vào server (Masked)
 #   DEPLOY_HOST              — IP hoặc hostname server (vd: 10.0.0.1)
@@ -71,6 +76,8 @@ build:frontend:
 
 deploy:production:
   stage: deploy
+  tags:
+    - on-prem
   image: alpine:latest
   before_script:
     - apk add --no-cache openssh-client sshpass
