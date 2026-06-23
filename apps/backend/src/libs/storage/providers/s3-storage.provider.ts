@@ -38,11 +38,13 @@ export class S3StorageProvider implements StorageProvider {
       );
     }
 
+    const endpoint = configService.get<string>('storage.s3.endpoint');
     this.client = new S3Client({
       region: this.region,
       credentials: accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
+      ...(endpoint && { endpoint, forcePathStyle: true }),
     });
-    this.logger.log(`S3 storage initialized: bucket=${this.bucket} region=${this.region}`);
+    this.logger.log(`S3 storage initialized: bucket=${this.bucket} region=${this.region}${endpoint ? ` endpoint=${endpoint}` : ''}`);
   }
 
   async upload(options: UploadOptions): Promise<string> {

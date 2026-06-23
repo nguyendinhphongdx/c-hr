@@ -7,6 +7,7 @@ name: c-hr
 include:
   - ./services/postgres/docker-compose.yml
   - ./services/redis/docker-compose.yml
+  - ./services/minio/docker-compose.yml
 
 services:
   backend:
@@ -44,8 +45,12 @@ services:
       AUTH_ACCESS_COOKIE_NAME: ${AUTH_ACCESS_COOKIE_NAME:-access_token}
       AUTH_REFRESH_COOKIE_NAME: ${AUTH_REFRESH_COOKIE_NAME:-refresh_token}
       # Storage
-      STORAGE_TYPE: ${STORAGE_TYPE:-local}
-      STORAGE_LOCAL_PATH: ${STORAGE_LOCAL_PATH:-./uploads}
+      STORAGE_TYPE: ${STORAGE_TYPE:-s3}
+      AWS_S3_ENDPOINT: ${AWS_S3_ENDPOINT:-http://minio:9000}
+      AWS_S3_REGION: ${AWS_S3_REGION:-us-east-1}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       # Mail
       MAIL_HOST: ${MAIL_HOST:-localhost}
       MAIL_PORT: ${MAIL_PORT:-1025}
