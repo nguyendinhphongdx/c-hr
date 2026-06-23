@@ -97,7 +97,7 @@ deploy:production:
           docker compose --env-file .env pull backend frontend
 
         REGISTRY_IMAGE=$CI_REGISTRY_IMAGE IMAGE_TAG=$CI_COMMIT_SHORT_SHA \
-          docker compose --env-file .env up -d --no-deps backend frontend
+          docker compose --env-file .env up -d
 
         docker image prune -f
       "
