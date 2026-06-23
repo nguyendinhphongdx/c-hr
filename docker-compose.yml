@@ -20,15 +20,48 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # Single source of truth for BE config — same file BE reads natively.
-    # `environment:` below only overrides container-network values.
-    env_file:
-      - ./apps/backend/.env
     environment:
       NODE_ENV: production
       PORT: 8000
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/c_hr
+      API_PREFIX: api/v1
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
+      # Database — override @postgres container hostname
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-c_hr}
+      # Redis — override @redis container hostname
       REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      # JWT
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-15m}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
+      # CORS & Cookies
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
+      AUTH_ACCESS_COOKIE_NAME: ${AUTH_ACCESS_COOKIE_NAME:-access_token}
+      AUTH_REFRESH_COOKIE_NAME: ${AUTH_REFRESH_COOKIE_NAME:-refresh_token}
+      # Storage
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      STORAGE_LOCAL_PATH: ${STORAGE_LOCAL_PATH:-./uploads}
+      # Mail
+      MAIL_HOST: ${MAIL_HOST:-localhost}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-noreply@example.com}
+      MAIL_SECURE: ${MAIL_SECURE:-false}
+      # SSO (Microsoft Entra)
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      MS_SSO_TENANT_ID: ${MS_SSO_TENANT_ID:-common}
+      MS_SSO_CLIENT_ID: ${MS_SSO_CLIENT_ID:-}
+      MS_SSO_CLIENT_SECRET: ${MS_SSO_CLIENT_SECRET:-}
+      # Recruitment
+      RECRUITMENT_CREDENTIALS_KEY: ${RECRUITMENT_CREDENTIALS_KEY:-change-me-to-a-long-random-string}
+      TALENT_VN_BASE_URL: ${TALENT_VN_BASE_URL:-https://api.talent.rework.vn}
+      TOPCV_BASE_URL: ${TOPCV_BASE_URL:-https://api.topcv.vn}
     ports:
       - '8000:8000'
     networks:
@@ -43,16 +76,18 @@ services:
     depends_on:
       backend:
         condition: service_started
-    # NEXT_PUBLIC_* are baked into the build; the container only serves
-    # the prebuilt output. URLs in apps/frontend/.env.local should point
-    # at the host-mapped ports (localhost:8000 for BE) so the browser
-    # can reach them.
-    env_file:
-      - ./apps/frontend/.env.local
     environment:
       NODE_ENV: production
       PORT: 3000
+      # next-runtime-env reads these at request time — no rebuild needed.
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
     ports:
       - '3000:3000'
     networks:
       - c-hr
+
+networks:
+  c-hr:
+    name: c-hr
+    external: true
