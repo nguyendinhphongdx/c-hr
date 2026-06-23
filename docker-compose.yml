@@ -11,6 +11,7 @@ include:
 
 services:
   backend:
+    image: "${REGISTRY_IMAGE:-c-hr}/backend:${IMAGE_TAG:-latest}"
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
@@ -73,6 +74,7 @@ services:
       - c-hr
 
   frontend:
+    image: "${REGISTRY_IMAGE:-c-hr}/frontend:${IMAGE_TAG:-latest}"
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile
@@ -95,4 +97,4 @@ services:
 networks:
   c-hr:
     name: c-hr
-    external: true
+    driver: bridge

@@ -1,0 +1,105 @@
+# GitLab CI/CD — C-HR
+#
+# Required CI/CD Variables (Settings → CI/CD → Variables):
+#   DEPLOY_SSH_PASSWORD      — password SSH vào server (Masked)
+#   DEPLOY_HOST              — IP hoặc hostname server (vd: 10.0.0.1)
+#   DEPLOY_USER              — SSH user trên server (vd: ubuntu, deploy)
+#   DEPLOY_PATH              — absolute path repo trên server (vd: /opt/c-hr)
+#   DEPLOY_URL               — URL công khai (vd: https://hr.example.com) — optional
+#
+# Auto-provided by GitLab:
+#   CI_REGISTRY, CI_REGISTRY_USER, CI_REGISTRY_PASSWORD, CI_REGISTRY_IMAGE
+#   CI_COMMIT_SHORT_SHA, CI_COMMIT_BRANCH, CI_DEFAULT_BRANCH
+
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_BUILDKIT: "1"
+
+# ─── BUILD ────────────────────────────────────────────────────────────────────
+
+.build_template:
+  stage: build
+  image: docker:27
+  services:
+    - name: docker:27-dind
+      alias: docker
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+build:backend:
+  extends: .build_template
+  script:
+    - |
+      docker build \
+        --cache-from "$CI_REGISTRY_IMAGE/backend:latest" \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        -t "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA" \
+        -t "$CI_REGISTRY_IMAGE/backend:latest" \
+        apps/backend
+    - docker push "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/backend:latest"
+
+build:frontend:
+  extends: .build_template
+  script:
+    - |
+      docker build \
+        --cache-from "$CI_REGISTRY_IMAGE/frontend:latest" \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        -t "$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA" \
+        -t "$CI_REGISTRY_IMAGE/frontend:latest" \
+        apps/frontend
+    - docker push "$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/frontend:latest"
+
+# ─── DEPLOY ───────────────────────────────────────────────────────────────────
+#
+# Lần đầu triển khai lên server mới, SSH vào và chạy:
+#   git clone <repo-url> $DEPLOY_PATH
+#   cp apps/backend/.env.example $DEPLOY_PATH/.env   # rồi điền secrets
+#   cd $DEPLOY_PATH && docker compose --env-file .env up -d   # khởi động toàn bộ
+#
+# Từ lần 2 trở đi: nhấn nút ▶ "deploy:production" trên GitLab pipeline.
+
+deploy:production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client sshpass
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - printf 'Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n' > ~/.ssh/config
+  script:
+    - |
+      sshpass -p "$DEPLOY_SSH_PASSWORD" ssh "$DEPLOY_USER@$DEPLOY_HOST" "
+        set -e
+        cd $DEPLOY_PATH
+
+        git pull origin main
+
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+        REGISTRY_IMAGE=$CI_REGISTRY_IMAGE IMAGE_TAG=$CI_COMMIT_SHORT_SHA \
+          docker compose --env-file .env pull backend frontend
+
+        REGISTRY_IMAGE=$CI_REGISTRY_IMAGE IMAGE_TAG=$CI_COMMIT_SHORT_SHA \
+          docker compose --env-file .env up -d --no-deps backend frontend
+
+        docker image prune -f
+      "
+  needs:
+    - build:backend
+    - build:frontend
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+  environment:
+    name: production
+    url: $DEPLOY_URL
