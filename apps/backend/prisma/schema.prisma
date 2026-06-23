@@ -1428,20 +1428,18 @@ enum InvitationStatus {
   EXPIRED
 }
 
-/**
- * Unified onboarding entity covering 2 directions:
- *
- *   ADMIN_INVITE (push) — admin tạo Invitation cho 1 email, hệ thống
- *     sinh magic link `/invite/<token>`. Invitee click → auth → BE
- *     tạo User + (optional SsoLink) → status COMPLETED.
- *
- *   SELF_REQUEST (pull) — user login SSO mà email chưa thuộc Org nào.
- *     BE redirect /no-org. User chọn Org → tạo Invitation với
- *     `externalUserId` từ MS profile. Admin approve → BE tạo User +
- *     SsoLink (dùng oid đã lưu) → status COMPLETED.
- *
- * One table, kind-specific nullable fields, lifecycle status enum.
- */
+// Unified onboarding entity covering 2 directions:
+//
+//   ADMIN_INVITE (push) — admin tạo Invitation cho 1 email, hệ thống
+//     sinh magic link `/invite/<token>`. Invitee click → auth → BE
+//     tạo User + (optional SsoLink) → status COMPLETED.
+//
+//   SELF_REQUEST (pull) — user login SSO mà email chưa thuộc Org nào.
+//     BE redirect /no-org. User chọn Org → tạo Invitation với
+//     `externalUserId` từ MS profile. Admin approve → BE tạo User +
+//     SsoLink (dùng oid đã lưu) → status COMPLETED.
+//
+// One table, kind-specific nullable fields, lifecycle status enum.
 model Invitation {
   id              String            @id @default(uuid())
   organizationId  String            @map("organization_id")
