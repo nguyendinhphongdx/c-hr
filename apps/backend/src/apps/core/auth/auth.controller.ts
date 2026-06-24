@@ -15,7 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto, RefreshTokenDto } from './dto';
+import { LdapLoginDto, LoginDto, RegisterDto, RefreshTokenDto } from './dto';
 import { setAuthCookies, clearAuthCookies, getAuthCookieConfig } from './auth.cookies';
 import { JwtAuthGuard } from '@/common/guards';
 import { CurrentUser } from '@/common/decorators';
@@ -40,6 +40,14 @@ export class AuthController {
   @Post('login')
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(dto);
+    setAuthCookies(res, result, this.configService);
+    return result;
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('ldap/login')
+  async ldapLogin(@Body() dto: LdapLoginDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.loginWithLdap(dto);
     setAuthCookies(res, result, this.configService);
     return result;
   }

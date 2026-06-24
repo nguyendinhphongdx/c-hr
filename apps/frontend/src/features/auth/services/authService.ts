@@ -4,6 +4,7 @@ import type {
   ChangePasswordInput,
   ForgotPasswordInput,
   LoginInput,
+  LdapLoginInput,
   MeResponse,
   OAuthProvider,
   OrgSignupInput,
@@ -19,6 +20,11 @@ import type {
 export const authService = {
   login: async (data: LoginInput): Promise<AuthResponse> => {
     const res = await apiClient.post<AuthResponse>("/auth/login", data);
+    return res.data;
+  },
+
+  ldapLogin: async (data: LdapLoginInput): Promise<AuthResponse> => {
+    const res = await apiClient.post<AuthResponse>("/auth/ldap/login", data);
     return res.data;
   },
 

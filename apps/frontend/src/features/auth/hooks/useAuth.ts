@@ -10,6 +10,7 @@ import type {
   ChangePasswordInput,
   ForgotPasswordInput,
   LoginInput,
+  LdapLoginInput,
   OrgSignupInput,
   RegisterInput,
   ResetPasswordInput,
@@ -76,6 +77,20 @@ export function useLogin() {
       // session so the next 401 in this fresh session can refresh again.
       resetSession();
       // Re-fetch /users/me — login response only carries the bare user.
+      queryClient.invalidateQueries({ queryKey: authKeys.me });
+      router.push(readNextFromLocation());
+    },
+  });
+}
+
+export function useLdapLogin() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (data: LdapLoginInput) => authService.ldapLogin(data),
+    onSuccess: () => {
+      resetSession();
       queryClient.invalidateQueries({ queryKey: authKeys.me });
       router.push(readNextFromLocation());
     },
@@ -190,4 +205,3 @@ export function useUpdateProfile() {
     },
   });
 }
-

@@ -1,11 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -19,9 +18,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-
-import { useSignupOrg } from "../hooks/useAuth";
 
 /** Slugify a string the way humans expect — lowercase, dash-separated,
  * stripped of accents and non-alphanumerics. */
@@ -50,9 +46,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function RegisterForm() {
-  const signup = useSignupOrg();
   const [showPassword, setShowPassword] = useState(false);
-  const [shake, setShake] = useState(false);
   const [slugTouched, setSlugTouched] = useState(false);
 
   const form = useForm<FormValues>({
@@ -79,26 +73,11 @@ export function RegisterForm() {
     }
   }, [organizationName, slugTouched, form]);
 
-  const onSubmit = async (data: FormValues) => {
-    try {
-      await signup.mutateAsync(data);
-    } catch (err) {
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-      toast.error("Không tạo được Org", {
-        description:
-          err instanceof Error
-            ? err.message
-            : "Slug hoặc email có thể đã được dùng.",
-      });
-    }
-  };
-
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className={cn("space-y-4", shake && "animate-shake")}
+        onSubmit={(event) => event.preventDefault()}
+        className="space-y-4"
       >
         <FormField
           control={form.control}
@@ -211,21 +190,8 @@ export function RegisterForm() {
           )}
         />
 
-        {signup.error && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            Không tạo được Org. Slug hoặc email có thể đã được dùng.
-          </div>
-        )}
-
-        <Button type="submit" className="w-full gap-2" disabled={signup.isPending}>
-          {signup.isPending ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Đang tạo Org…
-            </>
-          ) : (
-            "Tạo Org"
-          )}
+        <Button type="submit" className="w-full" disabled>
+          Tạm ngừng đăng ký
         </Button>
 
         <p className="text-center text-sm text-muted-foreground">

@@ -72,6 +72,11 @@ export interface LoginInput {
   password: string;
 }
 
+export interface LdapLoginInput {
+  username: string;
+  password: string;
+}
+
 /** Legacy /auth/register input — boilerplate flow, kept while
  *  /organizations/signup becomes the canonical path. */
 export interface RegisterInput {

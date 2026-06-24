@@ -89,3 +89,19 @@ The canonical template is [.env.example](../../../apps/backend/.env.example). Th
 | --- | --- | --- |
 | `ADMIN_EMAIL` | `admin@example.com` | Used by `pnpm prisma:seed` and `pnpm cli seed`. |
 | `ADMIN_PASSWORD` | `Admin@123456` | **Change in any non-trivial deployment.** |
+
+## Active Directory / LDAP
+
+| Var | Default | Notes |
+| --- | --- | --- |
+| `LDAP_URL` | unset | `ldap://host:389` or `ldaps://host:636`. Empty disables AD login. |
+| `LDAP_BIND_DN` | unset | Service account DN, UPN, or accepted bind identity. |
+| `LDAP_BIND_PASSWORD` | unset | Service-account secret. Never commit it. |
+| `LDAP_BASE_DN` | auto-discover | Search root. Active Directory RootDSE is queried when empty. |
+| `LDAP_DEFAULT_ORGANIZATION_ID` | unset | Auto-provisions authenticated AD users into this Org with role `user`. Empty requires a pre-existing C‑HR user. |
+| `LDAP_USER_DOMAIN` | unset | Builds a UPN from short usernames. |
+| `LDAP_USER_FILTER` | built-in AD filter | Supports `{{username}}` and `{{principal}}`. |
+| `LDAP_START_TLS` | `false` | Upgrade `ldap://` to TLS before credentials are sent. |
+| `LDAP_CA_FILE` | unset | PEM CA chain used by StartTLS/LDAPS. |
+| `LDAP_TLS_REJECT_UNAUTHORIZED` | `true` | Keep true outside temporary diagnostics. |
+| `LDAP_TIMEOUT_MS` | `5000` | Connect and operation timeout. |

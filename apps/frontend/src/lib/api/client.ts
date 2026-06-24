@@ -70,6 +70,7 @@ type RetryableConfig = AxiosRequestConfig & { _retry?: boolean };
  */
 const NO_REFRESH_PATHS = [
   "/auth/login",
+  "/auth/ldap/login",
   "/auth/refresh",
   "/auth/logout",
   "/auth/register",

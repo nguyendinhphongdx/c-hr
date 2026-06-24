@@ -5,7 +5,7 @@ export function RegisterView() {
   return (
     <AuthLayout
       title="Tạo Org cho doanh nghiệp"
-      subtitle="Khởi tạo trong chưa đầy một phút. Không cần thẻ ngân hàng."
+      subtitle="Tính năng đăng ký tổ chức mới hiện đang tạm ngừng."
     >
       <RegisterForm />
     </AuthLayout>

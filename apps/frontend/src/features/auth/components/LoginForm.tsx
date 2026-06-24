@@ -18,9 +18,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { MicrosoftLoginButton } from "@/features/sso";
 import { cn } from "@/lib/utils";
 import { useLogin } from "../hooks/useAuth";
+import { LdapLoginDialog } from "./LdapLoginDialog";
 import { SocialAuthButtons } from "./SocialAuthButtons";
 
 const LAST_EMAIL_KEY = "auth:lastEmail";
@@ -95,7 +95,7 @@ export function LoginForm() {
     <div className="space-y-5">
       <SocialAuthButtons />
 
-      <MicrosoftLoginButton className="w-full" />
+      <LdapLoginDialog />
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
