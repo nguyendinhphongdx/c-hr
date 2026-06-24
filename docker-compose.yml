@@ -24,13 +24,14 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`api.cmcai.local`)"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.c-hr-api.rule=Host(`hrm.cmcai.vn`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.c-hr-api.priority=100"
+      - "traefik.http.services.c-hr-api.loadbalancer.server.port=8000"
     environment:
       NODE_ENV: production
       PORT: 8000
       API_PREFIX: api/v1
-      API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
+      API_BASE_URL: ${API_BASE_URL:-https://hrm.cmcai.vn}
       # Database — override @postgres container hostname
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-c_hr}
       # Redis — override @redis container hostname
@@ -43,7 +44,7 @@ services:
       JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-15m}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
       # CORS & Cookies
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://hrm.cmcai.vn}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
@@ -64,7 +65,7 @@ services:
       MAIL_FROM: ${MAIL_FROM:-noreply@example.com}
       MAIL_SECURE: ${MAIL_SECURE:-false}
       # SSO (Microsoft Entra)
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-https://hrm.cmcai.vn}
       MS_SSO_TENANT_ID: ${MS_SSO_TENANT_ID:-common}
       MS_SSO_CLIENT_ID: ${MS_SSO_CLIENT_ID:-}
       MS_SSO_CLIENT_SECRET: ${MS_SSO_CLIENT_SECRET:-}
@@ -88,14 +89,15 @@ services:
         condition: service_started
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`chr.cmcai.local`)"
-      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+      - "traefik.http.routers.c-hr-web.rule=Host(`hrm.cmcai.vn`)"
+      - "traefik.http.routers.c-hr-web.priority=10"
+      - "traefik.http.services.c-hr-web.loadbalancer.server.port=3000"
     environment:
       NODE_ENV: production
       PORT: 3000
       # next-runtime-env reads these at request time — no rebuild needed.
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://hrm.cmcai.vn/api/v1}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://hrm.cmcai.vn}
     networks:
       - c-hr
       - traefik-network
@@ -104,5 +106,5 @@ networks:
   c-hr:
     name: c-hr
     driver: bridge
-  traefik-network:   # ← thêm
+  traefik-network:
     external: true
