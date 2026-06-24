@@ -32,28 +32,18 @@ export class LdapService {
 
   async authenticate(login: string, password: string): Promise<LdapProfile> {
     const config = this.getConfig();
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
-      try {
-        return await this.authenticateOnce(login, password, config);
-      } catch (error) {
-        if (error instanceof UnauthorizedException) {
-          throw error;
-        }
-        if (attempt === 1 && isTransientConnectionError(error)) {
-          this.logger.warn(
-            `LDAP connection reset during authentication; retrying once (${connectionErrorCode(error)})`,
-          );
-          await delay(150);
-          continue;
-        }
-
-        this.logger.error(
-          `LDAP authentication failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        throw new ServiceUnavailableException('Không thể kết nối dịch vụ AD');
+    try {
+      return await this.authenticateOnce(login, password, config);
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
       }
+
+      this.logger.error(
+        `LDAP authentication failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw new ServiceUnavailableException('Không thể kết nối dịch vụ AD');
     }
-    throw new ServiceUnavailableException('Không thể kết nối dịch vụ AD');
   }
 
   private async authenticateOnce(
@@ -213,17 +203,4 @@ function escapeLdapFilter(value: string): string {
   return value.replace(/[\0()*\\]/g, (char) => {
     return `\\${char.charCodeAt(0).toString(16).padStart(2, '0')}`;
   });
-}
-
-function isTransientConnectionError(error: unknown): boolean {
-  return ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EPIPE'].includes(connectionErrorCode(error));
-}
-
-function connectionErrorCode(error: unknown): string {
-  if (!error || typeof error !== 'object' || !('code' in error)) return 'UNKNOWN';
-  return String(error.code);
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
