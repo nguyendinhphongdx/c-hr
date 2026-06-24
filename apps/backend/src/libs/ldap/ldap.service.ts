@@ -32,8 +32,36 @@ export class LdapService {
 
   async authenticate(login: string, password: string): Promise<LdapProfile> {
     const config = this.getConfig();
-    const directoryClient = this.createClient(config);
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        return await this.authenticateOnce(login, password, config);
+      } catch (error) {
+        if (error instanceof UnauthorizedException) {
+          throw error;
+        }
+        if (attempt === 1 && isTransientConnectionError(error)) {
+          this.logger.warn(
+            `LDAP connection reset during authentication; retrying once (${connectionErrorCode(error)})`,
+          );
+          await delay(150);
+          continue;
+        }
 
+        this.logger.error(
+          `LDAP authentication failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        throw new ServiceUnavailableException('Không thể kết nối dịch vụ AD');
+      }
+    }
+    throw new ServiceUnavailableException('Không thể kết nối dịch vụ AD');
+  }
+
+  private async authenticateOnce(
+    login: string,
+    password: string,
+    config: LdapConfig,
+  ): Promise<LdapProfile> {
+    const directoryClient = this.createClient(config);
     try {
       await this.secureConnection(directoryClient, config);
       await directoryClient.bind(config.bindDn, config.bindPassword);
@@ -47,7 +75,16 @@ export class LdapService {
       const { searchEntries } = await directoryClient.search(baseDn, {
         scope: 'sub',
         filter,
-        attributes: ['sAMAccountName', 'userPrincipalName', 'mail', 'displayName', 'memberOf'],
+        attributes: [
+          'sAMAccountName',
+          'userPrincipalName',
+          'mail',
+          'displayName',
+          'title',
+          'telephoneNumber',
+          'mobile',
+          'memberOf',
+        ],
         sizeLimit: 2,
       });
 
@@ -56,31 +93,23 @@ export class LdapService {
       }
 
       const entry = searchEntries[0];
-      await this.verifyPassword(entry.dn, password, config);
+      const userBindIdentity = firstString(entry.userPrincipalName) || entry.dn;
+      await this.verifyPassword(userBindIdentity, password, config);
       return this.toProfile(entry, identity.principal);
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-
-      this.logger.error(
-        `LDAP authentication failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      throw new ServiceUnavailableException('Không thể kết nối dịch vụ AD');
     } finally {
       await directoryClient.unbind().catch(() => undefined);
     }
   }
 
   private async verifyPassword(
-    userDn: string,
+    userIdentity: string,
     password: string,
     config: LdapConfig,
   ): Promise<void> {
     const userClient = this.createClient(config);
     try {
       await this.secureConnection(userClient, config);
-      await userClient.bind(userDn, password);
+      await userClient.bind(userIdentity, password);
     } catch (error) {
       if (error instanceof InvalidCredentialsError) {
         throw new UnauthorizedException('Tài khoản hoặc mật khẩu AD không đúng');
@@ -108,12 +137,13 @@ export class LdapService {
   }
 
   private createClient(config: LdapConfig): Client {
-    const tlsOptions = this.tlsOptions(config);
     return new Client({
       url: config.url,
       connectTimeout: config.timeoutMs,
       timeout: config.timeoutMs,
-      tlsOptions,
+      ...(config.url.toLowerCase().startsWith('ldaps://')
+        ? { tlsOptions: this.tlsOptions(config) }
+        : {}),
     });
   }
 
@@ -150,6 +180,8 @@ export class LdapService {
       username: firstString(entry.sAMAccountName) || principal,
       email,
       name: firstString(entry.displayName) || null,
+      title: firstString(entry.title) || null,
+      phone: firstString(entry.mobile) || firstString(entry.telephoneNumber) || null,
       groups: stringArray(entry.memberOf),
     };
   }
@@ -181,4 +213,17 @@ function escapeLdapFilter(value: string): string {
   return value.replace(/[\0()*\\]/g, (char) => {
     return `\\${char.charCodeAt(0).toString(16).padStart(2, '0')}`;
   });
+}
+
+function isTransientConnectionError(error: unknown): boolean {
+  return ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EPIPE'].includes(connectionErrorCode(error));
+}
+
+function connectionErrorCode(error: unknown): string {
+  if (!error || typeof error !== 'object' || !('code' in error)) return 'UNKNOWN';
+  return String(error.code);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

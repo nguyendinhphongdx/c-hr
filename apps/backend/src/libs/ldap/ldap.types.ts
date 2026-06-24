@@ -3,5 +3,7 @@ export interface LdapProfile {
   username: string;
   email: string;
   name: string | null;
+  title: string | null;
+  phone: string | null;
   groups: string[];
 }

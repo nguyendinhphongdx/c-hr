@@ -6,10 +6,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import type { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '@libs/database/prisma.service';
-import { LdapService } from '@libs/ldap';
+import { LdapService, type LdapProfile } from '@libs/ldap';
 import { IAuthTokens, IJwtPayload } from '@/common/types';
 import { LdapLoginDto, LoginDto, RegisterDto } from './dto';
 
@@ -79,12 +80,16 @@ export class AuthService {
         create: {
           email: profile.email,
           name: profile.name,
+          title: profile.title,
+          phone: profile.phone,
           password: await bcrypt.hash(uuidv4(), SALT_ROUNDS),
           role: 'user',
           organizationId: organization.id,
         },
       });
     }
+
+    user = await this.ensureLdapEmployee(user, profile);
 
     const tokens = await this.issueTokens(user);
     return { user: this.sanitize(user), ...tokens };
@@ -145,5 +150,46 @@ export class AuthService {
     const result = { ...user };
     delete result.password;
     return result;
+  }
+
+  private async ensureLdapEmployee(user: User, profile: LdapProfile): Promise<User> {
+    if (user.employeeId) return user;
+    if (!user.organizationId || user.role === 'sysowner') {
+      throw new UnauthorizedException(
+        'Tài khoản AD chưa thuộc tổ chức nên không thể tạo hồ sơ nhân viên',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const currentUser = await tx.user.findUnique({ where: { id: user.id } });
+      if (!currentUser) throw new UnauthorizedException('Tài khoản không còn tồn tại');
+      if (currentUser.employeeId) return currentUser;
+      if (!currentUser.organizationId || currentUser.role === 'sysowner') {
+        throw new UnauthorizedException(
+          'Tài khoản AD chưa thuộc tổ chức nên không thể tạo hồ sơ nhân viên',
+        );
+      }
+
+      const employeeCode = `AD-${currentUser.id.replaceAll('-', '').toUpperCase()}`;
+      const employee = await tx.employee.upsert({
+        where: {
+          organizationId_code: {
+            organizationId: currentUser.organizationId,
+            code: employeeCode,
+          },
+        },
+        update: {},
+        create: {
+          organizationId: currentUser.organizationId,
+          code: employeeCode,
+          title: profile.title,
+        },
+      });
+
+      return tx.user.update({
+        where: { id: currentUser.id },
+        data: { employeeId: employee.id },
+      });
+    });
   }
 }
