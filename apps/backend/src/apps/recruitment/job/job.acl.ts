@@ -2,10 +2,7 @@ import { Job } from '@prisma/client';
 
 import { AclView, BaseAcl } from '@/common/acl';
 
-export type JobAclSubject = Pick<
-  Job,
-  'id' | 'organizationId' | 'hiringManagerId' | 'createdById'
->;
+export type JobAclSubject = Pick<Job, 'id' | 'organizationId' | 'hiringManagerId' | 'createdById'>;
 
 export interface JobAclView extends AclView {
   canPublish: boolean;

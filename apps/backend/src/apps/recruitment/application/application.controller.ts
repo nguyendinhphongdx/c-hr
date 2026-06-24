@@ -51,20 +51,14 @@ export class ApplicationController {
   @Post(':id/move-stage')
   @HttpCode(HttpStatus.OK)
   @Auditable({ action: 'APPLICATION_MOVE_STAGE', entity: 'Application' })
-  moveStage(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: MoveStageDto,
-  ) {
+  moveStage(@Param('id', ParseUUIDPipe) id: string, @Body() dto: MoveStageDto) {
     return this.service.moveStage(id, dto);
   }
 
   @Post(':id/reject')
   @HttpCode(HttpStatus.OK)
   @Auditable({ action: 'APPLICATION_REJECT', entity: 'Application' })
-  reject(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: RejectApplicationDto,
-  ) {
+  reject(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RejectApplicationDto) {
     return this.service.reject(id, dto);
   }
 
@@ -78,20 +72,14 @@ export class ApplicationController {
   @Post(':id/hire')
   @HttpCode(HttpStatus.OK)
   @Auditable({ action: 'APPLICATION_HIRE', entity: 'Application' })
-  hire(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: HireApplicationDto,
-  ) {
+  hire(@Param('id', ParseUUIDPipe) id: string, @Body() dto: HireApplicationDto) {
     return this.service.hire(id, dto);
   }
 
   @Post(':id/email')
   @HttpCode(HttpStatus.OK)
   @Auditable({ action: 'APPLICATION_EMAIL_SEND', entity: 'Application' })
-  sendEmail(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: SendApplicationEmailDto,
-  ) {
+  sendEmail(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SendApplicationEmailDto) {
     return this.service.sendEmail(id, dto);
   }
 }

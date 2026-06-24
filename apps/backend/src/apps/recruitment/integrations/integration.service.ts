@@ -56,19 +56,13 @@ export class IntegrationService {
     // Fail fast: if no adapter is implemented for this board, refuse
     // the save — would just be dead data sitting in the DB.
     if (!this.adapters.available().includes(dto.board)) {
-      throw new BadRequestException(
-        `Adapter for ${dto.board} is not implemented yet`,
-      );
+      throw new BadRequestException(`Adapter for ${dto.board} is not implemented yet`);
     }
 
     const creds: BoardCredentials = {
       apiKey: dto.apiKey.trim(),
-      ...(dto.secretKey
-        ? { secretKey: dto.secretKey.trim() }
-        : {}),
-      ...(dto.webhookSecret
-        ? { webhookSecret: dto.webhookSecret.trim() }
-        : {}),
+      ...(dto.secretKey ? { secretKey: dto.secretKey.trim() } : {}),
+      ...(dto.webhookSecret ? { webhookSecret: dto.webhookSecret.trim() } : {}),
     };
 
     const adapter = this.adapters.get(dto.board);
@@ -158,9 +152,7 @@ export class IntegrationService {
       where: { organizationId_board: { organizationId, board } },
     });
     if (!row) {
-      throw new NotFoundException(
-        `No integration configured for ${board} in this org`,
-      );
+      throw new NotFoundException(`No integration configured for ${board} in this org`);
     }
     if (requireActive && !row.isActive) {
       throw new BadRequestException(`Integration for ${board} is disabled`);

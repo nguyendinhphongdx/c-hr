@@ -53,6 +53,13 @@ const schema = z
       .min(1, "Bắt buộc")
       .max(50)
       .regex(/^[A-Za-z0-9-_]+$/, "Chỉ chữ cái, số, gạch ngang, gạch dưới"),
+    attendanceCode: z
+      .string()
+      .max(50)
+      .refine(
+        (value) => value === "" || /^[A-Za-z0-9-_]+$/.test(value),
+        "Chỉ chữ cái, số, gạch ngang, gạch dưới",
+      ),
     title: z.string().max(100).optional(),
     hireDate: z.string().optional(),
     departmentId: z.union(
@@ -94,6 +101,7 @@ const DEFAULTS: FormValues = {
   password: "",
   userId: null,
   code: "",
+  attendanceCode: "",
   title: "",
   hireDate: "",
   departmentId: NO_DEPARTMENT,
@@ -119,6 +127,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
     try {
       const sharedFields = {
         code: values.code,
+        attendanceCode: values.attendanceCode || undefined,
         title: values.title || undefined,
         hireDate: values.hireDate || undefined,
         departmentId:
@@ -264,7 +273,24 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
                     <Input placeholder="EMP-0001" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Unique trong Org. Dùng cho push từ thiết bị chấm công.
+                    Mã hồ sơ nhân sự, unique trong Org.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="attendanceCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mã chấm công</FormLabel>
+                  <FormControl>
+                    <Input placeholder="00001" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Mã được cài giống nhau trên tất cả máy chấm công. Có thể cập nhật sau.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

@@ -36,23 +36,23 @@ export class EmployeeService {
   ) {}
 
   /**
-   * Claim every orphan AttendanceLog (employeeId=null + employeeCode=code)
+   * Claim every orphan AttendanceLog matching the employee attendance code.
    * for this Org and link them to the new Employee. Multiple orphan rows on
    * the same date get merged into a single (employeeId, date) row with
    * MIN/MAX check-in/out — the rest are deleted to satisfy the
    * @@unique([employeeId, date]) constraint. Idempotent: re-running yields 0.
    */
-  private async linkPendingAttendance(
+  async linkPendingAttendance(
     tx: PrismaService | Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
     orgId: string,
     employeeId: string,
-    code: string,
+    attendanceCode: string,
   ): Promise<number> {
     const orphans = await tx.attendanceLog.findMany({
       where: {
         organizationId: orgId,
         employeeId: null,
-        employeeCode: code,
+        employeeCode: attendanceCode,
       },
       orderBy: [{ date: 'asc' }, { checkInAt: 'asc' }],
     });
@@ -90,7 +90,7 @@ export class EmployeeService {
     }
 
     this.logger.log(
-      `[employee=${employeeId}] linked ${orphans.length} orphan attendance event(s) (code=${code})`,
+      `[employee=${employeeId}] linked ${orphans.length} orphan attendance event(s) (attendanceCode=${attendanceCode})`,
     );
     return orphans.length;
   }
@@ -140,6 +140,7 @@ export class EmployeeService {
           data: {
             organizationId: orgId,
             code: dto.code,
+            attendanceCode: dto.attendanceCode,
             departmentId: dto.departmentId,
             title: dto.title,
             hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
@@ -149,7 +150,9 @@ export class EmployeeService {
           where: { id: dto.userId },
           data: { employeeId: employee.id },
         });
-        await this.linkPendingAttendance(tx, orgId, employee.id, dto.code);
+        if (dto.attendanceCode) {
+          await this.linkPendingAttendance(tx, orgId, employee.id, dto.attendanceCode);
+        }
         return employee;
       });
       this.eventEmitter.emit('employee.created', {
@@ -185,6 +188,7 @@ export class EmployeeService {
         data: {
           organizationId: orgId,
           code: dto.code,
+          attendanceCode: dto.attendanceCode,
           departmentId: dto.departmentId,
           title: dto.title,
           hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
@@ -200,7 +204,9 @@ export class EmployeeService {
           employeeId: employee.id,
         },
       });
-      await this.linkPendingAttendance(tx, orgId, employee.id, dto.code);
+      if (dto.attendanceCode) {
+        await this.linkPendingAttendance(tx, orgId, employee.id, dto.attendanceCode);
+      }
       return employee;
     });
     this.eventEmitter.emit('employee.created', {
@@ -242,12 +248,32 @@ export class EmployeeService {
       }
     }
 
+    if (
+      dto.attendanceCode !== undefined &&
+      dto.attendanceCode !== null &&
+      dto.attendanceCode !== existing.attendanceCode
+    ) {
+      const attendanceCodeTaken = await this.prisma.employee.findFirst({
+        where: {
+          organizationId: orgId,
+          attendanceCode: dto.attendanceCode,
+          deletedAt: null,
+          NOT: { id },
+        },
+        select: { id: true },
+      });
+      if (attendanceCodeTaken) {
+        throw new ConflictException('Attendance code already in use');
+      }
+    }
+
     const previousStatus = existing.status;
     const updated = await this.prisma.$transaction(async (tx) => {
       const employee = await tx.employee.update({
         where: { id },
         data: {
           code: dto.code,
+          attendanceCode: dto.attendanceCode,
           departmentId: dto.departmentId,
           title: dto.title,
           hireDate:
@@ -281,8 +307,12 @@ export class EmployeeService {
       }
       // If the code changed (or was just set), retry orphan reconcile —
       // pending attendance events keyed by the new code claim this row.
-      if (dto.code !== undefined && dto.code !== existing.code) {
-        await this.linkPendingAttendance(tx, orgId, id, dto.code);
+      if (
+        dto.attendanceCode !== undefined &&
+        dto.attendanceCode !== null &&
+        dto.attendanceCode !== existing.attendanceCode
+      ) {
+        await this.linkPendingAttendance(tx, orgId, id, dto.attendanceCode);
       }
       return employee;
     });

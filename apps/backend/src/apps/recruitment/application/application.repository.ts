@@ -32,10 +32,7 @@ const FULL_INCLUDE = {
 export class ApplicationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findManyByOrg(
-    organizationId: string,
-    where: Prisma.ApplicationWhereInput = {},
-  ) {
+  findManyByOrg(organizationId: string, where: Prisma.ApplicationWhereInput = {}) {
     return this.prisma.application.findMany({
       where: { organizationId, ...where },
       orderBy: { appliedAt: 'desc' },

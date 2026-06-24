@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JobBoard } from '@prisma/client';
 import { createHmac, timingSafeEqual } from 'crypto';
 
@@ -26,15 +21,10 @@ export class TalentVnAdapter implements JobBoardAdapter {
   private readonly logger = new Logger(TalentVnAdapter.name);
 
   private get baseUrl(): string {
-    return (
-      process.env.TALENT_VN_BASE_URL ?? 'https://api.talent.rework.vn'
-    ).replace(/\/+$/, '');
+    return (process.env.TALENT_VN_BASE_URL ?? 'https://api.talent.rework.vn').replace(/\/+$/, '');
   }
 
-  async publish(
-    input: PublishJobInput,
-    creds: BoardCredentials,
-  ): Promise<PublishJobResult> {
+  async publish(input: PublishJobInput, creds: BoardCredentials): Promise<PublishJobResult> {
     const res = await this.request<{
       id: string;
       url?: string;
@@ -78,9 +68,7 @@ export class TalentVnAdapter implements JobBoardAdapter {
     }
     const secret = creds.webhookSecret;
     if (!secret) {
-      throw new BadRequestException(
-        'Webhook secret not configured for this integration',
-      );
+      throw new BadRequestException('Webhook secret not configured for this integration');
     }
     const expected = createHmac('sha256', secret)
       .update(typeof rawBody === 'string' ? rawBody : rawBody)
@@ -111,25 +99,14 @@ export class TalentVnAdapter implements JobBoardAdapter {
       data: {
         externalApplicationId: String(data.applicationId ?? ''),
         externalJobId: String(data.jobId ?? ''),
-        externalJobTitle:
-          typeof data.jobTitle === 'string' ? data.jobTitle : undefined,
+        externalJobTitle: typeof data.jobTitle === 'string' ? data.jobTitle : undefined,
         candidate: {
           fullName: String(data.candidateName ?? 'Unknown'),
           email: String(data.candidateEmail ?? ''),
-          phone:
-            typeof data.candidatePhone === 'string'
-              ? data.candidatePhone
-              : undefined,
-          resumeUrl:
-            typeof data.resumeUrl === 'string' ? data.resumeUrl : undefined,
-          coverLetter:
-            typeof data.coverLetter === 'string'
-              ? data.coverLetter
-              : undefined,
-          expectedSalary:
-            typeof data.expectedSalary === 'number'
-              ? data.expectedSalary
-              : undefined,
+          phone: typeof data.candidatePhone === 'string' ? data.candidatePhone : undefined,
+          resumeUrl: typeof data.resumeUrl === 'string' ? data.resumeUrl : undefined,
+          coverLetter: typeof data.coverLetter === 'string' ? data.coverLetter : undefined,
+          expectedSalary: typeof data.expectedSalary === 'number' ? data.expectedSalary : undefined,
         },
         appliedAt: appliedAtRaw ? new Date(appliedAtRaw) : new Date(),
       },
@@ -170,32 +147,23 @@ export class TalentVnAdapter implements JobBoardAdapter {
   }
 
   /** Map our internal job shape to talent.vn's expected payload. */
-  private buildPublishBody(
-    input: PublishJobInput,
-    partial = false,
-  ): Record<string, unknown> {
+  private buildPublishBody(input: PublishJobInput, partial = false): Record<string, unknown> {
     const body: Record<string, unknown> = {};
     if (!partial || input.title !== undefined) body.title = input.title;
-    if (!partial || input.description !== undefined)
-      body.description = input.description;
-    if (!partial || input.requirements !== undefined)
-      body.requirements = input.requirements;
+    if (!partial || input.description !== undefined) body.description = input.description;
+    if (!partial || input.requirements !== undefined) body.requirements = input.requirements;
     if (input.benefits !== undefined) body.benefits = input.benefits;
     if (input.jobType) body.jobType = input.jobType;
     if (input.workMode) body.workMode = input.workMode;
     if (input.workAddresses?.length) body.workAddresses = input.workAddresses;
-    if (input.experienceMin !== undefined)
-      body.experienceMin = input.experienceMin;
-    if (input.experienceMax !== undefined)
-      body.experienceMax = input.experienceMax;
+    if (input.experienceMin !== undefined) body.experienceMin = input.experienceMin;
+    if (input.experienceMax !== undefined) body.experienceMax = input.experienceMax;
     if (input.salaryMin !== undefined) body.salaryMin = input.salaryMin;
     if (input.salaryMax !== undefined) body.salaryMax = input.salaryMax;
-    if (input.salaryNegotiable !== undefined)
-      body.salaryNegotiable = input.salaryNegotiable;
+    if (input.salaryNegotiable !== undefined) body.salaryNegotiable = input.salaryNegotiable;
     if (input.currency) body.currency = input.currency;
     if (input.requiredSkills) body.requiredSkills = input.requiredSkills;
-    if (input.niceToHaveSkills)
-      body.niceToHaveSkills = input.niceToHaveSkills;
+    if (input.niceToHaveSkills) body.niceToHaveSkills = input.niceToHaveSkills;
     if (input.headcount !== undefined) body.headcount = input.headcount;
     if (input.isUrgent !== undefined) body.isUrgent = input.isUrgent;
     if (input.expiresAt) body.expiresAt = input.expiresAt.toISOString();
@@ -211,5 +179,5 @@ function pickHeader(
 ): string | null {
   const direct = headers[name] ?? headers[name.toLowerCase()];
   if (!direct) return null;
-  return Array.isArray(direct) ? direct[0] ?? null : direct;
+  return Array.isArray(direct) ? (direct[0] ?? null) : direct;
 }

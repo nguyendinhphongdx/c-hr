@@ -13,17 +13,7 @@ import { JobModule } from './job/job.module';
  * Phase 3: Interview + Scorecard + Offer.
  */
 @Module({
-  imports: [
-    JobModule,
-    CandidateModule,
-    ApplicationModule,
-    IntegrationsModule,
-  ],
-  exports: [
-    JobModule,
-    CandidateModule,
-    ApplicationModule,
-    IntegrationsModule,
-  ],
+  imports: [JobModule, CandidateModule, ApplicationModule, IntegrationsModule],
+  exports: [JobModule, CandidateModule, ApplicationModule, IntegrationsModule],
 })
 export class RecruitmentModule {}

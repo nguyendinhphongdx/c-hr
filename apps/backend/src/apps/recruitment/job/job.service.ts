@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { JobStageKind, JobStatus, Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
 
@@ -72,9 +68,7 @@ export class JobService {
 
     if (dto.experienceMin !== undefined && dto.experienceMax !== undefined) {
       if (dto.experienceMax < dto.experienceMin) {
-        throw new BadRequestException(
-          'experienceMax must be ≥ experienceMin',
-        );
+        throw new BadRequestException('experienceMax must be ≥ experienceMin');
       }
     }
     if (dto.salaryMin !== undefined && dto.salaryMax !== undefined) {
@@ -266,11 +260,7 @@ export class JobService {
 
   // ──────────────────────────────────────────────────────────────────
 
-  private async transition(
-    id: string,
-    next: JobStatus,
-    action: 'canPublish' | 'canClose',
-  ) {
+  private async transition(id: string, next: JobStatus, action: 'canPublish' | 'canClose') {
     const orgId = this.ctx.requireOrg();
     const row = await this.repo.findByIdByOrg(orgId, id);
     if (!row) throw new NotFoundException('Job not found');

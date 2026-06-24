@@ -2,10 +2,7 @@ import { Candidate } from '@prisma/client';
 
 import { AclView, BaseAcl } from '@/common/acl';
 
-export type CandidateAclSubject = Pick<
-  Candidate,
-  'id' | 'organizationId' | 'createdById'
->;
+export type CandidateAclSubject = Pick<Candidate, 'id' | 'organizationId' | 'createdById'>;
 
 /**
  * Candidate ACL.

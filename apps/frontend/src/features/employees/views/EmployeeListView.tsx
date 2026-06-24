@@ -209,6 +209,7 @@ export function EmployeeListView() {
             <thead className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 font-medium">Mã</th>
+                <th className="px-4 py-3 font-medium">Mã chấm công</th>
                 <th className="px-4 py-3 font-medium">Họ tên</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Chức danh</th>
@@ -225,6 +226,9 @@ export function EmployeeListView() {
                   onClick={() => setViewingId(emp.id)}
                 >
                   <td className="px-4 py-3 font-mono text-xs">{emp.code}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                    {emp.attendanceCode ?? "—"}
+                  </td>
                   <td className="px-4 py-3 font-medium">
                     {emp.user?.name ?? "—"}
                   </td>

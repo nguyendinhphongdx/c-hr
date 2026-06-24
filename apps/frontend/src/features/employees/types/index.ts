@@ -23,6 +23,7 @@ export interface Employee {
   /** Linked User — personal info source of truth (name, email, dob, ...). */
   user: Nullable<EmployeeUser>;
   code: string;
+  attendanceCode: Nullable<string>;
   /** Formal job title set by HR. Distinct from User.title (personal). */
   title: Nullable<string>;
   hireDate: Nullable<ISODate>;
@@ -63,6 +64,7 @@ export interface EmployeesListResponse {
  */
 export interface CreateEmployeeInput {
   code: string;
+  attendanceCode?: string;
   userId?: ID;
   email?: string;
   name?: string;
@@ -74,6 +76,7 @@ export interface CreateEmployeeInput {
 
 export interface UpdateEmployeeInput {
   code?: string;
+  attendanceCode?: Nullable<string>;
   userId?: ID;
   departmentId?: Nullable<ID>;
   title?: Nullable<string>;
@@ -93,6 +96,7 @@ export type ImportRowStatus = "valid" | "invalid";
 export interface ParsedEmployeeRow {
   rowNumber: number;
   employeeCode: string;
+  attendanceCode: Nullable<string>;
   email: string;
   name: string;
   title: Nullable<string>;
@@ -107,7 +111,13 @@ export interface EmployeeImportParseResponse {
 
 export interface EmployeeImportBulkInput {
   defaultPassword: string;
-  rows: { employeeCode: string; email: string; name: string; title?: string }[];
+  rows: {
+    employeeCode: string;
+    attendanceCode?: string;
+    email: string;
+    name: string;
+    title?: string;
+  }[];
 }
 
 export interface EmployeeImportBulkResponse {

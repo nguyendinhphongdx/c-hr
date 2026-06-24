@@ -297,11 +297,7 @@ export class TaskService {
     }
     // Section changed (drag-drop in Board) → auto-set status if section
     // name maps to a known status.
-    if (
-      dto.sectionId !== undefined &&
-      dto.sectionId !== null &&
-      dto.status === undefined
-    ) {
+    if (dto.sectionId !== undefined && dto.sectionId !== null && dto.status === undefined) {
       const section = project.sections.find((s) => s.id === dto.sectionId);
       const wantStatus = section ? SECTION_TO_STATUS[section.name] : null;
       if (wantStatus && wantStatus !== row.status) {

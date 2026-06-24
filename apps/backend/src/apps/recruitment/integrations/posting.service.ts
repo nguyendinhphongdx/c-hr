@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { JobBoard, Prisma } from '@prisma/client';
 
 import { requireAppAdmin } from '@/common/auth/access';
@@ -186,12 +181,8 @@ export class PostingService {
       workAddresses: (job.workAddresses as PublishJobInput['workAddresses']) ?? [],
       experienceMin: job.experienceMin ?? undefined,
       experienceMax: job.experienceMax ?? undefined,
-      salaryMin: job.salaryMin
-        ? Number(job.salaryMin.toString())
-        : undefined,
-      salaryMax: job.salaryMax
-        ? Number(job.salaryMax.toString())
-        : undefined,
+      salaryMin: job.salaryMin ? Number(job.salaryMin.toString()) : undefined,
+      salaryMax: job.salaryMax ? Number(job.salaryMax.toString()) : undefined,
       salaryNegotiable: job.salaryNegotiable,
       currency: job.currency,
       requiredSkills: job.requiredSkills,

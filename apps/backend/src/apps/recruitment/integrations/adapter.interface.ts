@@ -22,12 +22,7 @@ export interface PublishJobInput {
   description: string;
   requirements: string;
   benefits?: string;
-  jobType:
-    | 'FULL_TIME'
-    | 'PART_TIME'
-    | 'CONTRACT'
-    | 'INTERN'
-    | 'FREELANCE';
+  jobType: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERN' | 'FREELANCE';
   workMode: 'ONSITE' | 'REMOTE' | 'HYBRID';
   workAddresses: WorkAddressInput[];
   experienceMin?: number;
@@ -81,10 +76,7 @@ export interface IncomingApplication {
 export interface JobBoardAdapter {
   readonly board: JobBoard;
 
-  publish(
-    input: PublishJobInput,
-    creds: BoardCredentials,
-  ): Promise<PublishJobResult>;
+  publish(input: PublishJobInput, creds: BoardCredentials): Promise<PublishJobResult>;
 
   update(
     externalId: string,
@@ -115,7 +107,5 @@ export interface JobBoardAdapter {
    * Convert a raw board webhook payload into our internal shape. Lets
    * the webhook controller stay board-agnostic.
    */
-  parseWebhookEvent(
-    body: unknown,
-  ): { event: string; data: IncomingApplication | null };
+  parseWebhookEvent(body: unknown): { event: string; data: IncomingApplication | null };
 }

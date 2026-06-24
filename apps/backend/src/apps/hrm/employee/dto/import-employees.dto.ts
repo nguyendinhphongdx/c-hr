@@ -4,6 +4,8 @@ import {
   IsEmail,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -12,6 +14,15 @@ import { Type } from 'class-transformer';
 export class BulkCreateRowDto {
   @IsString()
   employeeCode!: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(50)
+  @Matches(/^[A-Za-z0-9-_]+$/, {
+    message: 'attendanceCode must contain letters, digits, hyphens or underscores only',
+  })
+  attendanceCode?: string;
 
   @IsEmail()
   email!: string;
@@ -41,6 +52,7 @@ export type ImportRowStatus = 'valid' | 'invalid';
 export interface ParsedEmployeeRow {
   rowNumber: number;
   employeeCode: string;
+  attendanceCode: string | null;
   email: string;
   name: string;
   title: string | null;

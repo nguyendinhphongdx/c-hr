@@ -22,10 +22,7 @@ const FULL_INCLUDE = {
 export class CandidateRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findManyByOrg(
-    organizationId: string,
-    where: Prisma.CandidateWhereInput = {},
-  ) {
+  findManyByOrg(organizationId: string, where: Prisma.CandidateWhereInput = {}) {
     return this.prisma.candidate.findMany({
       where: { organizationId, deletedAt: null, ...where },
       orderBy: { updatedAt: 'desc' },

@@ -32,20 +32,14 @@ export class PostingController {
   @Post('push')
   @HttpCode(HttpStatus.OK)
   @Auditable({ action: 'JOB_BOARD_PUSH', entity: 'JobBoardPosting' })
-  push(
-    @Param('jobId', ParseUUIDPipe) jobId: string,
-    @Body() dto: PushJobDto,
-  ) {
+  push(@Param('jobId', ParseUUIDPipe) jobId: string, @Body() dto: PushJobDto) {
     return this.service.pushJob(jobId, dto.board);
   }
 
   @Post('close')
   @HttpCode(HttpStatus.OK)
   @Auditable({ action: 'JOB_BOARD_CLOSE', entity: 'JobBoardPosting' })
-  close(
-    @Param('jobId', ParseUUIDPipe) jobId: string,
-    @Body() dto: PushJobDto,
-  ) {
+  close(@Param('jobId', ParseUUIDPipe) jobId: string, @Body() dto: PushJobDto) {
     return this.service.closePosting(jobId, dto.board);
   }
 }

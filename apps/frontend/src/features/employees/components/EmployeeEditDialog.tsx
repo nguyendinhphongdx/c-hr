@@ -48,6 +48,14 @@ const schema = z.object({
     .min(1, "Bắt buộc")
     .max(50)
     .regex(/^[A-Za-z0-9-_]+$/, "Chỉ chữ cái, số, gạch ngang, gạch dưới"),
+  attendanceCode: z
+    .string()
+    .max(50)
+    .refine(
+      (value) => value === "" || /^[A-Za-z0-9-_]+$/.test(value),
+      "Chỉ chữ cái, số, gạch ngang, gạch dưới",
+    )
+    .nullable(),
   userId: z.string().uuid("Chọn người dùng"),
   title: z.string().max(100).nullable(),
   hireDate: z.string().nullable(),
@@ -96,6 +104,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
     resolver: zodResolver(schema),
     defaultValues: {
       code: "",
+      attendanceCode: "",
       userId: "",
       title: "",
       hireDate: "",
@@ -115,6 +124,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
       const e = employee.data;
       form.reset({
         code: e.code,
+        attendanceCode: e.attendanceCode ?? "",
         userId: e.user?.id ?? "",
         title: e.title ?? "",
         hireDate: toInputDate(e.hireDate),
@@ -141,6 +151,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
         id,
         data: {
           code: values.code,
+          attendanceCode: values.attendanceCode || null,
           userId: values.userId,
           title: values.title || null,
           hireDate: values.hireDate || null,
@@ -212,8 +223,28 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                       <Input placeholder="EMP-0001" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Unique trong Org. Đổi mã sẽ kéo theo các bản ghi liên kết
-                      (chấm công, push từ thiết bị) — cẩn trọng.
+                      Mã hồ sơ nhân sự, không dùng để đối chiếu máy chấm công.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="attendanceCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mã chấm công</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="00001"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Phải giống mã được cài trên tất cả máy chấm công.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

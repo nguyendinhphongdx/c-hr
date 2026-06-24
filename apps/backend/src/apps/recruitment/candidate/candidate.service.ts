@@ -14,11 +14,7 @@ import { computeMatch } from '../application/matching';
 
 import { CandidateAcl } from './candidate.acl';
 import { CandidateRepository } from './candidate.repository';
-import {
-  CreateCandidateDto,
-  ListCandidatesDto,
-  UpdateCandidateDto,
-} from './dto';
+import { CreateCandidateDto, ListCandidatesDto, UpdateCandidateDto } from './dto';
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -65,9 +61,7 @@ export class CandidateService {
     const email = normalizeEmail(dto.email);
     const existing = await this.repo.findByEmailByOrg(orgId, email);
     if (existing) {
-      throw new ConflictException(
-        `Candidate already exists with email ${email}`,
-      );
+      throw new ConflictException(`Candidate already exists with email ${email}`);
     }
 
     const created = await this.prisma.candidate.create({

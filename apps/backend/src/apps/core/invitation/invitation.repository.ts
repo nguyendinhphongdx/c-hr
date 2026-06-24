@@ -53,10 +53,7 @@ export class InvitationRepository {
     });
   }
 
-  listByOrg(
-    orgId: string,
-    filter: { kind?: InvitationKind; status?: InvitationStatus },
-  ) {
+  listByOrg(orgId: string, filter: { kind?: InvitationKind; status?: InvitationStatus }) {
     const where: Prisma.InvitationWhereInput = {
       organizationId: orgId,
       ...(filter.kind ? { kind: filter.kind } : {}),

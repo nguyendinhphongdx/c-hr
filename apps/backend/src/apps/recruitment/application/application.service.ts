@@ -93,9 +93,7 @@ export class ApplicationService {
 
     const existing = await this.repo.findByPair(dto.candidateId, dto.jobId);
     if (existing) {
-      throw new ConflictException(
-        'Candidate already applied to this job',
-      );
+      throw new ConflictException('Candidate already applied to this job');
     }
 
     const initialStage = await this.prisma.jobStage.findFirst({
@@ -103,9 +101,7 @@ export class ApplicationService {
       orderBy: { order: 'asc' },
     });
     if (!initialStage) {
-      throw new BadRequestException(
-        'Job has no SOURCED stage — corrupted pipeline',
-      );
+      throw new BadRequestException('Job has no SOURCED stage — corrupted pipeline');
     }
 
     if (dto.resumeId) {
@@ -385,8 +381,7 @@ export class ApplicationService {
       replyTo: dto.replyTo ?? caller?.email ?? undefined,
     });
 
-    const emails =
-      (row.emails as unknown as Array<Record<string, unknown>>) ?? [];
+    const emails = (row.emails as unknown as Array<Record<string, unknown>>) ?? [];
     emails.push({
       subject: dto.subject,
       sentAt: new Date().toISOString(),

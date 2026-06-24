@@ -49,9 +49,7 @@ export type CallbackResult =
       returnTo: string;
     };
 
-type ResolveResult =
-  | { kind: 'user'; user: ResolvedUser }
-  | { kind: 'orphan'; email: string };
+type ResolveResult = { kind: 'user'; user: ResolvedUser } | { kind: 'orphan'; email: string };
 
 interface ResolvedUser {
   id: string;
@@ -125,9 +123,7 @@ export class EntraSsoService {
       throw new UnauthorizedException('Phiên SSO không hợp lệ hoặc đã hết hạn');
     }
     if (payload.ua && input.userAgent && payload.ua !== input.userAgent) {
-      this.logger.warn(
-        `SSO state UA mismatch — expected="${payload.ua}" got="${input.userAgent}"`,
-      );
+      this.logger.warn(`SSO state UA mismatch — expected="${payload.ua}" got="${input.userAgent}"`);
     }
 
     const tokenResp = await this.exchangeCode(cfg, input.code);

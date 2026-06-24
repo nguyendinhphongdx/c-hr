@@ -43,14 +43,10 @@ export class WebhookService {
       throw new NotFoundException('Integration not found');
     }
     if (integration.board !== board) {
-      throw new BadRequestException(
-        `Integration ${integrationId} is not for board ${board}`,
-      );
+      throw new BadRequestException(`Integration ${integrationId} is not for board ${board}`);
     }
 
-    const credentials = decryptJson<BoardCredentials>(
-      integration.credentialsEncrypted,
-    );
+    const credentials = decryptJson<BoardCredentials>(integration.credentialsEncrypted);
     if (integration.webhookSecret && !credentials.webhookSecret) {
       credentials.webhookSecret = integration.webhookSecret;
     }
@@ -67,9 +63,7 @@ export class WebhookService {
     const { event, data } = adapter.parseWebhookEvent(payload);
 
     if (event !== 'application.created' || !data) {
-      this.logger.log(
-        `Ignoring ${board} event "${event}" — handler not implemented yet`,
-      );
+      this.logger.log(`Ignoring ${board} event "${event}" — handler not implemented yet`);
       return { event, received: true, ingested: false };
     }
     if (!data.candidate.email) {
@@ -97,10 +91,7 @@ export class WebhookService {
     //    posted manually on the board long before connecting C-HR and
     //    not yet linked the posting — title is the best soft signal.
     if (!jobId && incoming.externalJobTitle) {
-      jobId = await this.resolveJobByTitle(
-        organizationId,
-        incoming.externalJobTitle,
-      );
+      jobId = await this.resolveJobByTitle(organizationId, incoming.externalJobTitle);
     }
 
     // 3. No match — return 200 OK and log; do NOT 4xx (would make the
@@ -172,9 +163,7 @@ export class WebhookService {
       orderBy: { order: 'asc' },
     });
     if (!stage) {
-      throw new BadRequestException(
-        'Job has no SOURCED stage — corrupted pipeline',
-      );
+      throw new BadRequestException('Job has no SOURCED stage — corrupted pipeline');
     }
 
     // The unique (candidateId, jobId) constraint guards against
@@ -249,10 +238,7 @@ export class WebhookService {
    * within the same org. Returns null when ambiguous (2+ matches) so
    * we don't accidentally land the CV on the wrong job.
    */
-  private async resolveJobByTitle(
-    organizationId: string,
-    title: string,
-  ): Promise<string | null> {
+  private async resolveJobByTitle(organizationId: string, title: string): Promise<string | null> {
     const normalised = title.trim();
     if (!normalised) return null;
     const matches = await this.prisma.job.findMany({

@@ -52,10 +52,7 @@ export class EntraSsoController {
    *  than a 302 so the FE can decide how to navigate (popup vs full
    *  redirect). Public — user is anonymous at this point. */
   @Get('start')
-  async start(
-    @Query('returnTo') returnTo: string | undefined,
-    @Req() req: Request,
-  ) {
+  async start(@Query('returnTo') returnTo: string | undefined, @Req() req: Request) {
     return this.service.buildAuthorizeUrl({
       returnTo,
       userAgent: req.headers['user-agent'] as string | undefined,
@@ -228,11 +225,7 @@ export class EntraSsoController {
     return {
       httpOnly: true,
       secure: this.configService.get<boolean>('auth.cookie.secure', false),
-      sameSite:
-        this.configService.get<'lax' | 'strict' | 'none'>(
-          'auth.cookie.sameSite',
-          'lax',
-        ),
+      sameSite: this.configService.get<'lax' | 'strict' | 'none'>('auth.cookie.sameSite', 'lax'),
       domain: this.configService.get<string>('auth.cookie.domain'),
       path: '/',
     };

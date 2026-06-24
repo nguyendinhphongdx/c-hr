@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JobBoard } from '@prisma/client';
 import { createHmac, timingSafeEqual } from 'crypto';
 
@@ -30,15 +25,10 @@ export class TopCvAdapter implements JobBoardAdapter {
   private readonly logger = new Logger(TopCvAdapter.name);
 
   private get baseUrl(): string {
-    return (
-      process.env.TOPCV_BASE_URL ?? 'https://api.topcv.vn'
-    ).replace(/\/+$/, '');
+    return (process.env.TOPCV_BASE_URL ?? 'https://api.topcv.vn').replace(/\/+$/, '');
   }
 
-  async publish(
-    input: PublishJobInput,
-    creds: BoardCredentials,
-  ): Promise<PublishJobResult> {
+  async publish(input: PublishJobInput, creds: BoardCredentials): Promise<PublishJobResult> {
     const res = await this.request<{
       id: string;
       url?: string;
@@ -60,11 +50,7 @@ export class TopCvAdapter implements JobBoardAdapter {
   }
 
   async close(externalId: string, creds: BoardCredentials): Promise<void> {
-    await this.request(
-      'POST',
-      `/open-api/jobs/${encodeURIComponent(externalId)}/close`,
-      creds,
-    );
+    await this.request('POST', `/open-api/jobs/${encodeURIComponent(externalId)}/close`, creds);
   }
 
   async validateCredentials(creds: BoardCredentials): Promise<void> {
@@ -78,13 +64,9 @@ export class TopCvAdapter implements JobBoardAdapter {
     headers: Record<string, string | string[] | undefined>,
     creds: BoardCredentials,
   ): void {
-    const sig =
-      pickHeader(headers, 'x-topcv-signature') ??
-      pickHeader(headers, 'x-signature');
+    const sig = pickHeader(headers, 'x-topcv-signature') ?? pickHeader(headers, 'x-signature');
     if (!sig) {
-      throw new UnauthorizedException(
-        'Missing X-TopCV-Signature / X-Signature header',
-      );
+      throw new UnauthorizedException('Missing X-TopCV-Signature / X-Signature header');
     }
     // TopCV doesn't expose a separate "webhook secret" field in their
     // partner UI — they sign with the same Secret Key the partner
@@ -96,9 +78,7 @@ export class TopCvAdapter implements JobBoardAdapter {
       (typeof creds.secretKey === 'string' ? creds.secretKey : undefined) ??
       creds.apiKey;
     if (!secret) {
-      throw new BadRequestException(
-        'No secret available to verify TopCV webhook',
-      );
+      throw new BadRequestException('No secret available to verify TopCV webhook');
     }
     const expected = createHmac('sha256', secret)
       .update(rawBody as Buffer)
@@ -124,16 +104,12 @@ export class TopCvAdapter implements JobBoardAdapter {
     }
     const data = (b.data ?? b) as Record<string, unknown>;
     const appliedAtRaw =
-      (data.appliedAt as string | undefined) ??
-      (data.applied_at as string | undefined);
-    const candidate =
-      ((data.candidate as Record<string, unknown> | undefined) ?? data) ?? {};
+      (data.appliedAt as string | undefined) ?? (data.applied_at as string | undefined);
+    const candidate = (data.candidate as Record<string, unknown> | undefined) ?? data ?? {};
     return {
       event,
       data: {
-        externalApplicationId: String(
-          data.applicationId ?? data.application_id ?? '',
-        ),
+        externalApplicationId: String(data.applicationId ?? data.application_id ?? ''),
         externalJobId: String(data.jobId ?? data.job_id ?? ''),
         externalJobTitle:
           typeof data.jobTitle === 'string'
@@ -142,16 +118,10 @@ export class TopCvAdapter implements JobBoardAdapter {
               ? (data.job_title as string)
               : undefined,
         candidate: {
-          fullName: String(
-            candidate.fullName ?? candidate.name ?? 'Unknown',
-          ),
+          fullName: String(candidate.fullName ?? candidate.name ?? 'Unknown'),
           email: String(candidate.email ?? ''),
-          phone:
-            typeof candidate.phone === 'string' ? candidate.phone : undefined,
-          headline:
-            typeof candidate.headline === 'string'
-              ? candidate.headline
-              : undefined,
+          phone: typeof candidate.phone === 'string' ? candidate.phone : undefined,
+          headline: typeof candidate.headline === 'string' ? candidate.headline : undefined,
           resumeUrl:
             typeof candidate.resumeUrl === 'string'
               ? candidate.resumeUrl
@@ -159,13 +129,9 @@ export class TopCvAdapter implements JobBoardAdapter {
                 ? (candidate.resume_url as string)
                 : undefined,
           coverLetter:
-            typeof candidate.coverLetter === 'string'
-              ? candidate.coverLetter
-              : undefined,
+            typeof candidate.coverLetter === 'string' ? candidate.coverLetter : undefined,
           expectedSalary:
-            typeof candidate.expectedSalary === 'number'
-              ? candidate.expectedSalary
-              : undefined,
+            typeof candidate.expectedSalary === 'number' ? candidate.expectedSalary : undefined,
         },
         appliedAt: appliedAtRaw ? new Date(appliedAtRaw) : new Date(),
       },
@@ -209,32 +175,23 @@ export class TopCvAdapter implements JobBoardAdapter {
     return (await res.json()) as T;
   }
 
-  private buildPublishBody(
-    input: PublishJobInput,
-    partial = false,
-  ): Record<string, unknown> {
+  private buildPublishBody(input: PublishJobInput, partial = false): Record<string, unknown> {
     const body: Record<string, unknown> = {};
     if (!partial || input.title !== undefined) body.title = input.title;
-    if (!partial || input.description !== undefined)
-      body.description = input.description;
-    if (!partial || input.requirements !== undefined)
-      body.requirements = input.requirements;
+    if (!partial || input.description !== undefined) body.description = input.description;
+    if (!partial || input.requirements !== undefined) body.requirements = input.requirements;
     if (input.benefits !== undefined) body.benefits = input.benefits;
     if (input.jobType) body.jobType = input.jobType;
     if (input.workMode) body.workMode = input.workMode;
     if (input.workAddresses?.length) body.workAddresses = input.workAddresses;
-    if (input.experienceMin !== undefined)
-      body.experienceMin = input.experienceMin;
-    if (input.experienceMax !== undefined)
-      body.experienceMax = input.experienceMax;
+    if (input.experienceMin !== undefined) body.experienceMin = input.experienceMin;
+    if (input.experienceMax !== undefined) body.experienceMax = input.experienceMax;
     if (input.salaryMin !== undefined) body.salaryMin = input.salaryMin;
     if (input.salaryMax !== undefined) body.salaryMax = input.salaryMax;
-    if (input.salaryNegotiable !== undefined)
-      body.salaryNegotiable = input.salaryNegotiable;
+    if (input.salaryNegotiable !== undefined) body.salaryNegotiable = input.salaryNegotiable;
     if (input.currency) body.currency = input.currency;
     if (input.requiredSkills) body.requiredSkills = input.requiredSkills;
-    if (input.niceToHaveSkills)
-      body.niceToHaveSkills = input.niceToHaveSkills;
+    if (input.niceToHaveSkills) body.niceToHaveSkills = input.niceToHaveSkills;
     if (input.headcount !== undefined) body.headcount = input.headcount;
     if (input.isUrgent !== undefined) body.isUrgent = input.isUrgent;
     if (input.expiresAt) body.expiresAt = input.expiresAt.toISOString();
@@ -250,5 +207,5 @@ function pickHeader(
 ): string | null {
   const direct = headers[name] ?? headers[name.toLowerCase()];
   if (!direct) return null;
-  return Array.isArray(direct) ? direct[0] ?? null : direct;
+  return Array.isArray(direct) ? (direct[0] ?? null) : direct;
 }

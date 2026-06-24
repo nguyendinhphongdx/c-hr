@@ -30,6 +30,15 @@ export class CreateEmployeeDto {
   })
   code: string;
 
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(50)
+  @Matches(/^[A-Za-z0-9-_]+$/, {
+    message: 'attendanceCode must contain letters, digits, hyphens or underscores only',
+  })
+  attendanceCode?: string;
+
   // ── Link-existing-user mode (mutually exclusive with email/name/password) ─
 
   @IsOptional()

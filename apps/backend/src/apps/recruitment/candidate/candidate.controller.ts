@@ -16,11 +16,7 @@ import { JwtAuthGuard } from '@/common/guards';
 import { ParseUUIDPipe } from '@/common/pipes';
 
 import { CandidateService } from './candidate.service';
-import {
-  CreateCandidateDto,
-  ListCandidatesDto,
-  UpdateCandidateDto,
-} from './dto';
+import { CreateCandidateDto, ListCandidatesDto, UpdateCandidateDto } from './dto';
 
 @ApiTags('candidates')
 @ApiBearerAuth()
@@ -47,10 +43,7 @@ export class CandidateController {
 
   @Patch(':id')
   @Auditable({ action: 'CANDIDATE_UPDATE', entity: 'Candidate' })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateCandidateDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCandidateDto) {
     return this.service.update(id, dto);
   }
 

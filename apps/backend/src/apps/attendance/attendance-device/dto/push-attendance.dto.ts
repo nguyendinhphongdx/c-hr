@@ -21,7 +21,7 @@ export class AttendanceEventDto {
   @MaxLength(100)
   eventLogId: string;
 
-  /** Employee.code matching a row within the same Org. */
+  /** Employee.attendanceCode matching a row within the same Org. */
   @IsString()
   @MaxLength(50)
   employeeCode: string;

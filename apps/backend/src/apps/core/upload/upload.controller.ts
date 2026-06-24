@@ -32,9 +32,7 @@ const MIME_EXT: Record<string, string> = {
 @UseGuards(JwtAuthGuard)
 @Controller('uploads')
 export class UploadController {
-  constructor(
-    @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
-  ) {}
+  constructor(@Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider) {}
 
   /**
    * Inline image upload for the shared TextEditor (Tiptap). Any authenticated
@@ -49,9 +47,7 @@ export class UploadController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: INLINE_IMAGE_MAX_BYTES } }),
-  )
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: INLINE_IMAGE_MAX_BYTES } }))
   async uploadInlineImage(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('file là bắt buộc');
     if (!file.mimetype?.startsWith('image/')) {

@@ -20,12 +20,6 @@ import { WebhookService } from './webhook.service';
     TalentVnAdapter,
     TopCvAdapter,
   ],
-  exports: [
-    IntegrationService,
-    PostingService,
-    AdapterRegistry,
-    TalentVnAdapter,
-    TopCvAdapter,
-  ],
+  exports: [IntegrationService, PostingService, AdapterRegistry, TalentVnAdapter, TopCvAdapter],
 })
 export class IntegrationsModule {}

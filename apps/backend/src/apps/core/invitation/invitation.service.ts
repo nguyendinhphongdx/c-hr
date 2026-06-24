@@ -6,13 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  Invitation,
-  InvitationKind,
-  InvitationStatus,
-  Role,
-  SsoProvider,
-} from '@prisma/client';
+import { Invitation, InvitationKind, InvitationStatus, Role, SsoProvider } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -83,9 +77,7 @@ export class InvitationService {
       select: { id: true },
     });
     if (existing) {
-      throw new ConflictException(
-        'Email này đã có trong tổ chức — không cần mời lại',
-      );
+      throw new ConflictException('Email này đã có trong tổ chức — không cần mời lại');
     }
 
     // Also dedupe pending ADMIN_INVITE for the same email + Org.
@@ -164,9 +156,7 @@ export class InvitationService {
       );
     }
     if (!row.externalUserId) {
-      throw new BadRequestException(
-        'SELF_REQUEST không có externalUserId — data corrupt',
-      );
+      throw new BadRequestException('SELF_REQUEST không có externalUserId — data corrupt');
     }
 
     // Idempotency: another admin may have approved concurrently OR
@@ -231,9 +221,7 @@ export class InvitationService {
           decisionNote: decisionNote ?? null,
         },
       });
-      this.logger.log(
-        `Approved SELF_REQUEST ${id} → created User ${newUser.id} in Org ${orgId}`,
-      );
+      this.logger.log(`Approved SELF_REQUEST ${id} → created User ${newUser.id} in Org ${orgId}`);
       return newUser;
     });
   }
@@ -248,9 +236,7 @@ export class InvitationService {
       throw new BadRequestException('Chỉ reject được SELF_REQUEST');
     }
     if (row.status !== InvitationStatus.PENDING) {
-      throw new BadRequestException(
-        `Chỉ reject được invitation PENDING (hiện tại: ${row.status})`,
-      );
+      throw new BadRequestException(`Chỉ reject được invitation PENDING (hiện tại: ${row.status})`);
     }
     return this.repo.update(id, {
       status: InvitationStatus.REJECTED,
@@ -312,9 +298,7 @@ export class InvitationService {
         where: { email: row.email },
       });
       if (conflictUser) {
-        throw new ConflictException(
-          'Email đã được sử dụng — vui lòng đăng nhập trực tiếp',
-        );
+        throw new ConflictException('Email đã được sử dụng — vui lòng đăng nhập trực tiếp');
       }
       const newUser = await tx.user.create({
         data: {
@@ -353,11 +337,7 @@ export class InvitationService {
   // SSO login lands inside the Org without needing the magic link.
   // ──────────────────────────────────────────────────────────────────
 
-  async tryAcceptViaSso(input: {
-    email: string;
-    name: string | null;
-    externalUserId: string;
-  }) {
+  async tryAcceptViaSso(input: { email: string; name: string | null; externalUserId: string }) {
     const row = await this.repo.findPendingAdminInviteByEmail(input.email);
     if (!row) return null;
 
@@ -423,9 +403,7 @@ export class InvitationService {
       return newUser;
     });
 
-    this.logger.log(
-      `Auto-accepted ADMIN_INVITE for ${input.email} via SSO → User ${user.id}`,
-    );
+    this.logger.log(`Auto-accepted ADMIN_INVITE for ${input.email} via SSO → User ${user.id}`);
     return user;
   }
 
@@ -448,9 +426,7 @@ export class InvitationService {
       input.externalUserId,
     );
     if (existingPending) {
-      throw new ConflictException(
-        'Bạn đã có 1 yêu cầu đang chờ duyệt cho tổ chức này',
-      );
+      throw new ConflictException('Bạn đã có 1 yêu cầu đang chờ duyệt cho tổ chức này');
     }
     // Also block if an existing User already covers this email + Org
     // (admin invited and accepted while user was filling the form).
@@ -458,9 +434,7 @@ export class InvitationService {
       where: { email: normalizedEmail, organizationId: input.orgId },
     });
     if (existingUser) {
-      throw new ConflictException(
-        'Tài khoản đã tồn tại trong tổ chức — đăng nhập lại để vào',
-      );
+      throw new ConflictException('Tài khoản đã tồn tại trong tổ chức — đăng nhập lại để vào');
     }
     return this.repo.create({
       organizationId: input.orgId,

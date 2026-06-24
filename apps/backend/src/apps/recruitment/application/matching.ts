@@ -47,9 +47,7 @@ export function computeMatch(input: MatchInput): MatchResult {
     .map((s) => s.trim().toLowerCase())
     .filter((s) => s.length > 0);
   const candidateNormalized = new Set(
-    input.candidate.skills
-      .map((s) => s.trim().toLowerCase())
-      .filter((s) => s.length > 0),
+    input.candidate.skills.map((s) => s.trim().toLowerCase()).filter((s) => s.length > 0),
   );
 
   let skillsMatched: string[] = [];
@@ -65,9 +63,7 @@ export function computeMatch(input: MatchInput): MatchResult {
       if (isMatch) skillsMatched.push(skill);
       else skillsMissing.push(skill);
     }
-    skillScore = Math.round(
-      (skillsMatched.length / requiredNormalized.length) * SKILL_WEIGHT,
-    );
+    skillScore = Math.round((skillsMatched.length / requiredNormalized.length) * SKILL_WEIGHT);
   }
 
   let experienceScore: number | null = null;

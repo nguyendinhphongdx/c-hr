@@ -5,6 +5,7 @@ import {
   Cake,
   CalendarDays,
   CalendarOff,
+  Hash,
   Loader2,
   Mail,
   Phone,
@@ -158,6 +159,12 @@ export function EmployeeDetailSheet({ id, onClose }: EmployeeDetailSheetProps) {
               <Separator />
 
               <Section title="Công việc">
+                <FieldRow icon={<Hash className="h-3.5 w-3.5" />} label="Mã nhân viên">
+                  <span className="font-mono">{e.code}</span>
+                </FieldRow>
+                <FieldRow icon={<Hash className="h-3.5 w-3.5" />} label="Mã chấm công">
+                  <span className="font-mono">{e.attendanceCode ?? "—"}</span>
+                </FieldRow>
                 <FieldRow
                   icon={<Building2 className="h-3.5 w-3.5" />}
                   label="Phòng ban"

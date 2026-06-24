@@ -43,6 +43,7 @@ export class EmployeeRepository {
       const q = filter.q;
       where.OR = [
         { code: { contains: q, mode: 'insensitive' } },
+        { attendanceCode: { contains: q, mode: 'insensitive' } },
         { user: { is: { name: { contains: q, mode: 'insensitive' } } } },
         { user: { is: { email: { contains: q, mode: 'insensitive' } } } },
       ];

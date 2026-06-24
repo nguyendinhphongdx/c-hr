@@ -27,9 +27,7 @@ export class AdapterRegistry {
   get(board: JobBoard): JobBoardAdapter {
     const adapter = this.map[board];
     if (!adapter) {
-      throw new NotImplementedException(
-        `Job board adapter for "${board}" is not implemented yet`,
-      );
+      throw new NotImplementedException(`Job board adapter for "${board}" is not implemented yet`);
     }
     return adapter;
   }

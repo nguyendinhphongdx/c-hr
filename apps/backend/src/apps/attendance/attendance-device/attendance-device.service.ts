@@ -153,11 +153,11 @@ export class AttendanceDeviceService {
   }
 
   /**
-   * Verify token, resolve employees by code within the device's Org, and
+   * Verify token, resolve employees by attendance code within the device's Org, and
    * upsert AttendanceLog rows day-by-day. Idempotent via unique
    * (deviceId, eventLogId): a replayed push of the same event is a no-op.
    *
-   * Events whose employeeCode does NOT match an existing Employee row are
+   * Events whose employeeCode does NOT match Employee.attendanceCode are
    * still persisted (employeeId=null, employeeCode=<raw>). Reconciled
    * automatically when HR creates the Employee — see linkPendingAttendance.
    */
@@ -169,12 +169,16 @@ export class AttendanceDeviceService {
     const employees = await this.prisma.employee.findMany({
       where: {
         organizationId: device.organizationId,
-        code: { in: codes },
+        attendanceCode: { in: codes },
         deletedAt: null,
       },
-      select: { id: true, code: true },
+      select: { id: true, attendanceCode: true },
     });
-    const codeToId = new Map(employees.map((e) => [e.code, e.id]));
+    const codeToId = new Map(
+      employees.flatMap((employee) =>
+        employee.attendanceCode ? [[employee.attendanceCode, employee.id] as const] : [],
+      ),
+    );
 
     const summary: PushSummary = {
       accepted: 0,

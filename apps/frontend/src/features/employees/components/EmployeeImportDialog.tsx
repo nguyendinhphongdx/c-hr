@@ -91,6 +91,7 @@ export function EmployeeImportDialog({ open, onClose }: Props) {
         defaultPassword,
         rows: validRows.map((r) => ({
           employeeCode: r.employeeCode,
+          attendanceCode: r.attendanceCode ?? undefined,
           email: r.email,
           name: r.name,
           title: r.title ?? undefined,
@@ -133,7 +134,8 @@ export function EmployeeImportDialog({ open, onClose }: Props) {
             <div>
               <div className="text-sm font-medium">File mẫu</div>
               <div className="text-xs text-muted-foreground">
-                Cột: employeeCode, email, name, title (chỗ title có thể trống).
+                Cột: employeeCode, attendanceCode, email, name, title. Mã chấm công và
+                title có thể trống.
               </div>
             </div>
             <div className="flex gap-2">
@@ -175,6 +177,7 @@ export function EmployeeImportDialog({ open, onClose }: Props) {
                     <tr>
                       <th className="w-12 px-3 py-2">#</th>
                       <th className="px-3 py-2">Mã</th>
+                      <th className="px-3 py-2">Mã chấm công</th>
                       <th className="px-3 py-2">Email</th>
                       <th className="px-3 py-2">Tên</th>
                       <th className="px-3 py-2">Chức vụ</th>
@@ -306,6 +309,9 @@ function RowItem({ row }: { row: ParsedEmployeeRow }) {
     >
       <td className="px-3 py-2 text-xs text-muted-foreground">{row.rowNumber}</td>
       <td className="px-3 py-2 font-mono text-xs">{row.employeeCode || "—"}</td>
+      <td className="px-3 py-2 font-mono text-xs">
+        {row.attendanceCode || "—"}
+      </td>
       <td className="px-3 py-2">{row.email || "—"}</td>
       <td className="px-3 py-2 font-medium">{row.name || "—"}</td>
       <td className="px-3 py-2 text-muted-foreground">{row.title || "—"}</td>

@@ -12,6 +12,7 @@ import {
   EmployeeImportParseResponse,
   ParsedEmployeeRow,
 } from './dto';
+import { EmployeeService } from './employee.service';
 
 const PASSWORD_BCRYPT_ROUNDS = 10;
 
@@ -24,6 +25,7 @@ export class EmployeeImportService {
     private readonly prisma: PrismaService,
     private readonly ctx: RequestContextService,
     private readonly importer: ImportService,
+    private readonly employeeService: EmployeeService,
   ) {}
 
   /**
@@ -44,6 +46,7 @@ export class EmployeeImportService {
     const rows: ParsedEmployeeRow[] = parsed.rows.map((r) => ({
       rowNumber: r.rowNumber,
       employeeCode: r.data.employeeCode ?? '',
+      attendanceCode: r.data.attendanceCode || null,
       email: r.data.email ?? '',
       name: r.data.name ?? '',
       title: r.data.title ? r.data.title : null,
@@ -52,6 +55,7 @@ export class EmployeeImportService {
     }));
 
     const codesInFile = new Map<string, number[]>();
+    const attendanceCodesInFile = new Map<string, number[]>();
     const emailsInFile = new Map<string, number[]>();
     for (const row of rows) {
       if (row.employeeCode) {
@@ -64,12 +68,18 @@ export class EmployeeImportService {
         list.push(row.rowNumber);
         emailsInFile.set(row.email.toLowerCase(), list);
       }
+      if (row.attendanceCode) {
+        const list = attendanceCodesInFile.get(row.attendanceCode) ?? [];
+        list.push(row.rowNumber);
+        attendanceCodesInFile.set(row.attendanceCode, list);
+      }
     }
 
     const allEmails = Array.from(emailsInFile.keys());
     const allCodes = Array.from(codesInFile.keys());
+    const allAttendanceCodes = Array.from(attendanceCodesInFile.keys());
 
-    const [existingUsers, existingEmployees] = await Promise.all([
+    const [existingUsers, existingEmployees, existingAttendanceEmployees] = await Promise.all([
       allEmails.length
         ? this.prisma.user.findMany({
             where: { email: { in: allEmails } },
@@ -86,9 +96,24 @@ export class EmployeeImportService {
             select: { code: true },
           })
         : Promise.resolve([]),
+      allAttendanceCodes.length
+        ? this.prisma.employee.findMany({
+            where: {
+              organizationId: orgId,
+              attendanceCode: { in: allAttendanceCodes },
+              deletedAt: null,
+            },
+            select: { attendanceCode: true },
+          })
+        : Promise.resolve([]),
     ]);
     const existingEmailSet = new Set(existingUsers.map((u) => u.email.toLowerCase()));
     const existingCodeSet = new Set(existingEmployees.map((e) => e.code));
+    const existingAttendanceCodeSet = new Set(
+      existingAttendanceEmployees.flatMap((employee) =>
+        employee.attendanceCode ? [employee.attendanceCode] : [],
+      ),
+    );
 
     for (const row of rows) {
       const errors: string[] = [];
@@ -107,11 +132,20 @@ export class EmployeeImportService {
       const emailDup = row.email && (emailsInFile.get(row.email.toLowerCase())?.length ?? 0) > 1;
       if (emailDup) errors.push(`Email '${row.email}' trùng trong file`);
 
+      const attendanceCodeDup =
+        row.attendanceCode && (attendanceCodesInFile.get(row.attendanceCode)?.length ?? 0) > 1;
+      if (attendanceCodeDup) {
+        errors.push(`Mã chấm công '${row.attendanceCode}' trùng trong file`);
+      }
+
       if (row.email && existingEmailSet.has(row.email.toLowerCase())) {
         errors.push(`Email '${row.email}' đã tồn tại trong hệ thống`);
       }
       if (row.employeeCode && existingCodeSet.has(row.employeeCode)) {
         errors.push(`Mã '${row.employeeCode}' đã tồn tại trong Org`);
+      }
+      if (row.attendanceCode && existingAttendanceCodeSet.has(row.attendanceCode)) {
+        errors.push(`Mã chấm công '${row.attendanceCode}' đã tồn tại trong Org`);
       }
 
       row.errors = errors;
@@ -149,6 +183,7 @@ export class EmployeeImportService {
             data: {
               organizationId: orgId,
               code: row.employeeCode,
+              attendanceCode: row.attendanceCode ?? null,
               title: row.title ?? null,
             },
           });
@@ -162,6 +197,9 @@ export class EmployeeImportService {
               employeeId: employee.id,
             },
           });
+          if (row.attendanceCode) {
+            await this.employeeService.linkPendingAttendance(tx, orgId, employee.id, row.attendanceCode);
+          }
         });
         created += 1;
       } catch (err) {

@@ -27,6 +27,17 @@ export class UpdateEmployeeDto {
   })
   code?: string;
 
+  /** Identifier configured on every attendance device for this employee. */
+  @Transform(passThrough)
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(50)
+  @Matches(/^[A-Za-z0-9-_]+$/, {
+    message: 'attendanceCode must contain letters, digits, hyphens or underscores only',
+  })
+  attendanceCode?: string | null;
+
   /** Re-link this employee to a different User in this Org. */
   @IsOptional()
   @IsUUID()
