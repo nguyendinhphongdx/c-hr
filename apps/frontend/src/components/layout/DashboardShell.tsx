@@ -18,16 +18,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <AuthGuard>
-      <div className="flex h-[100dvh]">
-        <Sidebar collapsed={collapsed} />
-        <div className="flex flex-1 flex-col">
-          <Header
-            sidebarCollapsed={collapsed}
-            onToggleSidebar={() => setCollapsed((c) => !c)}
+      <div className="flex h-[100dvh] flex-col bg-muted/70">
+        <Header />
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar
+            collapsed={collapsed}
+            onToggle={() => setCollapsed((c) => !c)}
           />
-          <main className="flex-1 overflow-auto scrollbar-thin">
-            <ErrorBoundary>{children}</ErrorBoundary>
-          </main>
+          <div className="flex flex-1 overflow-hidden pr-3 pb-3">
+            <main className="flex-1 overflow-auto rounded-xl border bg-card scrollbar-thin">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
+          </div>
         </div>
       </div>
       <RunningTimerBar />

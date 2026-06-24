@@ -4,8 +4,10 @@ import {
   BarChart3,
   Briefcase,
   Building2,
-  CalendarClock,
-  Calendar,
+  CalendarDays,
+  ChevronLeft,
+  ChevronsLeft,
+  Clock,
   DoorOpen,
   FolderKanban,
   Home,
@@ -22,7 +24,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { AppLogo, AppLogoMark } from "@/components/icons";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -35,135 +37,150 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Render as non-clickable placeholder until the feature lands. */
   disabled?: boolean;
-  /**
-   * Match active state by exact equality only — skip the prefix check.
-   * Use when a sibling route would otherwise trigger this item too.
-   * E.g. `/timesheet/reports` shouldn't light `/timesheet`.
-   */
   exact?: boolean;
-  /** Hide from non-admin users (HRM appadmin or higher). */
   adminOnly?: boolean;
+  hrmAdminOnly?: boolean;
 }
 
-interface NavSection {
-  /** Optional section heading; omit for the top group. */
-  label?: string;
-  items: NavItem[];
+interface AppDef {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  href: string;
+  matchPrefixes: string[];
+  adminOnly?: boolean;
+  nav: NavItem[];
 }
 
-const NAV_SECTIONS: NavSection[] = [
+const APPS: AppDef[] = [
   {
-    items: [{ href: "/home", label: "Trang chủ", icon: Home }],
-  },
-  {
+    id: "hr",
     label: "Nhân sự",
-    items: [
+    icon: Users,
+    href: "/hr",
+    matchPrefixes: ["/hr", "/employees", "/departments", "/orgchart"],
+    nav: [
       { href: "/employees", label: "Nhân sự", icon: Users },
       { href: "/departments", label: "Phòng ban", icon: Building2 },
       { href: "/orgchart", label: "Cây tổ chức", icon: Network },
     ],
   },
   {
-    label: "Thời gian làm việc",
-    items: [
-      { href: "/timesheet", label: "Bảng chấm công", icon: Calendar, exact: true },
+    id: "attendance",
+    label: "Chấm công",
+    icon: Clock,
+    href: "/attendance",
+    matchPrefixes: ["/attendance", "/timesheet"],
+    nav: [
+      { href: "/timesheet", label: "Bảng chấm công", icon: CalendarDays, exact: true },
+      { href: "/timesheet/reports", label: "Báo cáo", icon: BarChart3, adminOnly: true },
     ],
   },
   {
+    id: "requests",
     label: "Đơn từ",
-    items: [{ href: "/requests", label: "Đơn từ", icon: Inbox }],
+    icon: Inbox,
+    href: "/requests",
+    matchPrefixes: ["/requests"],
+    nav: [
+      { href: "/requests", label: "Đơn từ", icon: Inbox },
+    ],
   },
   {
+    id: "calendar",
     label: "Lịch",
-    items: [
-      { href: "/bookings", label: "Lịch", icon: CalendarClock },
+    icon: CalendarDays,
+    href: "/calendar",
+    matchPrefixes: ["/calendar", "/bookings", "/rooms", "/resources"],
+    nav: [
+      { href: "/bookings", label: "Lịch", icon: CalendarDays },
       { href: "/rooms", label: "Phòng họp", icon: Building2 },
+      { href: "/resources", label: "Tài nguyên", icon: DoorOpen, hrmAdminOnly: true },
     ],
   },
   {
+    id: "work",
     label: "Công việc",
-    items: [
-      {
-        href: "/my-tasks",
-        label: "Việc của tôi",
-        icon: ListChecks,
-        exact: true,
-      },
+    icon: FolderKanban,
+    href: "/work",
+    matchPrefixes: ["/work", "/my-tasks", "/projects"],
+    nav: [
+      { href: "/my-tasks", label: "Việc của tôi", icon: ListChecks, exact: true },
       { href: "/projects", label: "Dự án", icon: FolderKanban },
+      { href: "/projects/reports", label: "Báo cáo", icon: BarChart3, adminOnly: true },
     ],
   },
   {
+    id: "recruitment",
     label: "Tuyển dụng",
-    items: [
-      {
-        href: "/recruitment/jobs",
-        label: "Jobs",
-        icon: Briefcase,
-        adminOnly: true,
-      },
-      {
-        href: "/recruitment/candidates",
-        label: "Ứng viên",
-        icon: UserPlus,
-        adminOnly: true,
-      },
-      {
-        href: "/recruitment/integrations",
-        label: "Kết nối job board",
-        icon: Plug,
-        adminOnly: true,
-      },
+    icon: Briefcase,
+    href: "/recruitment",
+    matchPrefixes: ["/recruitment"],
+    adminOnly: true,
+    nav: [
+      { href: "/recruitment/jobs", label: "Jobs", icon: Briefcase },
+      { href: "/recruitment/candidates", label: "Ứng viên", icon: UserPlus },
+      { href: "/recruitment/integrations", label: "Kết nối job board", icon: Plug },
     ],
   },
 ];
 
 interface SidebarProps {
   collapsed: boolean;
+  onToggle: () => void;
 }
 
-export function Sidebar({ collapsed }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const isAdmin = useIsAdmin();
   const isHrmAdmin = useIsAppAdmin("HRM");
   const showAdmin = isAdmin || isHrmAdmin;
 
+  const visibleApps = APPS.filter((app) => !app.adminOnly || showAdmin);
+
+  const activeApp =
+    visibleApps.find((app) =>
+      app.matchPrefixes.some(
+        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+      ),
+    ) ?? null;
+
+  const activeNav = activeApp
+    ? activeApp.nav.filter(
+        (item) =>
+          (!item.adminOnly || showAdmin) && (!item.hrmAdminOnly || isHrmAdmin),
+      )
+    : [];
+
   return (
     <aside
       data-collapsed={collapsed}
       className={cn(
-        "flex shrink-0 flex-col border-r bg-muted/30 transition-[width] duration-200",
-        collapsed ? "w-14" : "w-60",
+        "flex shrink-0 flex-col bg-transparent transition-[width] duration-200",
+        collapsed ? "w-12" : "w-56",
       )}
     >
-      <div
-        className={cn(
-          "flex h-14 items-center border-b",
-          collapsed ? "justify-center px-2" : "px-4",
-        )}
-      >
-        {collapsed ? <AppLogoMark size={28} /> : <AppLogo height={32} />}
-      </div>
+      {activeApp ? (
+        // ── APP NAV MODE ───────────────────────────────────────────────────────
+        <>
+          {!collapsed && (
+            <div className="px-2 pt-2 pb-0.5">
+              <Link
+                href="/home"
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+              >
+                <ChevronLeft className="h-3 w-3" />
+                Ứng dụng
+              </Link>
+              <p className="mt-0.5 px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                {activeApp.label}
+              </p>
+            </div>
+          )}
 
-      <nav className="flex-1 space-y-3 overflow-y-auto p-2 scrollbar-thin">
-        {NAV_SECTIONS.map((section, idx) => {
-          // Filter section-defined items by adminOnly flag — admin-gated
-          // links collapse out for regular users.
-          const items = section.items.filter(
-            (it) => !it.adminOnly || showAdmin,
-          );
-          return (
-          <div key={section.label ?? idx} className="space-y-1">
-            {section.label &&
-              (collapsed ? (
-                <div className="mx-2 my-2 border-t border-border/60" />
-              ) : (
-                <div className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                  {section.label}
-                </div>
-              ))}
-            {items.map((item) => (
+          <nav className="flex-1 space-y-0.5 overflow-y-auto px-1.5 py-1 scrollbar-thin">
+            {activeNav.map((item) => (
               <NavLink
                 key={item.href}
                 item={item}
@@ -175,54 +192,38 @@ export function Sidebar({ collapsed }: SidebarProps) {
                 }
               />
             ))}
-            {section.label === "Lịch" && isHrmAdmin && (
-              <NavLink
-                item={{
-                  href: "/resources",
-                  label: "Tài nguyên",
-                  icon: DoorOpen,
-                }}
-                collapsed={collapsed}
-                active={
-                  pathname === "/resources" ||
-                  pathname.startsWith("/resources/")
-                }
-              />
-            )}
-            {section.label === "Thời gian làm việc" && showAdmin && (
-              <NavLink
-                item={{
-                  href: "/timesheet/reports",
-                  label: "Báo cáo",
-                  icon: BarChart3,
-                }}
-                collapsed={collapsed}
-                active={
-                  pathname === "/timesheet/reports" ||
-                  pathname.startsWith("/timesheet/reports/")
-                }
-              />
-            )}
-            {section.label === "Công việc" && showAdmin && (
-              <NavLink
-                item={{
-                  href: "/projects/reports",
-                  label: "Báo cáo",
-                  icon: BarChart3,
-                }}
-                collapsed={collapsed}
-                active={
-                  pathname === "/projects/reports" ||
-                  pathname.startsWith("/projects/reports/")
-                }
-              />
-            )}
-          </div>
-          );
-        })}
-      </nav>
+          </nav>
+        </>
+      ) : (
+        // ── APP LIST MODE ──────────────────────────────────────────────────────
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-1.5 py-2 scrollbar-thin">
+          <NavLink
+            item={{ href: "/home", label: "Trang chủ", icon: Home }}
+            collapsed={collapsed}
+            active={pathname === "/home"}
+          />
 
-      <div className="mt-auto space-y-1 border-t p-2">
+          {collapsed ? (
+            <div className="mx-2 my-2 border-t border-border/50" />
+          ) : (
+            <div className="px-2 pt-3 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+              Ứng dụng
+            </div>
+          )}
+
+          {visibleApps.map((app) => (
+            <NavLink
+              key={app.id}
+              item={{ href: app.href, label: app.label, icon: app.icon }}
+              collapsed={collapsed}
+              active={false}
+            />
+          ))}
+        </nav>
+      )}
+
+      {/* ── FOOTER ─────────────────────────────────────────────────────────── */}
+      <div className="mt-auto border-t border-border/50 px-1.5 py-2 space-y-0.5">
         {showAdmin && (
           <NavLink
             item={{ href: "/admin", label: "Quản trị", icon: Shield }}
@@ -230,32 +231,53 @@ export function Sidebar({ collapsed }: SidebarProps) {
             active={pathname === "/admin" || pathname.startsWith("/admin/")}
           />
         )}
-        <NavLink
-          item={{ href: "/settings", label: "Cài đặt", icon: Settings }}
-          collapsed={collapsed}
-          active={pathname === "/settings" || pathname.startsWith("/settings/")}
-        />
+        <div className={cn("flex items-center", collapsed ? "flex-col gap-0.5" : "gap-0.5")}>
+          <div className={cn(collapsed ? "w-full" : "flex-1 min-w-0")}>
+            <NavLink
+              item={{ href: "/settings", label: "Cài đặt", icon: Settings }}
+              collapsed={collapsed}
+              active={
+                pathname === "/settings" || pathname.startsWith("/settings/")
+              }
+            />
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={onToggle}
+          >
+            <ChevronsLeft
+              className={cn(
+                "h-3.5 w-3.5 transition-transform duration-200",
+                collapsed && "rotate-180",
+              )}
+            />
+          </Button>
+        </div>
       </div>
     </aside>
   );
 }
+
+// ── NavLink ────────────────────────────────────────────────────────────────────
 
 function NavLink({
   item,
   collapsed,
   active,
 }: {
-  item: NavItem;
+  item: Pick<NavItem, "href" | "label" | "icon" | "disabled">;
   collapsed: boolean;
   active: boolean;
 }) {
   const baseClasses = cn(
-    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+    "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
     item.disabled
-      ? "cursor-not-allowed text-muted-foreground/50"
+      ? "cursor-not-allowed text-muted-foreground/40"
       : active
-        ? "bg-accent text-accent-foreground"
-        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+        ? "bg-primary/15 text-primary font-medium"
+        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
     collapsed && "justify-center px-0",
   );
 
@@ -276,7 +298,7 @@ function NavLink({
     </Link>
   );
 
-  if (!collapsed && !item.disabled) return node;
+  if (!collapsed) return node;
 
   return (
     <Tooltip delayDuration={0}>
