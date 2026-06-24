@@ -14,8 +14,8 @@ tags: [project, deployment, ci, ops, c-hr]
 | --- | --- | --- | --- | --- | --- |
 | dev (local) | backend | `http://localhost:8000` | n/a | `./scripts/dev.sh dev backend` | Postgres + Redis qua Docker |
 | dev (local) | frontend | `http://localhost:3000` | n/a | `./scripts/dev.sh dev frontend` | BE expect ở `:8000/api/v1` |
-| staging | both | TBD | TBD | TBD | TBD |
-| prod | both | TBD | TBD | TBD | TBD |
+| staging | both | TBD | TBD | TBD | Shared origin; `/api/*` routes to backend |
+| prod | both | `http://hrm.cmcai.vn` | `main` | TBD | Internal DNS, HTTP until internal TLS is configured |
 
 ## Secrets
 
@@ -29,16 +29,29 @@ tags: [project, deployment, ci, ops, c-hr]
 | `REDIS_PASSWORD` | TBD | TBD |
 | `ADMIN_PASSWORD` (initial seed) | TBD | one-time |
 
-### Frontend
+### Public URL
 
-FE chỉ public env (`NEXT_PUBLIC_*`) — không có secret runtime.
+Docker Compose derives frontend runtime URLs from two public origins:
 
 | Var | Source | Rotation |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Platform env | n/a |
-| `NEXT_PUBLIC_API_URL` | Platform env | n/a |
+| `API_BASE_URL` | `.env` / platform env | n/a |
+| `FRONTEND_URL` | `.env` / platform env | n/a |
 
-Lưu ý: `NEXT_PUBLIC_*` được inline vào bundle lúc build → đổi giá trị cần rebuild.
+```env
+API_BASE_URL=http://hrm.cmcai.vn
+FRONTEND_URL=http://hrm.cmcai.vn
+```
+
+Compose maps these values into `CORS_ORIGIN`, `NEXT_PUBLIC_SITE_URL`, and
+`NEXT_PUBLIC_API_URL`. Traefik additionally needs hostname-only
+`API_HOST` and `FRONTEND_HOST` because its `Host()` matcher does not accept
+origins containing `http://` or `https://`.
+`next-runtime-env` reads the frontend values at runtime, so changing the
+origin does not require rebuilding the frontend image.
+
+When TLS is available, switch both public origins to `https://...` and set
+`COOKIE_SECURE=true`.
 
 Phải đảm bảo: **không** commit secret thật vào repo. `.env*` gitignored, `.env.example` chỉ chứa placeholder.
 
