@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function WorkPage() {
-  redirect("/my-tasks");
+  redirect("/work/my-tasks");
 }

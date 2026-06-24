@@ -122,7 +122,7 @@ function WorkOverviewContent() {
                   >
                     <div className="min-w-0">
                       <Link
-                        href={`/projects/${p.slug}`}
+                        href={`/work/projects/${p.slug}`}
                         className="truncate font-medium hover:underline"
                       >
                         {p.name}

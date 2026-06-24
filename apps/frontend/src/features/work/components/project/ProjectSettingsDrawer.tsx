@@ -136,7 +136,7 @@ export function ProjectSettingsDrawer({
       await deleteMut.mutateAsync(project.id);
       toast.success("Đã xoá dự án");
       onClose();
-      router.push("/projects");
+      router.push("/work/projects");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Không xoá được");
     }

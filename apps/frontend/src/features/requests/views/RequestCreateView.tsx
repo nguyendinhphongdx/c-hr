@@ -27,7 +27,7 @@ export function RequestCreateView() {
   return (
     <RequestCreateDialog
       open
-      onClose={() => router.push("/requests")}
+      onClose={() => router.push("/approval/requests")}
       cloneFromId={cloneId ? (cloneId as ID) : undefined}
       prefill={prefill}
     />

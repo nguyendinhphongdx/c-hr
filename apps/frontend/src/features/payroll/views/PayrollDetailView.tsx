@@ -113,7 +113,7 @@ export function PayrollDetailView({ monthKey }: PayrollDetailViewProps) {
       <div className="flex h-full flex-col items-center justify-center gap-3 text-sm">
         <p>Không tìm thấy kỳ lương <code className="font-mono">{monthKey}</code>.</p>
         <Button asChild variant="outline" size="sm">
-          <Link href="/payroll">
+          <Link href="/hrm/payroll">
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
             Quay lại danh sách
           </Link>
@@ -128,7 +128,7 @@ export function PayrollDetailView({ monthKey }: PayrollDetailViewProps) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Link href="/payroll" className="hover:text-foreground">
+              <Link href="/hrm/payroll" className="hover:text-foreground">
                 <ArrowLeft className="inline h-3.5 w-3.5" /> Bảng lương
               </Link>
               <span>·</span>

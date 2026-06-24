@@ -31,7 +31,7 @@ export function PeriodCard({ period }: PeriodCardProps) {
         : `Tạo ${format(new Date(period.createdAt), "dd/MM/yyyy", { locale: vi })}`;
 
   return (
-    <Link href={`/payroll/${period.monthKey}`} className="block">
+    <Link href={`/hrm/payroll/${period.monthKey}`} className="block">
       <Card className="h-full transition-shadow hover:shadow-md">
         <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
           <div className="min-w-0">

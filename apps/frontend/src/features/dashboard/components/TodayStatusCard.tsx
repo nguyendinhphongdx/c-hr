@@ -126,18 +126,18 @@ export function TodayStatusCard() {
 
         <div className="flex flex-wrap gap-2 pt-1">
           <Button asChild variant="outline" size="sm" className="gap-1.5">
-            <Link href="/timesheet">
+            <Link href="/attendance/timesheet">
               <Clock className="h-3.5 w-3.5" /> Bảng chấm công
             </Link>
           </Button>
           {!checkedIn && hasShift && (
             <Button asChild variant="outline" size="sm">
-              <Link href="/requests/new">Đơn quên chấm vào</Link>
+              <Link href="/approval/requests/new">Đơn quên chấm vào</Link>
             </Button>
           )}
           {checkedIn && !checkedOut && hasShift && (
             <Button asChild variant="outline" size="sm">
-              <Link href="/requests/new">Đơn quên chấm ra</Link>
+              <Link href="/approval/requests/new">Đơn quên chấm ra</Link>
             </Button>
           )}
         </div>

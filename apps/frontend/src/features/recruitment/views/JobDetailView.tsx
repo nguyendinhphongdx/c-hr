@@ -81,7 +81,7 @@ export function JobDetailView({ slug }: JobDetailViewProps) {
         <div className="flex items-start justify-between gap-3 border-b px-4 py-3">
           <div className="min-w-0">
             <Link
-              href="/recruitment/jobs"
+              href="/hrm/recruitment/jobs"
               className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-3 w-3" />

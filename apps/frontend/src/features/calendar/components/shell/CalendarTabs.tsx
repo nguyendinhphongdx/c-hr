@@ -7,15 +7,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: "/bookings", label: "Lịch", icon: CalendarDays },
-  { href: "/rooms", label: "Phòng họp", icon: Building2 },
+  { href: "/calendar/bookings", label: "Lịch", icon: CalendarDays },
+  { href: "/calendar/rooms", label: "Phòng họp", icon: Building2 },
 ] as const;
 
-/**
- * Top-of-page tab bar shared by `/bookings` and `/rooms`. Looks like the
- * shadcn Tabs primitive but each tab is a `<Link>` so the pages stay
- * separately routed (different layouts, different URL state).
- */
 export function CalendarTabs() {
   const pathname = usePathname();
 

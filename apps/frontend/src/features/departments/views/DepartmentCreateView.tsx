@@ -89,7 +89,7 @@ export function DepartmentCreateView() {
         code: values.code || undefined,
       });
       toast.success("Đã tạo phòng ban");
-      router.push(`/departments?focus=${dept.id}`);
+      router.push(`/hrm/departments?focus=${dept.id}`);
     } catch (err) {
       toast.error("Không tạo được phòng ban", {
         description:
@@ -103,7 +103,7 @@ export function DepartmentCreateView() {
   return (
     <PageContainer variant="narrow">
       <Button variant="ghost" asChild size="sm" className="gap-2">
-        <Link href="/departments">
+        <Link href="/hrm/departments">
           <ArrowLeft className="h-3.5 w-3.5" /> Tất cả phòng ban
         </Link>
       </Button>
@@ -203,7 +203,7 @@ export function DepartmentCreateView() {
             </CardContent>
             <CardFooter className="justify-end gap-2">
               <Button type="button" variant="ghost" asChild>
-                <Link href="/departments">Huỷ</Link>
+                <Link href="/hrm/departments">Huỷ</Link>
               </Button>
               <Button
                 type="submit"

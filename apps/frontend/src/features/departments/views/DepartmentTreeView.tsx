@@ -35,7 +35,7 @@ export function DepartmentTreeView() {
         </div>
         {canManage && (
           <Button asChild>
-            <Link href="/departments/new" className="gap-2">
+            <Link href="/hrm/departments/new" className="gap-2">
               <Plus className="h-4 w-4" />
               Phòng ban mới
             </Link>
@@ -63,7 +63,7 @@ export function DepartmentTreeView() {
               Chưa có phòng ban.{" "}
               {canManage && (
                 <Link
-                  href="/departments/new"
+                  href="/hrm/departments/new"
                   className="text-foreground underline hover:no-underline"
                 >
                   Tạo phòng ban đầu tiên
@@ -139,7 +139,7 @@ function TreeNode({
         )}
         {canEdit && (
           <Link
-            href={`/departments/${node.id}/edit`}
+            href={`/hrm/departments/${node.id}/edit`}
             className="ml-auto text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
             aria-label={`Sửa ${node.name}`}
           >

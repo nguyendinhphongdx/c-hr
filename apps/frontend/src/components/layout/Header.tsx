@@ -1,9 +1,11 @@
 "use client";
 
-import { LogOut, Search, Settings, User } from "lucide-react";
+import { Check, ChevronDown, LogOut, Search, Settings, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
+import { APPS, getActiveApp } from "@/components/layout/apps";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -16,7 +18,52 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { useAuth, useLogout } from "@/features/auth";
+import { useAuth, useIsAdmin, useIsAppAdmin, useLogout } from "@/features/auth";
+
+function AppSwitcher() {
+  const pathname = usePathname();
+  const isAdmin = useIsAdmin();
+  const isHrmAdmin = useIsAppAdmin("HRM");
+  const showAdmin = isAdmin || isHrmAdmin;
+
+  const visibleApps = APPS.filter((app) => !app.adminOnly || showAdmin);
+  const activeApp = getActiveApp(pathname, visibleApps);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 gap-1.5 px-2 text-sm font-medium">
+          {activeApp ? (
+            <>
+              <activeApp.icon className="h-4 w-4 text-muted-foreground" />
+              <span>{activeApp.label}</span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">Ứng dụng</span>
+          )}
+          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44">
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          Ứng dụng
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {visibleApps.map((app) => (
+          <DropdownMenuItem key={app.id} asChild>
+            <Link href={app.href} className="flex items-center gap-2">
+              <app.icon className="h-4 w-4 shrink-0" />
+              <span className="flex-1">{app.label}</span>
+              {activeApp?.id === app.id && (
+                <Check className="h-3.5 w-3.5 text-primary" />
+              )}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 function getInitials(value: string | null | undefined): string {
   if (!value) return "U";
@@ -35,8 +82,12 @@ export function Header() {
 
   return (
     <header className="relative flex h-12 shrink-0 items-center gap-3 px-3">
-      <div className="flex shrink-0 items-center">
-        <Image src="/images/logo/logo-icon.ai.svg" alt="C-HR" width={61} height={32} className="h-8 w-auto" />
+      <div className="flex shrink-0 items-center gap-2">
+        <Link href="/home">
+          <Image src="/images/logo/logo-icon.ai.svg" alt="C-HR" width={61} height={32} className="h-8 w-auto" />
+        </Link>
+        <div className="h-4 w-px bg-border/70" />
+        <AppSwitcher />
       </div>
 
       <div className="absolute left-1/2 w-full max-w-sm -translate-x-1/2">

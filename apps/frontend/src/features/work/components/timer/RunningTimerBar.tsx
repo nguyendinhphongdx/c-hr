@@ -47,7 +47,9 @@ export function RunningTimerBar() {
   const onOpen = () => {
     const slug = running.task.project?.slug;
     if (!slug) return;
-    router.push(`/projects/${slug}?taskCode=${encodeURIComponent(running.task.code)}`);
+    router.push(
+      `/work/projects/${slug}?taskCode=${encodeURIComponent(running.task.code)}`,
+    );
   };
 
   const onStop = async () => {

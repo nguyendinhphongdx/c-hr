@@ -29,23 +29,29 @@ tags: [project, domain, hrm, c-hr]
 /reset-password
 /verify-email
 
-/dashboard                  Home (protected, route group `(dashboard)`)
-/employees                  List + filter + search
-/employees/new
-/employees/[id]             Profile (tabs: info, attendance, leave, payroll)
-/departments                Tree view + CRUD
-/positions                  CRUD đơn giản
-/attendance                 Bảng chấm công (theo tháng, theo employee)
-/attendance/me              Self-service: tự chấm
-/leave                      Đơn nghỉ — list (filter theo team, status)
-/leave/new
-/leave/[id]                 Chi tiết + approve/reject (nếu là approver)
-/payroll                    Kỳ lương — list
-/payroll/[periodId]         Bảng lương 1 kỳ (sortable, exportable)
-/payroll/[periodId]/[empId] Chi tiết payroll 1 nhân viên
-/settings/account           Profile của user đang login
-/settings/organization      (Admin) thông tin Org, timezone, currency
-/settings/users             (Admin) quản lý users + roles
+/home                       Home (protected, route group `(dashboard)`)
+/hrm/employees              List + filter + search
+/hrm/departments            Tree view + CRUD
+/hrm/departments/new
+/hrm/departments/[id]/edit
+/hrm/orgchart               Cây và sơ đồ tổ chức
+/hrm/recruitment/*          Jobs, ứng viên, tích hợp job board
+/hrm/payroll                Kỳ lương — list
+/hrm/payroll/[monthKey]     Bảng lương một kỳ
+/attendance/timesheet       Bảng chấm công theo tháng
+/attendance/timesheet/reports
+/approval/requests          Đơn từ và luồng phê duyệt
+/approval/requests/new
+/calendar/bookings          Lịch
+/calendar/rooms             Phòng họp
+/calendar/resources         Tài nguyên
+/work/my-tasks              Việc của tôi
+/work/projects              Danh sách dự án
+/work/projects/[slug]       Chi tiết dự án
+/work/projects/reports      Báo cáo dự án
+/settings/profile           Profile của user đang login
+/admin/organization         (Admin) thông tin Org
+/admin/app-admins           (Admin) quản trị ứng dụng
 ```
 
 ## Feature → folder map
@@ -57,12 +63,15 @@ Theo convention frontend (mỗi feature = 1 bounded slice trong `src/features/<n
 | `auth` | đã có | `(auth)/*`, `me` query |
 | `dashboard` | đã có | `/dashboard` |
 | `settings` | đã có | `/settings/*` |
-| `employees` | sẽ tạo | `/employees`, `/employees/[id]` |
-| `departments` | sẽ tạo | `/departments` |
-| `positions` | sẽ tạo | `/positions` |
-| `attendance` | sẽ tạo | `/attendance`, `/attendance/me` |
-| `leave` | sẽ tạo | `/leave/*` |
-| `payroll` | sẽ tạo | `/payroll/*` |
+| `employees` | đã có | `/hrm/employees` |
+| `departments` | đã có | `/hrm/departments/*` |
+| `orgchart` | đã có | `/hrm/orgchart` |
+| `recruitment` | đã có | `/hrm/recruitment/*` |
+| `payroll` | đã có | `/hrm/payroll/*` |
+| `timesheet` | đã có | `/attendance/timesheet/*` |
+| `requests` | đã có | `/approval/requests/*` |
+| `calendar` | đã có | `/calendar/*` |
+| `work` | đã có | `/work/*` |
 
 Mỗi feature theo cấu trúc:
 

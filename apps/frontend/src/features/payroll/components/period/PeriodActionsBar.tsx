@@ -125,7 +125,7 @@ export function PeriodActionsBar({ period }: PeriodActionsBarProps) {
         case "delete":
           await deleteMut.mutateAsync(period.id);
           toast.success("Đã xoá kỳ lương");
-          router.push("/payroll");
+          router.push("/hrm/payroll");
           break;
       }
     } catch (err) {

@@ -123,7 +123,7 @@ export function JobListView() {
               {rows.map((job) => (
                 <li key={job.id}>
                   <Link
-                    href={`/recruitment/jobs/${job.slug}`}
+                    href={`/hrm/recruitment/jobs/${job.slug}`}
                     className="block rounded-md border bg-background px-4 py-3 transition-colors hover:bg-accent/30"
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -173,7 +173,7 @@ export function JobListView() {
       <JobCreateDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreated={(slug) => router.push(`/recruitment/jobs/${slug}`)}
+        onCreated={(slug) => router.push(`/hrm/recruitment/jobs/${slug}`)}
       />
     </PageContainer>
   );

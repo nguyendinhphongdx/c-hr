@@ -1,29 +1,10 @@
 "use client";
 
-import {
-  BarChart3,
-  Briefcase,
-  Building2,
-  CalendarDays,
-  ChevronLeft,
-  ChevronsLeft,
-  Clock,
-  DoorOpen,
-  FolderKanban,
-  Home,
-  Inbox,
-  ListChecks,
-  Network,
-  Plug,
-  Settings,
-  Shield,
-  UserPlus,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { ChevronsLeft, Settings, Shield } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { type NavItem, APPS, getActiveApp } from "@/components/layout/apps";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -32,99 +13,6 @@ import {
 } from "@/components/ui/tooltip";
 import { useIsAdmin, useIsAppAdmin } from "@/features/auth";
 import { cn } from "@/lib/utils";
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  disabled?: boolean;
-  exact?: boolean;
-  adminOnly?: boolean;
-  hrmAdminOnly?: boolean;
-}
-
-interface AppDef {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  href: string;
-  matchPrefixes: string[];
-  adminOnly?: boolean;
-  nav: NavItem[];
-}
-
-const APPS: AppDef[] = [
-  {
-    id: "hr",
-    label: "Nhân sự",
-    icon: Users,
-    href: "/hr",
-    matchPrefixes: ["/hr", "/employees", "/departments", "/orgchart"],
-    nav: [
-      { href: "/employees", label: "Nhân sự", icon: Users },
-      { href: "/departments", label: "Phòng ban", icon: Building2 },
-      { href: "/orgchart", label: "Cây tổ chức", icon: Network },
-    ],
-  },
-  {
-    id: "attendance",
-    label: "Chấm công",
-    icon: Clock,
-    href: "/attendance",
-    matchPrefixes: ["/attendance", "/timesheet"],
-    nav: [
-      { href: "/timesheet", label: "Bảng chấm công", icon: CalendarDays, exact: true },
-      { href: "/timesheet/reports", label: "Báo cáo", icon: BarChart3, adminOnly: true },
-    ],
-  },
-  {
-    id: "requests",
-    label: "Đơn từ",
-    icon: Inbox,
-    href: "/requests",
-    matchPrefixes: ["/requests"],
-    nav: [
-      { href: "/requests", label: "Đơn từ", icon: Inbox },
-    ],
-  },
-  {
-    id: "calendar",
-    label: "Lịch",
-    icon: CalendarDays,
-    href: "/calendar",
-    matchPrefixes: ["/calendar", "/bookings", "/rooms", "/resources"],
-    nav: [
-      { href: "/bookings", label: "Lịch", icon: CalendarDays },
-      { href: "/rooms", label: "Phòng họp", icon: Building2 },
-      { href: "/resources", label: "Tài nguyên", icon: DoorOpen, hrmAdminOnly: true },
-    ],
-  },
-  {
-    id: "work",
-    label: "Công việc",
-    icon: FolderKanban,
-    href: "/work",
-    matchPrefixes: ["/work", "/my-tasks", "/projects"],
-    nav: [
-      { href: "/my-tasks", label: "Việc của tôi", icon: ListChecks, exact: true },
-      { href: "/projects", label: "Dự án", icon: FolderKanban },
-      { href: "/projects/reports", label: "Báo cáo", icon: BarChart3, adminOnly: true },
-    ],
-  },
-  {
-    id: "recruitment",
-    label: "Tuyển dụng",
-    icon: Briefcase,
-    href: "/recruitment",
-    matchPrefixes: ["/recruitment"],
-    adminOnly: true,
-    nav: [
-      { href: "/recruitment/jobs", label: "Jobs", icon: Briefcase },
-      { href: "/recruitment/candidates", label: "Ứng viên", icon: UserPlus },
-      { href: "/recruitment/integrations", label: "Kết nối job board", icon: Plug },
-    ],
-  },
-];
 
 interface SidebarProps {
   collapsed: boolean;
@@ -138,20 +26,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const showAdmin = isAdmin || isHrmAdmin;
 
   const visibleApps = APPS.filter((app) => !app.adminOnly || showAdmin);
-
-  const activeApp =
-    visibleApps.find((app) =>
-      app.matchPrefixes.some(
-        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-      ),
-    ) ?? null;
-
-  const activeNav = activeApp
-    ? activeApp.nav.filter(
-        (item) =>
-          (!item.adminOnly || showAdmin) && (!item.hrmAdminOnly || isHrmAdmin),
-      )
-    : [];
+  const activeApp = getActiveApp(pathname, visibleApps);
+  const homeApp = visibleApps.find((app) => app.id === "home");
+  const showAppDirectory = !activeApp || activeApp.id === "home";
 
   return (
     <aside
@@ -161,68 +38,75 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         collapsed ? "w-12" : "w-56",
       )}
     >
-      {activeApp ? (
-        // ── APP NAV MODE ───────────────────────────────────────────────────────
-        <>
-          {!collapsed && (
-            <div className="px-2 pt-2 pb-0.5">
-              <Link
-                href="/home"
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
-              >
-                <ChevronLeft className="h-3 w-3" />
-                Ứng dụng
-              </Link>
-              <p className="mt-0.5 px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
-                {activeApp.label}
-              </p>
-            </div>
-          )}
-
-          <nav className="flex-1 space-y-0.5 overflow-y-auto px-1.5 py-1 scrollbar-thin">
-            {activeNav.map((item) => (
-              <NavLink
-                key={item.href}
-                item={item}
-                collapsed={collapsed}
-                active={
-                  !item.disabled &&
-                  (pathname === item.href ||
-                    (!item.exact && pathname.startsWith(`${item.href}/`)))
-                }
-              />
-            ))}
-          </nav>
-        </>
-      ) : (
-        // ── APP LIST MODE ──────────────────────────────────────────────────────
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-1.5 py-2 scrollbar-thin">
-          <NavLink
-            item={{ href: "/home", label: "Trang chủ", icon: Home }}
-            collapsed={collapsed}
-            active={pathname === "/home"}
-          />
-
-          {collapsed ? (
-            <div className="mx-2 my-2 border-t border-border/50" />
-          ) : (
-            <div className="px-2 pt-3 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
-              Ứng dụng
-            </div>
-          )}
-
-          {visibleApps.map((app) => (
+      <nav className="flex-1 overflow-y-auto px-1.5 py-2 scrollbar-thin">
+        {showAppDirectory && homeApp ? (
+          <div className="space-y-0.5">
             <NavLink
-              key={app.id}
-              item={{ href: app.href, label: app.label, icon: app.icon }}
+              item={{
+                href: homeApp.href,
+                label: homeApp.label,
+                icon: homeApp.icon,
+              }}
               collapsed={collapsed}
-              active={false}
+              active={pathname === homeApp.href}
             />
-          ))}
-        </nav>
-      )}
+            {collapsed ? (
+              <div className="mx-2 my-2 border-t border-border/50" />
+            ) : (
+              <p className="px-2 pt-3 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                Ứng dụng
+              </p>
+            )}
+            {visibleApps
+              .filter((app) => app.id !== "home")
+              .map((app) => (
+                <NavLink
+                  key={app.id}
+                  item={{ href: app.href, label: app.label, icon: app.icon }}
+                  collapsed={collapsed}
+                  active={false}
+                />
+              ))}
+          </div>
+        ) : activeApp ? (
+          <div className="space-y-3">
+            {activeApp.nav.map((section, sIdx) => {
+              const items = section.items.filter(
+                (item) =>
+                  (!item.adminOnly || showAdmin) &&
+                  (!item.hrmAdminOnly || isHrmAdmin),
+              );
+              if (items.length === 0) return null;
+              return (
+                <div key={sIdx} className="space-y-0.5">
+                  {section.label &&
+                    (collapsed ? (
+                      <div className="mx-2 border-t border-border/50" />
+                    ) : (
+                      <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                        {section.label}
+                      </p>
+                    ))}
+                  {items.map((item) => (
+                    <NavLink
+                      key={item.href}
+                      item={item}
+                      collapsed={collapsed}
+                      active={
+                        !item.disabled &&
+                        (pathname === item.href ||
+                          (!item.exact &&
+                            pathname.startsWith(`${item.href}/`)))
+                      }
+                    />
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </nav>
 
-      {/* ── FOOTER ─────────────────────────────────────────────────────────── */}
       <div className="mt-auto border-t border-border/50 px-1.5 py-2 space-y-0.5">
         {showAdmin && (
           <NavLink
@@ -259,8 +143,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     </aside>
   );
 }
-
-// ── NavLink ────────────────────────────────────────────────────────────────────
 
 function NavLink({
   item,

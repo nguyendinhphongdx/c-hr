@@ -48,7 +48,7 @@ export function PendingApprovalsCard() {
             )}
           </span>
           <Button asChild variant="ghost" size="sm" className="gap-1">
-            <Link href="/requests">
+            <Link href="/approval/requests">
               Tất cả <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </Button>
@@ -72,7 +72,7 @@ export function PendingApprovalsCard() {
               <li key={r.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0 flex-1">
                   <Link
-                    href={`/requests?selected=${r.id}`}
+                    href={`/approval/requests?selected=${r.id}`}
                     className="block hover:text-foreground"
                   >
                     <div className="flex items-center gap-2">

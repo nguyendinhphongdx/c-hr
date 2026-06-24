@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function CalendarPage() {
-  redirect("/bookings");
+  redirect("/calendar/bookings");
 }

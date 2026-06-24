@@ -28,31 +28,31 @@ interface Shortcut {
 
 const SHORTCUTS: Shortcut[] = [
   {
-    href: "/employees",
+    href: "/hrm/employees",
     icon: Users,
     label: "Nhân sự",
     description: "Tra cứu, thêm và sửa hồ sơ nhân sự trong Org.",
   },
   {
-    href: "/departments",
+    href: "/hrm/departments",
     icon: Building2,
     label: "Phòng ban",
     description: "Dựng cây phòng ban, chỉ định manager phụ trách.",
   },
   {
-    href: "/orgchart",
+    href: "/hrm/orgchart",
     icon: Network,
     label: "Sơ đồ tổ chức",
     description: "Cấp báo cáo, cây phòng ban và sơ đồ trực quan.",
   },
   {
-    href: "/timesheet",
+    href: "/attendance/timesheet",
     icon: Calendar,
     label: "Bảng chấm công",
     description: "Xem chấm công theo tháng — tổng hợp từ máy chấm công.",
   },
   {
-    href: "/requests",
+    href: "/approval/requests",
     icon: Inbox,
     label: "Đơn từ",
     description: "Tạo đơn xin nghỉ, đơn quên chấm; duyệt đơn của team.",

@@ -111,7 +111,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
       <PageContainer variant="narrow">
         <p className="text-sm text-destructive">Không tìm thấy phòng ban.</p>
         <Button variant="ghost" asChild className="mt-4 gap-2">
-          <Link href="/departments">
+          <Link href="/hrm/departments">
             <ArrowLeft className="h-3.5 w-3.5" /> Quay lại
           </Link>
         </Button>
@@ -131,7 +131,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
         },
       });
       toast.success("Đã cập nhật phòng ban");
-      router.push("/departments");
+      router.push("/hrm/departments");
     } catch (err) {
       toast.error("Không cập nhật được phòng ban", {
         description:
@@ -153,7 +153,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
     try {
       await remove.mutateAsync(id);
       toast.success("Đã xoá phòng ban");
-      router.push("/departments");
+      router.push("/hrm/departments");
     } catch (err) {
       toast.error("Không xoá được", {
         description: err instanceof Error ? err.message : "Thử lại sau.",
@@ -168,7 +168,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
   return (
     <PageContainer variant="narrow">
       <Button variant="ghost" asChild size="sm" className="gap-2">
-        <Link href="/departments">
+        <Link href="/hrm/departments">
           <ArrowLeft className="h-3.5 w-3.5" /> Tất cả phòng ban
         </Link>
       </Button>
@@ -279,7 +279,7 @@ export function DepartmentEditView({ id }: DepartmentEditViewProps) {
               </Button>
               <div className="flex items-center gap-2">
                 <Button type="button" variant="ghost" asChild>
-                  <Link href="/departments">Huỷ</Link>
+                  <Link href="/hrm/departments">Huỷ</Link>
                 </Button>
                 <Button
                   type="submit"

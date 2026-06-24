@@ -41,8 +41,8 @@ export function OrgChartView() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Nguồn dữ liệu là cây phòng ban (Department.parentId + Department.managerId) — xem ADR 0004. Cấu trúc phòng ban quản lý ở{" "}
-          <Link href="/departments" className="underline hover:no-underline">
-            /departments
+          <Link href="/hrm/departments" className="underline hover:no-underline">
+            /hrm/departments
           </Link>
           .
         </p>

@@ -150,7 +150,7 @@ export function SchedulingAssistantView() {
       });
       toast.success("Đã tạo sự kiện");
       reset();
-      router.push("/bookings");
+      router.push("/calendar/bookings");
     } catch (err) {
       toast.error("Không tạo được sự kiện", {
         description: err instanceof Error ? err.message : "Vui lòng thử lại.",
@@ -185,7 +185,7 @@ export function SchedulingAssistantView() {
             variant="outline"
             onClick={() => {
               reset();
-              router.push("/bookings");
+              router.push("/calendar/bookings");
             }}
           >
             Huỷ

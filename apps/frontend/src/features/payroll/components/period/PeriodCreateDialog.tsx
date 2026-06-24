@@ -104,7 +104,7 @@ export function PeriodCreateDialog({
         toast.success("Đã tạo kỳ lương");
       }
       onClose();
-      router.push(`/payroll/${created.monthKey}`);
+      router.push(`/hrm/payroll/${created.monthKey}`);
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Không tạo được kỳ lương";

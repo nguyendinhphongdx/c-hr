@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function AttendancePage() {
-  redirect("/timesheet");
+  redirect("/attendance/timesheet");
 }

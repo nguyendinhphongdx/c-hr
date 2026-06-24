@@ -75,7 +75,7 @@ interface EventCreateDialogProps {
   /** ISO datetime to pre-fill startAt — e.g. clicked slot. */
   initialStart?: string;
   initialEnd?: string;
-  /** Pre-select these resources (e.g. dragging on a room row in /rooms). */
+  /** Pre-select resources when creating an event from a room row. */
   initialResourceIds?: string[];
   /** Edit mode — if set, dialog updates instead of creates. */
   editing?: EventDetail | null;

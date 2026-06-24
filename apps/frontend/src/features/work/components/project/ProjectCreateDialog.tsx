@@ -138,7 +138,7 @@ export function ProjectCreateDialog({
       });
       toast.success("Đã tạo dự án");
       onClose();
-      router.push(`/projects/${created.slug}`);
+      router.push(`/work/projects/${created.slug}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Không tạo được dự án";
       toast.error(msg);
