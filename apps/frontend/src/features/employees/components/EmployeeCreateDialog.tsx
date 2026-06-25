@@ -162,7 +162,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Thêm nhân sự</DialogTitle>
           <DialogDescription>

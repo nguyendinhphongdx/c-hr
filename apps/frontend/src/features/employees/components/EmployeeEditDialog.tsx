@@ -193,7 +193,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
 
   return (
     <Dialog open={!!id} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Sửa nhân sự</DialogTitle>
           <DialogDescription>
