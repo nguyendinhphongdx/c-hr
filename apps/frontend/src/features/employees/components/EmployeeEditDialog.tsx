@@ -10,6 +10,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -202,6 +203,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
+        <DialogBody>
         {employee.isLoading || !employee.data ? (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang tải…
@@ -541,6 +543,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
             </form>
           </Form>
         )}
+        </DialogBody>
 
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose}>

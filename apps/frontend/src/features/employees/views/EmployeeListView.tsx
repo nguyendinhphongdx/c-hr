@@ -190,7 +190,7 @@ export function EmployeeListView() {
         </Select>
       </div>
 
-      <div className="rounded-md border bg-background">
+      <div className="overflow-x-auto rounded-md border bg-background">
         {list.isLoading ? (
           <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -205,11 +205,11 @@ export function EmployeeListView() {
             Không có nhân sự phù hợp với bộ lọc.
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[720px] text-sm">
             <thead className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-4 py-3 font-medium">Mã</th>
-                <th className="px-4 py-3 font-medium">Mã chấm công</th>
+                <th className="w-28 px-4 py-3 font-medium">Mã</th>
+                <th className="w-28 px-4 py-3 font-medium">Mã chấm công</th>
                 <th className="px-4 py-3 font-medium">Họ tên</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Chức danh</th>
@@ -225,8 +225,10 @@ export function EmployeeListView() {
                   className="cursor-pointer transition-colors hover:bg-accent/30"
                   onClick={() => setViewingId(emp.id)}
                 >
-                  <td className="px-4 py-3 font-mono text-xs">{emp.code}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                  <td className="w-28 max-w-[7rem] px-4 py-3 font-mono text-xs">
+                    <span className="block truncate" title={emp.code}>{emp.code}</span>
+                  </td>
+                  <td className="w-28 max-w-[7rem] px-4 py-3 font-mono text-xs text-muted-foreground">
                     {emp.attendanceCode ?? "—"}
                   </td>
                   <td className="px-4 py-3 font-medium">
