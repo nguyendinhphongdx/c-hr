@@ -51,14 +51,14 @@ EOF
 cmd="${1:-help}"
 target="${2:-}"
 
-infra_services=(postgres redis)
-all_compose_services=(postgres redis backend frontend)
+infra_services=(postgres redis minio)
+all_compose_services=(postgres redis minio backend frontend)
 
 resolve_services() {
   case "$1" in
     ""|all)      printf '%s\n' "${all_compose_services[@]}" ;;
     infra)       printf '%s\n' "${infra_services[@]}" ;;
-    postgres|redis|backend|frontend) printf '%s\n' "$1" ;;
+    postgres|redis|minio|backend|frontend) printf '%s\n' "$1" ;;
     *)           echo "Unknown target: $1" >&2; exit 2 ;;
   esac
 }
