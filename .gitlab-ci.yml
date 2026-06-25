@@ -99,7 +99,7 @@ deploy:production:
         REGISTRY_IMAGE=$CI_REGISTRY_IMAGE IMAGE_TAG=$CI_COMMIT_SHORT_SHA \
           docker compose --env-file .env up -d
 
-        docker image prune -f
+        docker image prune -af
       "
   needs:
     - build:backend
