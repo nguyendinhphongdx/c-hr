@@ -65,16 +65,7 @@ export class LdapService {
       const { searchEntries } = await directoryClient.search(baseDn, {
         scope: 'sub',
         filter,
-        attributes: [
-          'sAMAccountName',
-          'userPrincipalName',
-          'mail',
-          'displayName',
-          'title',
-          'telephoneNumber',
-          'mobile',
-          'memberOf',
-        ],
+        attributes: ['*', '+'],
         sizeLimit: 2,
       });
 
@@ -173,6 +164,8 @@ export class LdapService {
       title: firstString(entry.title) || null,
       phone: firstString(entry.mobile) || firstString(entry.telephoneNumber) || null,
       groups: stringArray(entry.memberOf),
+      employeeId: firstString(entry.employeeID) || null,
+      attendanceCode: firstString(entry.employeeID) || null,
     };
   }
 

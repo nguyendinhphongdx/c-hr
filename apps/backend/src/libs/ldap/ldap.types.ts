@@ -6,4 +6,6 @@ export interface LdapProfile {
   title: string | null;
   phone: string | null;
   groups: string[];
+  employeeId?: string | null;
+  attendanceCode?: string | null;
 }

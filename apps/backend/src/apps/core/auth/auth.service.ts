@@ -153,38 +153,37 @@ export class AuthService {
   }
 
   private async ensureLdapEmployee(user: User, profile: LdapProfile): Promise<User> {
-    if (user.employeeId) return user;
     if (!user.organizationId || user.role === 'sysowner') {
       throw new UnauthorizedException(
         'Tài khoản AD chưa thuộc tổ chức nên không thể tạo hồ sơ nhân viên',
       );
     }
 
+    // Fields được sync từ LDAP mỗi lần login. undefined = Prisma bỏ qua field đó.
+    const syncData = {
+      attendanceCode: profile.attendanceCode ?? undefined,
+      title: profile.title ?? undefined,
+    };
+
     return this.prisma.$transaction(async (tx) => {
       const currentUser = await tx.user.findUnique({ where: { id: user.id } });
       if (!currentUser) throw new UnauthorizedException('Tài khoản không còn tồn tại');
-      if (currentUser.employeeId) return currentUser;
       if (!currentUser.organizationId || currentUser.role === 'sysowner') {
         throw new UnauthorizedException(
           'Tài khoản AD chưa thuộc tổ chức nên không thể tạo hồ sơ nhân viên',
         );
       }
 
-      const employeeCode = `AD-${currentUser.id.replaceAll('-', '').toUpperCase()}`;
+      const employeeCode = profile.employeeId || profile.username.split('@')[0];
       const employee = await tx.employee.upsert({
         where: {
-          organizationId_code: {
-            organizationId: currentUser.organizationId,
-            code: employeeCode,
-          },
+          organizationId_code: { organizationId: currentUser.organizationId, code: employeeCode },
         },
-        update: {},
-        create: {
-          organizationId: currentUser.organizationId,
-          code: employeeCode,
-          title: profile.title,
-        },
+        update: syncData,
+        create: { organizationId: currentUser.organizationId, code: employeeCode, ...syncData },
       });
+
+      if (currentUser.employeeId) return currentUser;
 
       return tx.user.update({
         where: { id: currentUser.id },
