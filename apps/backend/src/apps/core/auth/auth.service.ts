@@ -6,12 +6,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, type User } from '@prisma/client';
+import type { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '@libs/database/prisma.service';
 import { LdapService, type LdapProfile } from '@libs/ldap';
 import { IAuthTokens, IJwtPayload } from '@/common/types';
+import type { EmployeeAttendanceCodeSetEvent } from '@/apps/hrm/employee/employee.events';
 import { LdapLoginDto, LoginDto, RegisterDto } from './dto';
 
 const SALT_ROUNDS = 10;
@@ -23,6 +25,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly ldapService: LdapService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -158,52 +161,38 @@ export class AuthService {
         'Tài khoản AD chưa thuộc tổ chức nên không thể tạo hồ sơ nhân viên',
       );
     }
+    if (user.employeeId) return user;
+
     const employeeCode = profile.employeeId
       ? 'AD-' + profile.employeeId
       : profile.username.split('@')[0];
 
-    // Fields được sync từ LDAP mỗi lần login. undefined = Prisma bỏ qua field đó.
-    const syncData = {
-      attendanceCode: profile.attendanceCode ?? undefined,
-      title: profile.title ?? undefined,
-      code: employeeCode,
-    };
-
-    // Đã link employee — update thẳng bằng ID, tránh đụng unique constraint
-    if (user.employeeId) {
-      await this.syncEmployee(user.employeeId, syncData);
-      return user;
-    }
-
-    // Chưa có employee — upsert theo code rồi link
     const employee = await this.prisma.employee.upsert({
       where: {
         organizationId_code: { organizationId: user.organizationId, code: employeeCode },
       },
-      update: syncData,
-      create: { organizationId: user.organizationId, ...syncData },
+      update: {},
+      create: {
+        organizationId: user.organizationId,
+        code: employeeCode,
+        attendanceCode: profile.attendanceCode ?? undefined,
+        title: profile.title ?? undefined,
+      },
     });
 
-    return this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: user.id },
       data: { employeeId: employee.id },
     });
-  }
 
-  private async syncEmployee(id: string, data: Prisma.EmployeeUpdateInput): Promise<void> {
-    try {
-      await this.prisma.employee.update({ where: { id }, data });
-    } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        // attendanceCode đã thuộc employee khác — bỏ qua field đó, sync phần còn lại
-        const { attendanceCode, ...rest } = data;
-        void attendanceCode;
-        if (Object.keys(rest).length) {
-          await this.prisma.employee.update({ where: { id }, data: rest });
-        }
-      } else {
-        throw e;
-      }
+    if (profile.attendanceCode) {
+      this.eventEmitter.emit('employee.attendanceCode.set', {
+        organizationId: user.organizationId,
+        employeeId: employee.id,
+        attendanceCode: profile.attendanceCode,
+      } satisfies EmployeeAttendanceCodeSetEvent);
     }
+
+    return updatedUser;
   }
 }

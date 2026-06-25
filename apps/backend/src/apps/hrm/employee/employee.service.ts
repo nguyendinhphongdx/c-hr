@@ -70,22 +70,43 @@ export class EmployeeService {
     for (const group of byDate.values()) {
       const checkIns = group.map((r) => r.checkInAt).filter(Boolean) as Date[];
       const checkOuts = group.map((r) => r.checkOutAt).filter(Boolean) as Date[];
-      const checkInAt = checkIns.length
+      const orphanCheckIn = checkIns.length
         ? new Date(Math.min(...checkIns.map((d) => d.getTime())))
         : null;
-      const checkOutAt = checkOuts.length
+      const orphanCheckOut = checkOuts.length
         ? new Date(Math.max(...checkOuts.map((d) => d.getTime())))
         : null;
 
-      const [first, ...rest] = group;
-      await tx.attendanceLog.update({
-        where: { id: first.id },
-        data: { employeeId, checkInAt, checkOutAt },
+      // Nếu employee đã có log linked cho ngày này, merge vào đó rồi xóa orphan
+      const linked = await tx.attendanceLog.findUnique({
+        where: { employeeId_date: { employeeId, date: group[0].date } },
+        select: { id: true, checkInAt: true, checkOutAt: true },
       });
-      if (rest.length > 0) {
-        await tx.attendanceLog.deleteMany({
-          where: { id: { in: rest.map((r) => r.id) } },
+
+      if (linked) {
+        const mergedCheckIn =
+          linked.checkInAt && orphanCheckIn
+            ? new Date(Math.min(linked.checkInAt.getTime(), orphanCheckIn.getTime()))
+            : (linked.checkInAt ?? orphanCheckIn);
+        const mergedCheckOut =
+          linked.checkOutAt && orphanCheckOut
+            ? new Date(Math.max(linked.checkOutAt.getTime(), orphanCheckOut.getTime()))
+            : (linked.checkOutAt ?? orphanCheckOut);
+
+        await tx.attendanceLog.update({
+          where: { id: linked.id },
+          data: { checkInAt: mergedCheckIn ?? undefined, checkOutAt: mergedCheckOut ?? undefined },
         });
+        await tx.attendanceLog.deleteMany({ where: { id: { in: group.map((r) => r.id) } } });
+      } else {
+        const [first, ...rest] = group;
+        await tx.attendanceLog.update({
+          where: { id: first.id },
+          data: { employeeId, checkInAt: orphanCheckIn, checkOutAt: orphanCheckOut },
+        });
+        if (rest.length > 0) {
+          await tx.attendanceLog.deleteMany({ where: { id: { in: rest.map((r) => r.id) } } });
+        }
       }
     }
 
