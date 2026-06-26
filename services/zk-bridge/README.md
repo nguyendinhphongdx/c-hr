@@ -77,17 +77,6 @@ zk-bridge stop                   # stop it
 
 Visit **<http://localhost:7000>**, set the backend Push URL, paste the per-device JWT — bridge pushes attendance on the next cycle.
 
-When C-HR backend runs in Docker on the same host and publishes port 8000
-to loopback, configure:
-
-```text
-Push URL: http://127.0.0.1:8000/api/v1/attendance-devices/push
-Ping URL: http://127.0.0.1:8000/api/v1/attendance-devices/ping
-```
-
-Binding the backend port to `127.0.0.1` keeps it unavailable to other LAN
-machines while allowing a host-installed ZK-Bridge to reach it.
-
 ## Features
 
 ### Web Admin UI
