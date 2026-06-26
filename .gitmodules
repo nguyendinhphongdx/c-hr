@@ -1,0 +1,3 @@
+[submodule "services/zk-bridge"]
+	path = services/zk-bridge
+	url = https://github.com/nguyendinhphongdx/zkteco-bridge.git
