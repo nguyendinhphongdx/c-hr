@@ -10,6 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import type { EmployeeSummaryRow } from "../types/report";
@@ -27,17 +32,28 @@ function fmtHm(minutes: number): string {
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
 }
 
-function fmtPct(rate: number): string {
-  return `${(rate * 100).toFixed(1)}%`;
+function AttendanceBadge({ rate }: { rate: number }) {
+  const pct = rate * 100;
+  const label = `${pct.toFixed(1)}%`;
+  if (pct >= 95)
+    return (
+      <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+        {label}
+      </span>
+    );
+  if (pct >= 80)
+    return (
+      <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+        {label}
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+      {label}
+    </span>
+  );
 }
 
-/**
- * Per-employee timesheet summary table. Columns picked to feed the
- * payroll workflow: HR copies these to compute monthly pay.
- *
- * Late / Early-leave / OT show as "lần · phút" on one line so the row
- * stays narrow on a 13" laptop.
- */
 export function EmployeeSummaryTable({
   rows,
   loading,
@@ -63,124 +79,126 @@ export function EmployeeSummaryTable({
       <Table>
         <TableHeader className="sticky top-0 z-10 bg-muted/50">
           <TableRow>
-            <TableHead className="min-w-24">Mã NV</TableHead>
-            <TableHead className="min-w-40">Họ tên</TableHead>
-            <TableHead className="min-w-32">Phòng ban</TableHead>
-            <TableHead className="text-right">Công thực / chuẩn</TableHead>
-            <TableHead className="text-right">Giờ công</TableHead>
-            <TableHead className="text-right">Đi muộn</TableHead>
-            <TableHead className="text-right">Về sớm</TableHead>
-            <TableHead className="text-right">Vắng</TableHead>
-            <TableHead className="text-right">OT thường</TableHead>
-            <TableHead className="text-right">OT cuối tuần</TableHead>
-            <TableHead className="text-right">OT lễ</TableHead>
-            <TableHead className="text-right">OT tổng</TableHead>
-            <TableHead className="text-right">Giờ làm theo project</TableHead>
-            <TableHead className="text-right">Chuyên cần</TableHead>
+            <TableHead className="min-w-20">Mã NV</TableHead>
+            <TableHead className="min-w-44">Họ tên</TableHead>
+            <TableHead className="min-w-28">Phòng ban</TableHead>
+            <TableHead className="min-w-28 text-right">Công / Chuẩn</TableHead>
+            <TableHead className="min-w-24 text-right">Giờ công</TableHead>
+            <TableHead className="min-w-28 text-right">Đi muộn</TableHead>
+            <TableHead className="min-w-28 text-right">Về sớm</TableHead>
+            <TableHead className="min-w-16 text-right">Vắng</TableHead>
+            <TableHead className="min-w-20 text-right">OT</TableHead>
+            <TableHead className="min-w-24 text-right">Chuyên cần</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((r) => (
             <TableRow
               key={r.employeeId}
-              className={cn(
-                onRowClick && "cursor-pointer hover:bg-muted/40",
-              )}
+              className={cn(onRowClick && "cursor-pointer hover:bg-muted/40")}
               onClick={() => onRowClick?.(r)}
             >
-              <TableCell className="font-mono text-xs">{r.code}</TableCell>
-              <TableCell>
-                <div className="leading-tight">
-                  <div className="font-medium">{r.name ?? "—"}</div>
-                  {r.email && (
-                    <div className="text-[10px] text-muted-foreground">
-                      {r.email}
-                    </div>
-                  )}
-                </div>
+              <TableCell className="font-mono text-xs text-muted-foreground">
+                {r.code}
               </TableCell>
+
+              <TableCell>
+                {r.email ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="font-medium leading-tight">
+                        {r.name ?? "—"}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{r.email}</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <span className="font-medium leading-tight">
+                    {r.name ?? "—"}
+                  </span>
+                )}
+              </TableCell>
+
               <TableCell className="text-sm text-muted-foreground">
                 {r.departmentName ?? "—"}
               </TableCell>
+
               <TableCell className="text-right tabular-nums">
                 <span className="font-medium">{r.actualWorkdays}</span>
-                <span className="text-muted-foreground"> / {r.standardWorkdays}</span>
+                <span className="text-muted-foreground">
+                  {" / "}
+                  {r.standardWorkdays}
+                </span>
               </TableCell>
+
               <TableCell className="text-right tabular-nums">
                 {fmtHm(r.totalWorkMinutes)}
               </TableCell>
+
               <TableCell className="text-right tabular-nums">
                 {r.lateCount === 0 ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
-                  <span>
-                    <span className="font-medium">{r.lateCount}</span>
-                    <span className="text-muted-foreground">
-                      {" · "}
+                  <div>
+                    <div className="font-medium">{r.lateCount} lần</div>
+                    <div className="text-xs text-muted-foreground">
                       {fmtHm(r.lateMinutes)}
-                    </span>
-                  </span>
+                    </div>
+                  </div>
                 )}
               </TableCell>
+
               <TableCell className="text-right tabular-nums">
                 {r.earlyLeaveCount === 0 ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
-                  <span>
-                    <span className="font-medium">{r.earlyLeaveCount}</span>
-                    <span className="text-muted-foreground">
-                      {" · "}
+                  <div>
+                    <div className="font-medium">{r.earlyLeaveCount} lần</div>
+                    <div className="text-xs text-muted-foreground">
                       {fmtHm(r.earlyLeaveMinutes)}
-                    </span>
-                  </span>
+                    </div>
+                  </div>
                 )}
               </TableCell>
+
               <TableCell className="text-right tabular-nums">
                 {r.absentDays === 0 ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
-                  <span className="font-medium text-destructive">
+                  <span
+                    className={cn(
+                      "font-medium",
+                      r.absentDays >= 3
+                        ? "text-destructive"
+                        : "text-amber-600",
+                    )}
+                  >
                     {r.absentDays}
                   </span>
                 )}
               </TableCell>
+
               <TableCell className="text-right tabular-nums">
-                {r.otMinutesWeekday === 0 ? (
-                  <span className="text-muted-foreground">—</span>
-                ) : (
-                  fmtHm(r.otMinutesWeekday)
-                )}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {r.otMinutesWeekend === 0 ? (
-                  <span className="text-muted-foreground">—</span>
-                ) : (
-                  fmtHm(r.otMinutesWeekend)
-                )}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {r.otMinutesHoliday === 0 ? (
-                  <span className="text-muted-foreground">—</span>
-                ) : (
-                  fmtHm(r.otMinutesHoliday)
-                )}
-              </TableCell>
-              <TableCell className="text-right tabular-nums font-medium">
                 {r.otMinutesTotal === 0 ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
-                  fmtHm(r.otMinutesTotal)
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-default font-medium">
+                        {fmtHm(r.otMinutesTotal)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="space-y-0.5 text-xs">
+                      <div>Thường: {fmtHm(r.otMinutesWeekday)}</div>
+                      <div>Cuối tuần: {fmtHm(r.otMinutesWeekend)}</div>
+                      <div>Lễ: {fmtHm(r.otMinutesHoliday)}</div>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {r.workMinutes === 0 ? (
-                  <span className="text-muted-foreground">—</span>
-                ) : (
-                  fmtHm(r.workMinutes)
-                )}
-              </TableCell>
-              <TableCell className="text-right tabular-nums font-medium">
-                {fmtPct(r.attendanceRate)}
+
+              <TableCell className="text-right">
+                <AttendanceBadge rate={r.attendanceRate} />
               </TableCell>
             </TableRow>
           ))}

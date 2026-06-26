@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
-  IsBoolean,
+  IsDateString,
   IsOptional,
   IsString,
   MaxLength,
@@ -20,8 +20,8 @@ export class UpdateWorkScheduleDto {
   name?: string;
 
   @IsOptional()
-  @IsBoolean()
-  isDefault?: boolean;
+  @IsDateString()
+  effectiveFrom?: string | null;
 
   /** Pass to fully replace the shift list. Omit to keep existing shifts. */
   @IsOptional()

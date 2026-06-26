@@ -4,6 +4,8 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsBoolean,
+  IsDateString,
+  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -16,6 +18,11 @@ import {
 } from 'class-validator';
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export enum AttendanceModeDto {
+  FIXED = 'FIXED',
+  FLEXIBLE = 'FLEXIBLE',
+}
 
 export class ShiftInputDto {
   @IsString()
@@ -46,14 +53,26 @@ export class ShiftInputDto {
   breakMinutes?: number;
 
   @IsOptional()
+  @IsBoolean()
+  crossesMidnight?: boolean;
+
+  @IsOptional()
+  @IsEnum(AttendanceModeDto)
+  mode?: AttendanceModeDto;
+
+  /** FIXED only — minutes allowed after startTime before marking LATE. */
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(120)
   lateGraceMinutes?: number;
 
+  /** FLEXIBLE only — width of the check-in window in minutes (e.g. 60 = 08:00–09:00). */
   @IsOptional()
-  @IsBoolean()
-  crossesMidnight?: boolean;
+  @IsInt()
+  @Min(0)
+  @Max(240)
+  windowMinutes?: number;
 }
 
 export class CreateWorkScheduleDto {
@@ -62,9 +81,10 @@ export class CreateWorkScheduleDto {
   @MaxLength(100)
   name: string;
 
+  /** ISO-8601 datetime. null/omitted = baseline (active from the beginning). */
   @IsOptional()
-  @IsBoolean()
-  isDefault?: boolean;
+  @IsDateString()
+  effectiveFrom?: string;
 
   @IsArray()
   @ArrayMinSize(1)

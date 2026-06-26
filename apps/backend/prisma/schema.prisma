@@ -278,33 +278,43 @@ model WorkSchedule {
   id             String    @id @default(uuid())
   organizationId String    @map("organization_id")
   name           String
-  isDefault      Boolean   @default(false) @map("is_default")
+  /// null = baseline (áp dụng từ đầu). Schedule mới hơn override schedule cũ
+  /// từ ngày effectiveFrom trở đi. Query: ORDER BY effective_from DESC NULLS LAST LIMIT 1.
+  effectiveFrom  DateTime? @map("effective_from")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
 
   shifts WorkShift[]
 
-  @@index([organizationId, isDefault])
+  @@index([organizationId, effectiveFrom])
   @@map("work_schedules")
+}
+
+enum AttendanceMode {
+  FIXED
+  FLEXIBLE
 }
 
 // Một ca làm trong schedule: "Ca chính T2-T6", "Sáng T7", "Ca đêm".
 // startTime/endTime dạng "HH:MM" 24h. crossesMidnight=true khi end <= start.
+// mode=FIXED:    config = { lateGraceMinutes: 15 }
+// mode=FLEXIBLE: config = { windowMinutes: 60 }  — endTime-startTime-breakMinutes = phút làm tối thiểu
 model WorkShift {
-  id               String   @id @default(uuid())
-  workScheduleId   String   @map("work_schedule_id")
-  name             String
-  startTime        String   @map("start_time")
-  endTime          String   @map("end_time")
-  /// ISO weekdays: 1=Mon ... 7=Sun. MVP constraint: shifts trong cùng
-  /// schedule không được trùng day — validated ở service layer.
-  daysOfWeek       Int[]    @map("days_of_week")
-  breakMinutes     Int      @default(0) @map("break_minutes")
-  lateGraceMinutes Int      @default(15) @map("late_grace_minutes")
-  crossesMidnight  Boolean  @default(false) @map("crosses_midnight")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id             String         @id @default(uuid())
+  workScheduleId String         @map("work_schedule_id")
+  name           String
+  startTime      String         @map("start_time")
+  endTime        String         @map("end_time")
+  /// ISO weekdays: 1=Mon ... 7=Sun. MVP: shifts trong cùng schedule không trùng day.
+  daysOfWeek     Int[]          @map("days_of_week")
+  breakMinutes   Int            @default(0) @map("break_minutes")
+  crossesMidnight Boolean       @default(false) @map("crosses_midnight")
+  mode           AttendanceMode @default(FIXED)
+  /// FIXED: { "lateGraceMinutes": 15 }  FLEXIBLE: { "windowMinutes": 60 }
+  config         Json           @default("{}")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
 
   workSchedule WorkSchedule @relation(fields: [workScheduleId], references: [id], onDelete: Cascade)
 

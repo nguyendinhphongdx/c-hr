@@ -8,31 +8,45 @@ import { AttendanceLogRepository } from '../attendance-log/attendance-log.reposi
 import { WorkScheduleRepository } from '../work-schedule/work-schedule.repository';
 
 import { TimesheetQueryDto } from './dto';
+import {
+  computeDayMetrics,
+  indexShiftsByDay,
+  isoWeekday,
+  resolveSchedule,
+  toDateKey,
+  type DayStatus,
+  type ShiftLike,
+} from './timesheet-utils';
 
-export type DayStatus = 'PRESENT' | 'LATE' | 'EARLY_LEAVE' | 'ABSENT' | 'WEEKEND';
+export type { DayStatus };
 
 export interface TimesheetDay {
   date: string; // YYYY-MM-DD
-  shift: { name: string; startTime: string; endTime: string } | null;
+  shift: { name: string; startTime: string; endTime: string; mode: string } | null;
   checkInAt: string | null;
   checkOutAt: string | null;
   status: DayStatus;
+  lateMinutes: number;
+  earlyLeaveMinutes: number;
+  workedMinutes: number;
 }
 
 export interface TimesheetResponse {
   year: number;
   month: number;
-  workSchedule: {
+  schedules: Array<{
     id: string;
     name: string;
+    effectiveFrom: string | null;
     shifts: Array<{
       name: string;
       startTime: string;
       endTime: string;
       daysOfWeek: number[];
-      lateGraceMinutes: number;
+      mode: string;
+      config: Record<string, unknown>;
     }>;
-  } | null;
+  }>;
   days: TimesheetDay[];
 }
 
@@ -65,64 +79,64 @@ export class TimesheetService {
     if (!employee) throw new NotFoundException('Employee not found in organization');
     const tz = organization?.timezone ?? 'Asia/Ho_Chi_Minh';
 
-    const schedule = await this.schedules.findDefaultByOrg(orgId);
+    // Load all schedules once (typically 1–5 records) — sorted newest first.
+    const allSchedules = await this.schedules.findManyByOrg(orgId);
+
+    // Pre-index shifts per schedule to avoid rebuilding the map for each day.
+    const shiftMapBySchedule = new Map<string, Map<number, ShiftLike>>();
+    for (const s of allSchedules) {
+      shiftMapBySchedule.set(s.id, indexShiftsByDay(s.shifts as ShiftLike[]));
+    }
+
     const { from, to, dates } = monthRange(query.year, query.month);
     const logs = await this.logs.findByRange(orgId, query.employeeId, from, to);
 
-    // Index logs by YYYY-MM-DD for O(1) day lookup.
     const logByDate = new Map<string, (typeof logs)[number]>();
     for (const l of logs) logByDate.set(toDateKey(l.date), l);
 
-    const shiftsByDay = indexShiftsByDay(schedule?.shifts ?? []);
-
     const days: TimesheetDay[] = dates.map((date) => {
-      const isoDay = isoWeekday(date);
-      const shift = shiftsByDay.get(isoDay) ?? null;
+      const schedule = resolveSchedule(allSchedules, date);
+      const shiftMap = schedule ? (shiftMapBySchedule.get(schedule.id) ?? new Map()) : new Map();
+      const shift = shiftMap.get(isoWeekday(date)) ?? null;
       const log = logByDate.get(toDateKey(date)) ?? null;
+      const metrics = computeDayMetrics(shift, log, tz);
+
       return {
         date: toDateKey(date),
         shift: shift
-          ? { name: shift.name, startTime: shift.startTime, endTime: shift.endTime }
+          ? { name: shift.name, startTime: shift.startTime, endTime: shift.endTime, mode: shift.mode }
           : null,
         checkInAt: log?.checkInAt?.toISOString() ?? null,
         checkOutAt: log?.checkOutAt?.toISOString() ?? null,
-        status: deriveStatus(shift, log, tz),
+        status: metrics.status,
+        lateMinutes: metrics.lateMinutes,
+        earlyLeaveMinutes: metrics.earlyLeaveMinutes,
+        workedMinutes: metrics.workedMinutes,
       };
     });
 
     return {
       year: query.year,
       month: query.month,
-      workSchedule: schedule
-        ? {
-            id: schedule.id,
-            name: schedule.name,
-            shifts: schedule.shifts.map((s) => ({
-              name: s.name,
-              startTime: s.startTime,
-              endTime: s.endTime,
-              daysOfWeek: s.daysOfWeek,
-              lateGraceMinutes: s.lateGraceMinutes,
-            })),
-          }
-        : null,
+      schedules: allSchedules.map((s) => ({
+        id: s.id,
+        name: s.name,
+        effectiveFrom: s.effectiveFrom?.toISOString() ?? null,
+        shifts: s.shifts.map((sh) => ({
+          name: sh.name,
+          startTime: sh.startTime,
+          endTime: sh.endTime,
+          daysOfWeek: sh.daysOfWeek,
+          mode: sh.mode,
+          config: sh.config as Record<string, unknown>,
+        })),
+      })),
       days,
     };
   }
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Pure helpers (no DI)
-// ──────────────────────────────────────────────────────────────────
-
-interface ShiftLike {
-  name: string;
-  startTime: string;
-  endTime: string;
-  daysOfWeek: number[];
-  lateGraceMinutes: number;
-  crossesMidnight: boolean;
-}
+// ── Pure helpers ─────────────────────────────────────────────────────────────
 
 function monthRange(year: number, month: number) {
   const from = new Date(Date.UTC(year, month - 1, 1));
@@ -133,67 +147,4 @@ function monthRange(year: number, month: number) {
     dates.push(new Date(Date.UTC(year, month - 1, d)));
   }
   return { from, to, dates };
-}
-
-function toDateKey(d: Date): string {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-/** ISO weekday: 1=Mon ... 7=Sun. JS getUTCDay returns 0=Sun..6=Sat. */
-function isoWeekday(d: Date): number {
-  const js = d.getUTCDay();
-  return js === 0 ? 7 : js;
-}
-
-function indexShiftsByDay(shifts: ShiftLike[]): Map<number, ShiftLike> {
-  const m = new Map<number, ShiftLike>();
-  for (const s of shifts) {
-    for (const day of s.daysOfWeek) m.set(day, s);
-  }
-  return m;
-}
-
-function hhmmToMinutes(hhmm: string): number {
-  const [h, m] = hhmm.split(':').map(Number);
-  return h * 60 + m;
-}
-
-/**
- * Wall-clock minutes-since-midnight in the org's timezone. Shift times
- * (e.g. "08:00") are stored as plain strings representing local time, so
- * we must compare against check-in's local hours/minutes — not UTC.
- * en-GB locale gives a stable 00–23 hour format.
- */
-function localMinutes(d: Date, tz: string): number {
-  const fmt = new Intl.DateTimeFormat('en-GB', {
-    timeZone: tz,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  const parts = fmt.formatToParts(d);
-  const h = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
-  const m = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
-  return h * 60 + m;
-}
-
-function deriveStatus(
-  shift: ShiftLike | null,
-  log: { checkInAt: Date | null; checkOutAt: Date | null } | null,
-  tz: string,
-): DayStatus {
-  if (!shift) return 'WEEKEND';
-  if (!log || !log.checkInAt) return 'ABSENT';
-
-  const startM = hhmmToMinutes(shift.startTime);
-  const endM = hhmmToMinutes(shift.endTime);
-  const inM = localMinutes(log.checkInAt, tz);
-  const outM = log.checkOutAt ? localMinutes(log.checkOutAt, tz) : null;
-
-  if (inM > startM + shift.lateGraceMinutes) return 'LATE';
-  if (outM !== null && outM < endM) return 'EARLY_LEAVE';
-  return 'PRESENT';
 }

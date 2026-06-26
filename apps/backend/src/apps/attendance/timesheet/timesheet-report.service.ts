@@ -8,17 +8,16 @@ import { HolidayService } from '../holiday/holiday.service';
 import { WorkScheduleRepository } from '../work-schedule/work-schedule.repository';
 
 import { TimesheetSummaryQueryDto } from './dto';
+import {
+  computeDayMetrics,
+  indexShiftsByDay,
+  isoWeekday,
+  resolveSchedule,
+  toDateKey,
+  type ShiftLike,
+} from './timesheet-utils';
 
 const MAX_RANGE_DAYS = 92; // ~3 months — caps the aggregation cost.
-
-interface ShiftLike {
-  name: string;
-  startTime: string; // "HH:MM"
-  endTime: string; // "HH:MM"
-  daysOfWeek: number[];
-  lateGraceMinutes: number;
-  crossesMidnight: boolean;
-}
 
 export interface OverviewTotals {
   activeEmployees: number;
@@ -138,8 +137,11 @@ export class TimesheetReportService {
     });
     const tz = org?.timezone ?? 'Asia/Ho_Chi_Minh';
 
-    const schedule = await this.schedules.findDefaultByOrg(orgId);
-    const shiftsByDay = indexShiftsByDay(schedule?.shifts ?? []);
+    const allSchedules = await this.schedules.findManyByOrg(orgId);
+    const shiftMapBySchedule = new Map<string, Map<number, ShiftLike>>();
+    for (const s of allSchedules) {
+      shiftMapBySchedule.set(s.id, indexShiftsByDay(s.shifts as ShiftLike[]));
+    }
 
     // 1. Fetch employees matching filters. Include ON_LEAVE so people on
     // leave during the period still surface (with zeros if they didn't
@@ -211,6 +213,15 @@ export class TimesheetReportService {
 
     // 3. Iterate every (employee × day) and aggregate.
     const dates = enumerateDays(from, to);
+
+    // Pre-compute the active shift per date once — same across all employees.
+    const shiftPerDate = new Map<string, ShiftLike | null>();
+    for (const d of dates) {
+      const schedule = resolveSchedule(allSchedules, d);
+      const shiftMap = schedule ? (shiftMapBySchedule.get(schedule.id) ?? new Map()) : new Map();
+      shiftPerDate.set(toDateKey(d), shiftMap.get(isoWeekday(d)) ?? null);
+    }
+
     const rows: EmployeeSummaryRow[] = [];
 
     for (const emp of employees) {
@@ -227,50 +238,40 @@ export class TimesheetReportService {
       let otMinutesHoliday = 0;
 
       for (const d of dates) {
-        const isoDay = isoWeekday(d);
-        const shift = shiftsByDay.get(isoDay) ?? null;
+        const dateKey = toDateKey(d);
+        const shift = shiftPerDate.get(dateKey) ?? null;
         if (!shift) continue; // weekend / non-scheduled day
         standardWorkdays++;
 
-        const dateKey = toDateKey(d);
         const log = logsByEmpDate.get(`${emp.id}|${dateKey}`) ?? null;
-        if (!log || !log.checkInAt) {
+        const metrics = computeDayMetrics(shift, log, tz);
+
+        if (metrics.status === 'ABSENT') {
           absentDays++;
           continue;
         }
 
         actualWorkdays++;
-        const startM = hhmmToMinutes(shift.startTime);
-        const endM = hhmmToMinutes(shift.endTime);
-        const inM = localMinutes(log.checkInAt, tz);
-        const outM = log.checkOutAt ? localMinutes(log.checkOutAt, tz) : null;
-
-        const lateBy = inM - (startM + shift.lateGraceMinutes);
-        if (lateBy > 0) {
+        if (metrics.lateMinutes > 0) {
           lateCount++;
-          lateMinutes += lateBy;
+          lateMinutes += metrics.lateMinutes;
         }
+        if (metrics.earlyLeaveMinutes > 0) {
+          earlyLeaveCount++;
+          earlyLeaveMinutes += metrics.earlyLeaveMinutes;
+        }
+        totalWorkMinutes += metrics.workedMinutes;
 
-        if (outM !== null) {
-          if (outM < endM) {
-            earlyLeaveCount++;
-            earlyLeaveMinutes += endM - outM;
-          }
-          // Worked minutes — clamp to non-negative; cross-midnight not yet modeled.
-          const worked = Math.max(0, outM - inM);
-          totalWorkMinutes += worked;
-          if (outM > endM) {
-            const ot = outM - endM;
-            // Bucket precedence: holiday > weekend > weekday. Saturday
-            // and Sunday that are ALSO marked as a holiday get the
-            // higher 3.0× rate per VN labor law.
-            if (holidaySet.has(dateKey)) {
-              otMinutesHoliday += ot;
-            } else if (isoDay === 6 || isoDay === 7) {
-              otMinutesWeekend += ot;
-            } else {
-              otMinutesWeekday += ot;
-            }
+        if (metrics.otMinutes > 0) {
+          const isoDay = isoWeekday(d);
+          // Bucket precedence: holiday > weekend > weekday. Saturday and Sunday
+          // that are ALSO marked as a holiday get the higher 3.0× rate.
+          if (holidaySet.has(dateKey)) {
+            otMinutesHoliday += metrics.otMinutes;
+          } else if (isoDay === 6 || isoDay === 7) {
+            otMinutesWeekend += metrics.otMinutes;
+          } else {
+            otMinutesWeekday += metrics.otMinutes;
           }
         }
       }
@@ -417,11 +418,6 @@ function avgAttendanceRate(rows: EmployeeSummaryRow[]): number {
   return totalStandard > 0 ? totalActual / totalStandard : 0;
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Pure helpers — same shape as timesheet.service.ts but kept private here
-// to avoid churning the public surface of the existing service.
-// ──────────────────────────────────────────────────────────────────
-
 function enumerateDays(from: Date, to: Date): Date[] {
   const out: Date[] = [];
   const start = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
@@ -430,42 +426,4 @@ function enumerateDays(from: Date, to: Date): Date[] {
     out.push(new Date(d));
   }
   return out;
-}
-
-function toDateKey(d: Date): string {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function isoWeekday(d: Date): number {
-  const js = d.getUTCDay();
-  return js === 0 ? 7 : js;
-}
-
-function indexShiftsByDay(shifts: ShiftLike[]): Map<number, ShiftLike> {
-  const m = new Map<number, ShiftLike>();
-  for (const s of shifts) {
-    for (const day of s.daysOfWeek) m.set(day, s);
-  }
-  return m;
-}
-
-function hhmmToMinutes(hhmm: string): number {
-  const [h, m] = hhmm.split(':').map(Number);
-  return h * 60 + m;
-}
-
-function localMinutes(d: Date, tz: string): number {
-  const fmt = new Intl.DateTimeFormat('en-GB', {
-    timeZone: tz,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  const parts = fmt.formatToParts(d);
-  const h = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
-  const m = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
-  return h * 60 + m;
 }

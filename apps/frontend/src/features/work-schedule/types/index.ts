@@ -1,5 +1,7 @@
 import type { ID, ISODate } from "@/lib/types";
 
+export type AttendanceMode = "FIXED" | "FLEXIBLE";
+
 export interface WorkShift {
   id: ID;
   name: string;
@@ -7,8 +9,9 @@ export interface WorkShift {
   endTime: string;
   daysOfWeek: number[];
   breakMinutes: number;
-  lateGraceMinutes: number;
   crossesMidnight: boolean;
+  mode: AttendanceMode;
+  config: Record<string, unknown>;
   createdAt: ISODate;
   updatedAt: ISODate;
 }
@@ -17,7 +20,8 @@ export interface WorkSchedule {
   id: ID;
   organizationId: ID;
   name: string;
-  isDefault: boolean;
+  /** null = baseline (active from the beginning) */
+  effectiveFrom: ISODate | null;
   shifts: WorkShift[];
   createdAt: ISODate;
   updatedAt: ISODate;
@@ -29,18 +33,24 @@ export interface ShiftInput {
   endTime: string;
   daysOfWeek: number[];
   breakMinutes?: number;
-  lateGraceMinutes?: number;
   crossesMidnight?: boolean;
+  mode?: AttendanceMode;
+  /** FIXED only */
+  lateGraceMinutes?: number;
+  /** FLEXIBLE only */
+  windowMinutes?: number;
 }
 
 export interface CreateWorkScheduleInput {
   name: string;
-  isDefault?: boolean;
+  /** ISO-8601. Omit / null = baseline. */
+  effectiveFrom?: string | null;
   shifts: ShiftInput[];
 }
 
 export interface UpdateWorkScheduleInput {
   name?: string;
-  isDefault?: boolean;
+  /** null = reset to baseline */
+  effectiveFrom?: string | null;
   shifts?: ShiftInput[];
 }
