@@ -156,7 +156,8 @@ export class AuthService {
   }
 
   private async ensureLdapEmployee(user: User, profile: LdapProfile): Promise<User> {
-    if (!user.organizationId || user.role === 'sysowner') {
+    // if (!user.organizationId || user.role === 'sysowner') {
+    if (!user.organizationId) {
       throw new UnauthorizedException(
         'Tài khoản AD chưa thuộc tổ chức nên không thể tạo hồ sơ nhân viên',
       );
