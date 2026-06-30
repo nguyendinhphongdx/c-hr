@@ -1,13 +1,19 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
+import { useState } from "react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogBody,
@@ -100,6 +106,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
   const departments = useDepartments();
   const update = useUpdateEmployee();
   const isHrmAdmin = useIsAppAdmin("HRM");
+  const [salaryOpen, setSalaryOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -193,7 +200,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
 
   return (
     <Dialog open={!!id} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Sửa nhân sự</DialogTitle>
           <DialogDescription>
@@ -215,43 +222,45 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
               className="space-y-4"
               id="edit-employee-form"
             >
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mã nhân viên</FormLabel>
-                    <FormControl>
-                      <Input placeholder="EMP-0001" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Mã hồ sơ nhân sự, không dùng để đối chiếu máy chấm công.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mã nhân viên</FormLabel>
+                      <FormControl>
+                        <Input placeholder="EMP-0001" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Mã hồ sơ nhân sự, không dùng để đối chiếu máy chấm công.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="attendanceCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mã chấm công</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="00001"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Phải giống mã được cài trên tất cả máy chấm công.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="attendanceCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mã chấm công</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="00001"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Phải giống mã được cài trên tất cả máy chấm công.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -271,6 +280,7 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                             ? { name: linkedUser.name, email: linkedUser.email }
                             : null
                         }
+                        disabled
                       />
                     </FormControl>
                     <FormDescription>
@@ -302,32 +312,57 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="departmentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phòng ban</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={NO_DEPARTMENT}>(không có)</SelectItem>
-                        {departments.data?.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.name}
-                            {d.code ? ` · ${d.code}` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid gap-4 grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="departmentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phòng ban</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={NO_DEPARTMENT}>(không có)</SelectItem>
+                          {departments.data?.map((d) => (
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.name}
+                              {d.code ? ` · ${d.code}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Trạng thái</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ACTIVE">Đang làm</SelectItem>
+                          <SelectItem value="ON_LEAVE">Đang nghỉ</SelectItem>
+                          <SelectItem value="TERMINATED">Đã nghỉ việc</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField
@@ -375,37 +410,27 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Trạng thái</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="ACTIVE">Đang làm</SelectItem>
-                        <SelectItem value="ON_LEAVE">Đang nghỉ</SelectItem>
-                        <SelectItem value="TERMINATED">Đã nghỉ việc</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {isHrmAdmin && (
-                <div className="space-y-4 rounded-md border bg-muted/30 p-4">
-                  <div>
-                    <h4 className="text-sm font-semibold">Lương &amp; BHXH</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Dùng cho tính lương tháng (F9). Chỉ HRM admin nhìn thấy.
-                    </p>
-                  </div>
+                <Collapsible open={salaryOpen} onOpenChange={setSalaryOpen}>
+                  <div className="rounded-md border bg-muted/30">
+                    <CollapsibleTrigger asChild>
+                      <button className="flex w-full items-center justify-between p-4 text-left hover:bg-muted/50">
+                        <div>
+                          <h4 className="text-sm font-semibold">Lương &amp; BHXH</h4>
+                          <p className="text-xs text-muted-foreground">
+                            Dùng cho tính lương tháng (F9). Chỉ HRM admin nhìn thấy.
+                          </p>
+                        </div>
+                        <ChevronDown
+                          className="h-4 w-4 shrink-0 transition-transform"
+                          style={{
+                            transform: salaryOpen ? "rotate(180deg)" : "rotate(0deg)",
+                          }}
+                        />
+                      </button>
+                    </CollapsibleTrigger>
+
+                    <CollapsibleContent className="space-y-4 border-t px-4 py-4">
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <FormField
@@ -538,7 +563,9 @@ export function EmployeeEditDialog({ id, onClose }: EmployeeEditDialogProps) {
                       )}
                     />
                   </div>
-                </div>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
               )}
             </form>
           </Form>

@@ -157,6 +157,28 @@ export class EmployeeService {
     if (dto.userId) {
       await this.assertUserAvailableForLink(orgId, dto.userId);
       const created = await this.prisma.$transaction(async (tx) => {
+        // Check code + attendanceCode uniqueness in one query.
+        const conflict = await tx.employee.findFirst({
+          where: {
+            organizationId: orgId,
+            OR: [
+              { code: dto.code },
+              ...(dto.attendanceCode ? [{ attendanceCode: dto.attendanceCode }] : []),
+            ],
+          },
+          select: { id: true, code: true, attendanceCode: true },
+        });
+        if (conflict) {
+          if (conflict.code === dto.code) {
+            throw new ConflictException(
+              `Employee code "${dto.code}" already exists in this organization`,
+            );
+          }
+          throw new ConflictException(
+            `Attendance code "${dto.attendanceCode}" already exists in this organization`,
+          );
+        }
+
         const employee = await tx.employee.create({
           data: {
             organizationId: orgId,
@@ -205,6 +227,28 @@ export class EmployeeService {
     const { email, name } = dto;
 
     const created = await this.prisma.$transaction(async (tx) => {
+      // Check code + attendanceCode uniqueness in one query.
+      const conflict = await tx.employee.findFirst({
+        where: {
+          organizationId: orgId,
+          OR: [
+            { code: dto.code },
+            ...(dto.attendanceCode ? [{ attendanceCode: dto.attendanceCode }] : []),
+          ],
+        },
+        select: { id: true, code: true, attendanceCode: true },
+      });
+      if (conflict) {
+        if (conflict.code === dto.code) {
+          throw new ConflictException(
+            `Employee code "${dto.code}" already exists in this organization`,
+          );
+        }
+        throw new ConflictException(
+          `Attendance code "${dto.attendanceCode}" already exists in this organization`,
+        );
+      }
+
       const employee = await tx.employee.create({
         data: {
           organizationId: orgId,

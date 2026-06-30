@@ -162,7 +162,7 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Thêm nhân sự</DialogTitle>
           <DialogDescription>
@@ -263,39 +263,41 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
               />
             )}
 
-            <FormField
-              control={form.control}
-              name="code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mã nhân sự</FormLabel>
-                  <FormControl>
-                    <Input placeholder="EMP-0001" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Mã hồ sơ nhân sự, unique trong Org.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mã nhân sự</FormLabel>
+                    <FormControl>
+                      <Input placeholder="EMP-0001" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Mã hồ sơ nhân sự, unique trong Org.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="attendanceCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mã chấm công</FormLabel>
-                  <FormControl>
-                    <Input placeholder="00001" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Mã được cài giống nhau trên tất cả máy chấm công. Có thể cập nhật sau.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="attendanceCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mã chấm công</FormLabel>
+                    <FormControl>
+                      <Input placeholder="00001" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Mã được cài giống nhau trên tất cả máy chấm công. Có thể cập nhật sau.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -311,47 +313,46 @@ export function EmployeeCreateDialog({ open, onClose }: EmployeeCreateDialogProp
               )}
             />
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="departmentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phòng ban</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={NO_DEPARTMENT}>(không có)</SelectItem>
-                        {departments.data?.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.name}
-                            {d.code ? ` · ${d.code}` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="hireDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ngày vào</FormLabel>
+            <FormField
+              control={form.control}
+              name="departmentId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phòng ban</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                    <SelectContent>
+                      <SelectItem value={NO_DEPARTMENT}>(không có)</SelectItem>
+                      {departments.data?.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name}
+                          {d.code ? ` · ${d.code}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="hireDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ngày vào</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </form>
         </Form>
 
