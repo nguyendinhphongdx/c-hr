@@ -24,9 +24,30 @@ import { AttendanceDeviceRepository } from './attendance-device.repository';
 
 const JWT_AUDIENCE = 'attendance-device';
 
+const DEFAULT_TIMEZONE = 'Asia/Ho_Chi_Minh';
+
 interface DeviceTokenPayload {
   sub: string;
   v: number;
+}
+
+/**
+ * Local calendar day of an instant, expressed in `tz`, returned as a Date at
+ * UTC midnight of that day (matching the `@db.Date` storage convention).
+ * Buckets by the org's wall-clock midnight instead of UTC midnight — e.g. a
+ * scan at 06:53 VN must land on its VN day, not the previous UTC day.
+ */
+function localDateOnly(ts: Date, tz: string): Date {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = fmt.formatToParts(ts);
+  const get = (type: Intl.DateTimeFormatPartTypes): number =>
+    Number(parts.find((p) => p.type === type)?.value ?? '0');
+  return new Date(Date.UTC(get('year'), get('month') - 1, get('day')));
 }
 
 export interface PushSummary {
@@ -163,6 +184,7 @@ export class AttendanceDeviceService {
    */
   async push(dto: PushAttendanceDto): Promise<PushSummary> {
     const device = await this.verifyToken(dto.token);
+    const tz = dto.timezone ?? (await this.getOrgTimezone(device.organizationId));
 
     // Resolve all employee codes in this push to ids in one query.
     const codes = Array.from(new Set(dto.events.map((e) => e.employeeCode)));
@@ -189,7 +211,7 @@ export class AttendanceDeviceService {
 
     for (const event of dto.events) {
       const empId = codeToId.get(event.employeeCode);
-      const result = await this.applyEvent(device.id, device.organizationId, empId, event);
+      const result = await this.applyEvent(device.id, device.organizationId, empId, event, tz);
       if (result === 'accepted') summary.accepted++;
       else if (result === 'duplicate') summary.duplicates++;
       else if (result === 'pending') {
@@ -212,6 +234,14 @@ export class AttendanceDeviceService {
   // ──────────────────────────────────────────────────────────────────
   // Token helpers
   // ──────────────────────────────────────────────────────────────────
+
+  private async getOrgTimezone(organizationId: string): Promise<string> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { timezone: true },
+    });
+    return org?.timezone || DEFAULT_TIMEZONE;
+  }
 
   private signToken(deviceId: string, version: number): string {
     return this.jwt.sign({ sub: deviceId, v: version } satisfies DeviceTokenPayload, {
@@ -259,9 +289,10 @@ export class AttendanceDeviceService {
     organizationId: string,
     employeeId: string | undefined,
     event: AttendanceEventDto,
+    tz: string,
   ): Promise<'accepted' | 'duplicate' | 'pending'> {
     const ts = new Date(event.timestamp);
-    const dateOnly = new Date(Date.UTC(ts.getUTCFullYear(), ts.getUTCMonth(), ts.getUTCDate()));
+    const dateOnly = localDateOnly(ts, tz);
 
     return this.prisma.$transaction(async (tx) => {
       const replay = await tx.attendanceLog.findUnique({

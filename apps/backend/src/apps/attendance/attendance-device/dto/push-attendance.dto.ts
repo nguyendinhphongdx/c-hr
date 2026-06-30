@@ -49,6 +49,16 @@ export class PushAttendanceDto {
   @MaxLength(255)
   token: string;
 
+  /**
+   * IANA timezone of the device (e.g. "Asia/Ho_Chi_Minh"). Used to bucket each
+   * event's UTC instant into the correct local work-day. Omitted by older
+   * bridges → server falls back to Organization.timezone.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  timezone?: string;
+
   @IsArray()
   @ArrayNotEmpty()
   @ValidateNested({ each: true })
